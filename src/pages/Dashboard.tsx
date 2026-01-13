@@ -12,9 +12,24 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useTasks } from "@/hooks/useTasks";
 import { useEvents } from "@/hooks/useEvents";
 import { useFinance } from "@/hooks/useFinance";
+import { useFamily } from "@/hooks/useFamily";
+import type {
+  Child,
+  ChildEvent,
+  ChildScheduleItem,
+} from "@/features/family/familyService";
 import { isBeforeDay, isSameDay, toDateOnly } from "@/lib/date";
 
 const categories = ["Food", "Transport", "Rent", "Health", "Other"];
+const DAYS_OF_WEEK = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
 
 function parseDateOnly(value: string) {
   return new Date(`${value}T00:00:00`);
@@ -24,10 +39,30 @@ function formatCurrency(amount: number) {
   return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function getTodayWeekdayName(): string {
+  const today = new Date();
+  const jsDay = today.getDay();
+  const index = (jsDay + 6) % 7;
+  return DAYS_OF_WEEK[index];
+}
+
+function getTodayIsoDate(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = `${today.getMonth() + 1}`.padStart(2, "0");
+  const day = `${today.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function Dashboard() {
   const { tasks, addTask } = useTasks();
   const { events, addEvent } = useEvents();
   const { transactions, addTransaction } = useFinance();
+  const {
+    children: familyChildren,
+    isLoading: isFamilyLoading,
+    error: familyError,
+  } = useFamily();
 
   const [taskOpen, setTaskOpen] = useState(false);
   const [eventOpen, setEventOpen] = useState(false);
@@ -80,6 +115,36 @@ export default function Dashboard() {
       .reduce((sum, tx) => sum + tx.amount, 0);
     return { todaySpend, monthSpend };
   }, [transactions, todayKey, currentMonth]);
+
+  const familySummary = useMemo(() => {
+    const todayWeekday = getTodayWeekdayName();
+    const todayIso = getTodayIsoDate();
+
+    return (familyChildren ?? []).map((child: Child) => {
+      const scheduleItems = child.schedule ?? [];
+      const eventsList = (child.events ?? []).filter(
+        (event: ChildEvent) => !!event.date && !!event.title
+      );
+
+      const todaySchedule =
+        scheduleItems.find(
+          (item: ChildScheduleItem) =>
+            item.day === todayWeekday && item.activity?.trim()
+        ) ?? null;
+
+      const upcomingEvents = eventsList
+        .filter((event) => event.date >= todayIso)
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      const nextEvent = upcomingEvents[0] ?? null;
+
+      return {
+        child,
+        todaySchedule,
+        nextEvent,
+      };
+    });
+  }, [familyChildren]);
 
   const handleAddTask = () => {
     if (!taskTitle.trim()) {
@@ -327,6 +392,74 @@ export default function Dashboard() {
               <Clock className="w-3 h-3" />
               ${formatCurrency(financeSummary.monthSpend)} this month
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-full lg:col-span-2">
+          <CardHeader className="pb-2 flex items-center justify-between">
+            <CardTitle className="text-sm font-medium">
+              Family – Today & upcoming
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {isFamilyLoading && (
+              <p className="text-xs text-muted-foreground">Loading family data…</p>
+            )}
+
+            {familyError && !isFamilyLoading && (
+              <p className="text-xs text-destructive">
+                Could not load family data.
+              </p>
+            )}
+
+            {!isFamilyLoading && !familyError && (familySummary.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No kids added yet. You can create child profiles in the Family section.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {familySummary.map(({ child, todaySchedule, nextEvent }) => (
+                  <li
+                    key={child.id}
+                    className="flex flex-col gap-1 rounded-lg bg-secondary/60 px-3 py-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{child.name}</span>
+                      {typeof child.age === "number" && (
+                        <span className="text-[11px] text-muted-foreground">
+                          Age {child.age}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-[11px] text-muted-foreground">
+                      <span className="font-semibold">Today: </span>
+                      {todaySchedule ? (
+                        <span>{todaySchedule.activity}</span>
+                      ) : (
+                        <span>No specific activities</span>
+                      )}
+                    </div>
+
+                    <div className="text-[11px] text-muted-foreground">
+                      <span className="font-semibold">Next event: </span>
+                      {nextEvent ? (
+                        <span>
+                          {nextEvent.title} · {nextEvent.date}
+                          {nextEvent.calendarEventId && (
+                            <span className="ml-1 uppercase tracking-wide text-[10px]">
+                              (in calendar)
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span>No upcoming events</span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ))}
           </CardContent>
         </Card>
       </motion.div>

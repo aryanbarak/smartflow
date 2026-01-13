@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, Play, Pause, SkipBack, SkipForward, Volume2, Music, MoreVertical, ListMusic } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,76 +8,66 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
+import {
+  createPlaylist,
+  getLibrary,
+  saveLibrary,
+  type Playlist,
+  type Track,
+} from "@/features/music/musicService";
 
-interface Track {
-  id: number;
-  title: string;
-  artist: string;
-  duration: string;
-}
-
-interface Playlist {
-  id: number;
-  name: string;
-  trackCount: number;
-  color: string;
-  tracks: Track[];
-}
-
-const playlists: Playlist[] = [
-  {
-    id: 1,
-    name: "Morning Vibes",
-    trackCount: 12,
-    color: "from-amber-500 to-orange-600",
-    tracks: [
-      { id: 1, title: "Sunrise", artist: "Local File", duration: "3:24" },
-      { id: 2, title: "Coffee Time", artist: "Local File", duration: "4:15" },
-      { id: 3, title: "New Day", artist: "Local File", duration: "3:52" },
-    ]
-  },
-  {
-    id: 2,
-    name: "Focus Mode",
-    trackCount: 8,
-    color: "from-blue-500 to-cyan-600",
-    tracks: [
-      { id: 1, title: "Deep Work", artist: "Local File", duration: "5:20" },
-      { id: 2, title: "Concentration", artist: "Local File", duration: "4:45" },
-    ]
-  },
-  {
-    id: 3,
-    name: "Evening Relax",
-    trackCount: 15,
-    color: "from-purple-500 to-pink-600",
-    tracks: [
-      { id: 1, title: "Calm Waters", artist: "Local File", duration: "4:10" },
-      { id: 2, title: "Night Sky", artist: "Local File", duration: "3:58" },
-    ]
-  },
-  {
-    id: 4,
-    name: "Workout Mix",
-    trackCount: 20,
-    color: "from-green-500 to-emerald-600",
-    tracks: [
-      { id: 1, title: "Energy Boost", artist: "Local File", duration: "3:30" },
-      { id: 2, title: "Power Up", artist: "Local File", duration: "4:00" },
-    ]
-  },
+const playlistColors = [
+  "from-amber-500 to-orange-600",
+  "from-blue-500 to-cyan-600",
+  "from-purple-500 to-pink-600",
+  "from-green-500 to-emerald-600",
+  "from-rose-500 to-red-600",
+  "from-indigo-500 to-violet-600",
 ];
 
 export default function MusicPage() {
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState("");
+
+  const playlistCountLabel = useMemo(() => {
+    return playlists.length === 1 ? "playlist" : "playlists";
+  }, [playlists.length]);
+
+  useEffect(() => {
+    setPlaylists(getLibrary());
+  }, []);
+
+  useEffect(() => {
+    if (!selectedPlaylist) return;
+    const refreshed = playlists.find((playlist) => playlist.id === selectedPlaylist.id);
+    if (!refreshed) {
+      setSelectedPlaylist(null);
+      return;
+    }
+    setSelectedPlaylist(refreshed);
+  }, [playlists, selectedPlaylist]);
 
   const handlePlayPlaylist = (playlist: Playlist) => {
     setSelectedPlaylist(playlist);
-    setCurrentTrack(playlist.tracks[0]);
-    setIsPlaying(true);
+    const firstTrack = playlist.tracks[0] ?? null;
+    setCurrentTrack(firstTrack);
+    setIsPlaying(!!firstTrack);
+  };
+
+  const handleCreatePlaylist = () => {
+    const trimmedName = newPlaylistName.trim();
+    if (!trimmedName) return;
+    const color = playlistColors[Math.floor(Math.random() * playlistColors.length)];
+    const created = createPlaylist({ name: trimmedName, color });
+    const updated = [created, ...playlists];
+    setPlaylists(updated);
+    saveLibrary(updated);
+    setNewPlaylistName("");
+    setIsDialogOpen(false);
   };
 
   return (
@@ -89,7 +79,9 @@ export default function MusicPage() {
       >
         <div>
           <h1 className="text-2xl lg:text-3xl font-semibold mb-1">Music</h1>
-          <p className="text-muted-foreground">Your personal playlists</p>
+          <p className="text-muted-foreground">
+            Your personal playlists · {playlists.length} {playlistCountLabel}
+          </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -105,7 +97,11 @@ export default function MusicPage() {
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
                 <Label>Playlist Name</Label>
-                <Input placeholder="My Playlist" />
+                <Input
+                  placeholder="My Playlist"
+                  value={newPlaylistName}
+                  onChange={(event) => setNewPlaylistName(event.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Add Music</Label>
@@ -119,7 +115,11 @@ export default function MusicPage() {
                   </Button>
                 </div>
               </div>
-              <Button className="w-full" onClick={() => setIsDialogOpen(false)}>
+              <Button
+                className="w-full"
+                onClick={handleCreatePlaylist}
+                disabled={!newPlaylistName.trim()}
+              >
                 Create Playlist
               </Button>
             </div>
@@ -154,7 +154,9 @@ export default function MusicPage() {
             </div>
             <CardContent className="pt-4">
               <h3 className="font-medium truncate">{playlist.name}</h3>
-              <p className="text-sm text-muted-foreground">{playlist.trackCount} tracks</p>
+              <p className="text-sm text-muted-foreground">
+                {playlist.trackCount ?? playlist.tracks.length} tracks
+              </p>
             </CardContent>
           </Card>
         ))}

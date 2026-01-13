@@ -1,5 +1,7 @@
-import { createId } from "@/lib/id";
-import { safeGet, safeSet, storageKey } from "@/lib/storage";
+// src/features/finance/financeService.ts
+
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 export type TransactionType = "income" | "expense";
 
@@ -8,62 +10,116 @@ export interface Transaction {
   type: TransactionType;
   amount: number;
   category: string;
+  /**
+   * Local date in YYYY-MM-DD format (Supabase column: date)
+   */
   date: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-const TRANSACTIONS_KEY = storageKey("transactions");
+type FinanceRow = Database["public"]["Tables"]["finance_transactions"]["Row"];
 
-function readAll(): Transaction[] {
-  return safeGet<Transaction[]>(TRANSACTIONS_KEY, []);
-}
-
-function writeAll(transactions: Transaction[]) {
-  safeSet(TRANSACTIONS_KEY, transactions);
+function mapRowToTransaction(row: FinanceRow): Transaction {
+  return {
+    id: row.id,
+    type: row.type as TransactionType,
+    amount: typeof row.amount === "number" ? row.amount : Number(row.amount),
+    category: row.category,
+    date: row.date as string, // "YYYY-MM-DD"
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 export const financeService = {
-  getAll() {
-    return readAll();
+  async listTransactions(userId: string): Promise<Transaction[]> {
+    const { data, error } = await supabase
+      .from("finance_transactions")
+      .select(
+        "id,user_id,type,amount,category,date,notes,created_at,updated_at",
+      )
+      .eq("user_id", userId)
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return (data ?? []).map((row) => mapRowToTransaction(row as FinanceRow));
   },
-  create(input: Omit<Transaction, "id" | "createdAt" | "updatedAt">) {
-    const now = new Date().toISOString();
-    const transaction: Transaction = {
-      id: createId(),
-      type: input.type,
-      amount: input.amount,
-      category: input.category,
-      date: input.date,
-      notes: input.notes?.trim() || undefined,
-      createdAt: now,
-      updatedAt: now,
-    };
-    const transactions = [transaction, ...readAll()];
-    writeAll(transactions);
-    return transaction;
+
+  async createTransaction(
+    userId: string,
+    input: {
+      type: TransactionType;
+      amount: number;
+      category: string;
+      date: string;
+      notes?: string;
+    },
+  ): Promise<Transaction> {
+    const { data, error } = await supabase
+      .from("finance_transactions")
+      .insert({
+        user_id: userId,
+        type: input.type,
+        amount: input.amount,
+        category: input.category,
+        date: input.date, // YYYY-MM-DD
+        notes: input.notes?.trim() || null,
+      })
+      .select(
+        "id,user_id,type,amount,category,date,notes,created_at,updated_at",
+      )
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new Error("Insert returned no data");
+    return mapRowToTransaction(data as FinanceRow);
   },
-  update(id: string, updates: Partial<Omit<Transaction, "id" | "createdAt">>) {
-    const transactions = readAll();
-    const index = transactions.findIndex((tx) => tx.id === id);
-    if (index === -1) return null;
-    const updated: Transaction = {
-      ...transactions[index],
-      ...updates,
-      category: updates.category ? updates.category.trim() : transactions[index].category,
-      notes: updates.notes !== undefined ? updates.notes.trim() || undefined : transactions[index].notes,
-      updatedAt: new Date().toISOString(),
-    };
-    transactions[index] = updated;
-    writeAll(transactions);
-    return updated;
+
+  async updateTransaction(
+    userId: string,
+    id: string,
+    updates: {
+      type: TransactionType;
+      amount: number;
+      category: string;
+      date: string;
+      notes?: string;
+    },
+  ): Promise<Transaction> {
+    const { data, error } = await supabase
+      .from("finance_transactions")
+      .update({
+        type: updates.type,
+        amount: updates.amount,
+        category: updates.category,
+        date: updates.date,
+        notes: updates.notes?.trim() ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("user_id", userId)
+      .select(
+        "id,user_id,type,amount,category,date,notes,created_at,updated_at",
+      )
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new Error("Update returned no data");
+    return mapRowToTransaction(data as FinanceRow);
   },
-  remove(id: string) {
-    const transactions = readAll();
-    const next = transactions.filter((tx) => tx.id !== id);
-    if (next.length === transactions.length) return false;
-    writeAll(next);
+
+  async deleteTransaction(userId: string, id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from("finance_transactions")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId);
+
+    if (error) throw error;
     return true;
   },
 };

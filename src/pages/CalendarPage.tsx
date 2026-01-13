@@ -1,12 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Calendar as CalendarIcon, MapPin, Pencil, Trash2 } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, MapPin, Pencil, StickyNote, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,71 +15,256 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useEvents } from "@/hooks/useEvents";
-import { CalendarEvent } from "@/features/calendar/calendarService";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CalendarEvent, calendarService } from "@/features/calendar/calendarService";
+import { CalendarFormDialog } from "@/features/calendar/CalendarFormDialog";
+import { loadCalendarUiState, saveCalendarUiState } from "@/features/calendar/calendarUiState";
 import { formatDateTime, toDateOnly } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
 type EventFilter = "all" | "today" | "week";
 
-function formatInputDate(date: Date) {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function startOfDay(value: Date) {
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date;
 }
 
-function formatInputTime(date: Date) {
-  const hours = `${date.getHours()}`.padStart(2, "0");
-  const minutes = `${date.getMinutes()}`.padStart(2, "0");
-  return `${hours}:${minutes}`;
+function endOfDay(value: Date) {
+  const date = new Date(value);
+  date.setHours(23, 59, 59, 999);
+  return date;
 }
 
-function buildDateTime(date: string, time: string) {
-  return new Date(`${date}T${time}:00`).toISOString();
+function addDays(value: Date, amount: number) {
+  const date = new Date(value);
+  date.setDate(date.getDate() + amount);
+  return date;
+}
+
+function formatDayKey(value: Date) {
+  return toDateOnly(value);
+}
+
+function startOfWeekMonday(value: Date) {
+  const date = startOfDay(value);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  return date;
+}
+
+function startOfMonth(value: Date) {
+  const date = new Date(value.getFullYear(), value.getMonth(), 1);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function addMonths(value: Date, amount: number) {
+  const date = new Date(value);
+  date.setMonth(date.getMonth() + amount);
+  return date;
+}
+
+function parseDayKeyLocal(dayKey: string) {
+  const [yearStr, monthStr, dayStr] = dayKey.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (!year || !month || !day) return new Date(NaN);
+  return new Date(year, month - 1, day);
+}
+
+function isSameDay(a: Date, b: Date) {
+  return toDateOnly(a) === toDateOnly(b);
+}
+
+function formatTime(value?: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function getEventWindow(event: CalendarEvent) {
+  const start = event.dateTimeStart ? new Date(event.dateTimeStart) : null;
+  const end = event.dateTimeEnd ? new Date(event.dateTimeEnd) : null;
+  return {
+    start: start && !Number.isNaN(start.getTime()) ? start : null,
+    end: end && !Number.isNaN(end.getTime()) ? end : null,
+  };
+}
+
+function getEventState(now: Date, start: Date | null, end: Date | null) {
+  if (!start) return "future" as const;
+  const nowMs = now.getTime();
+  const startMs = start.getTime();
+  if (end) {
+    const endMs = end.getTime();
+    if (endMs < nowMs) return "past" as const;
+    if (startMs <= nowMs && endMs >= nowMs) return "current" as const;
+  } else if (startMs < nowMs) {
+    return "past" as const;
+  }
+  if (startMs >= nowMs && startMs - nowMs <= 24 * 60 * 60 * 1000) {
+    return "upcoming" as const;
+  }
+  return "future" as const;
 }
 
 export default function CalendarPage() {
-  const { events, addEvent, updateEvent, removeEvent } = useEvents();
-  const [filter, setFilter] = useState<EventFilter>("week");
+  const queryClient = useQueryClient();
+  const renderCount = useRef(0);
+  renderCount.current += 1;
+  if (import.meta.env.DEV) {
+    // DEV diagnostics to track render churn.
+    console.debug("[calendar] render", renderCount.current);
+  }
+  const initialUiState = useMemo(() => {
+    const anchor = new Date();
+    return loadCalendarUiState({
+      activeTab: "week",
+      viewAnchorDate: toDateOnly(anchor),
+      selectedDay: null,
+      searchQuery: "",
+      hasLocationOnly: false,
+      hasNotesOnly: false,
+    });
+  }, []);
+  const [filter, setFilter] = useState<EventFilter>(initialUiState.activeTab);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CalendarEvent | null>(null);
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState(formatInputDate(new Date()));
-  const [startTime, setStartTime] = useState(formatInputTime(new Date()));
-  const [endTime, setEndTime] = useState("");
-  const [location, setLocation] = useState("");
-  const [notes, setNotes] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState(initialUiState.searchQuery);
+  const [hasLocationOnly, setHasLocationOnly] = useState(initialUiState.hasLocationOnly);
+  const [hasNotesOnly, setHasNotesOnly] = useState(initialUiState.hasNotesOnly);
+  const [pendingScrollDay, setPendingScrollDay] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(initialUiState.selectedDay);
+  const [viewAnchorDate, setViewAnchorDate] = useState<Date>(
+    () => parseDayKeyLocal(initialUiState.viewAnchorDate),
+  );
+  const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const listContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const today = new Date();
-  const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay());
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  const today = useMemo(() => new Date(), []);
+  const weekStart = useMemo(() => startOfWeekMonday(viewAnchorDate), [viewAnchorDate]);
+  const weekEnd = useMemo(() => endOfDay(addDays(weekStart, 6)), [weekStart]);
+  const rangeStart = useMemo(() => {
+    if (filter === "today") return startOfDay(today);
+    if (filter === "week") return weekStart;
+    return null;
+  }, [filter, today, weekStart]);
+  const rangeEnd = useMemo(() => {
+    if (filter === "today") return endOfDay(today);
+    if (filter === "week") return weekEnd;
+    return null;
+  }, [filter, today, weekEnd]);
+  const visibleMonthStart = useMemo(() => startOfMonth(viewAnchorDate), [viewAnchorDate]);
+  const gridStart = useMemo(() => startOfWeekMonday(visibleMonthStart), [visibleMonthStart]);
+  const gridEnd = useMemo(() => endOfDay(addDays(gridStart, 41)), [gridStart]);
+  const monthWindowStart = useMemo(() => addDays(gridStart, -7), [gridStart]);
+  const monthWindowEnd = useMemo(() => endOfDay(addDays(gridEnd, 7)), [gridEnd]);
+  const tabQueryKey = useMemo(
+    () => ["calendarEvents", filter, rangeStart?.toISOString(), rangeEnd?.toISOString()],
+    [filter, rangeEnd, rangeStart],
+  );
+  const monthQueryKey = useMemo(
+    () => ["calendarMonthEvents", monthWindowStart.toISOString(), monthWindowEnd.toISOString()],
+    [monthWindowEnd, monthWindowStart],
+  );
 
-  const sortedEvents = useMemo(() => {
-    return [...events].sort(
+  const { data: rangeEvents = [], isLoading } = useQuery({
+    queryKey: tabQueryKey,
+    queryFn: async () => {
+      const started = performance.now();
+      const result = filter === "all" || !rangeStart || !rangeEnd
+        ? calendarService.getAll()
+        : calendarService.getRange(rangeStart, rangeEnd);
+      if (import.meta.env.DEV) {
+        console.groupCollapsed("Calendar fetch");
+        console.log("filter", filter);
+        console.log("rangeStart", rangeStart?.toISOString() ?? "all");
+        console.log("rangeEnd", rangeEnd?.toISOString() ?? "all");
+        console.log("events", result.length);
+        console.log("ms", (performance.now() - started).toFixed(1));
+        console.groupEnd();
+      }
+      return result;
+    },
+    staleTime: 60_000,
+  });
+
+  const { data: monthEvents = [] } = useQuery({
+    queryKey: monthQueryKey,
+    queryFn: async () => {
+      const started = performance.now();
+      const result = calendarService.getRange(monthWindowStart, monthWindowEnd);
+      if (import.meta.env.DEV) {
+        console.groupCollapsed("Calendar fetch (month)");
+        console.log("visibleMonth", visibleMonthStart.toISOString());
+        console.log("gridStart", gridStart.toISOString());
+        console.log("gridEnd", gridEnd.toISOString());
+        console.log("monthWindowStart", monthWindowStart.toISOString());
+        console.log("monthWindowEnd", monthWindowEnd.toISOString());
+        console.log("events", result.length);
+        console.log("ms", (performance.now() - started).toFixed(1));
+        console.groupEnd();
+      }
+      return result;
+    },
+    staleTime: 60_000,
+  });
+
+  const sortedRangeEvents = useMemo(() => {
+    return [...rangeEvents].sort(
       (a, b) => new Date(a.dateTimeStart).getTime() - new Date(b.dateTimeStart).getTime(),
     );
-  }, [events]);
+  }, [rangeEvents]);
+
+  const sortedMonthEvents = useMemo(() => {
+    return [...monthEvents].sort(
+      (a, b) => new Date(a.dateTimeStart).getTime() - new Date(b.dateTimeStart).getTime(),
+    );
+  }, [monthEvents]);
 
   const filteredEvents = useMemo(() => {
-    return sortedEvents.filter((event) => {
-      const eventDate = new Date(event.dateTimeStart);
-      if (filter === "today") {
-        return toDateOnly(eventDate) === toDateOnly(today);
-      }
-      if (filter === "week") {
-        return eventDate >= startOfWeek && eventDate <= endOfWeek;
-      }
-      return true;
+    const query = searchQuery.trim().toLowerCase();
+    return sortedRangeEvents.filter((event) => {
+      if (hasLocationOnly && !event.location?.trim()) return false;
+      if (hasNotesOnly && !event.notes?.trim()) return false;
+      if (!query) return true;
+      const haystack = [
+        event.title,
+        event.location ?? "",
+        event.notes ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
     });
-  }, [sortedEvents, filter, startOfWeek, endOfWeek, today]);
+  }, [hasLocationOnly, hasNotesOnly, searchQuery, sortedRangeEvents]);
 
-  const groupedEvents = useMemo(() => {
+  const filteredMonthEvents = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return sortedMonthEvents.filter((event) => {
+      if (hasLocationOnly && !event.location?.trim()) return false;
+      if (hasNotesOnly && !event.notes?.trim()) return false;
+      if (!query) return true;
+      const haystack = [
+        event.title,
+        event.location ?? "",
+        event.notes ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [hasLocationOnly, hasNotesOnly, searchQuery, sortedMonthEvents]);
+
+  const eventsByDay = useMemo(() => {
     return filteredEvents.reduce<Record<string, CalendarEvent[]>>((acc, event) => {
       const key = toDateOnly(event.dateTimeStart);
       acc[key] = acc[key] ? [...acc[key], event] : [event];
@@ -91,208 +272,503 @@ export default function CalendarPage() {
     }, {});
   }, [filteredEvents]);
 
+  const monthEventsByDay = useMemo(() => {
+    return filteredMonthEvents.reduce<Record<string, CalendarEvent[]>>((acc, event) => {
+      const key = toDateOnly(event.dateTimeStart);
+      acc[key] = acc[key] ? [...acc[key], event] : [event];
+      return acc;
+    }, {});
+  }, [filteredMonthEvents]);
+
+  const monthEventStats = useMemo(() => {
+    if (monthEvents.length === 0) {
+      return { count: 0, minStart: null as string | null, maxStart: null as string | null };
+    }
+    let minStart = monthEvents[0].dateTimeStart;
+    let maxStart = monthEvents[0].dateTimeStart;
+    monthEvents.forEach((event) => {
+      if (event.dateTimeStart < minStart) minStart = event.dateTimeStart;
+      if (event.dateTimeStart > maxStart) maxStart = event.dateTimeStart;
+    });
+    return { count: monthEvents.length, minStart, maxStart };
+  }, [monthEvents]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.debug("[calendar] month events", {
+      visibleMonthDate: viewAnchorDate.toISOString(),
+      gridStart: gridStart.toISOString(),
+      gridEnd: gridEnd.toISOString(),
+      count: monthEventStats.count,
+      minStart: monthEventStats.minStart,
+      maxStart: monthEventStats.maxStart,
+    });
+  }, [gridEnd, gridStart, monthEventStats, viewAnchorDate]);
+
+  useEffect(() => {
+    const prevMonthStart = startOfMonth(addMonths(viewAnchorDate, -1));
+    const nextMonthStart = startOfMonth(addMonths(viewAnchorDate, 1));
+    const prevGridStart = startOfWeekMonday(prevMonthStart);
+    const prevGridEnd = endOfDay(addDays(prevGridStart, 41));
+    const prevWindowStart = addDays(prevGridStart, -7);
+    const prevWindowEnd = endOfDay(addDays(prevGridEnd, 7));
+    const nextGridStart = startOfWeekMonday(nextMonthStart);
+    const nextGridEnd = endOfDay(addDays(nextGridStart, 41));
+    const nextWindowStart = addDays(nextGridStart, -7);
+    const nextWindowEnd = endOfDay(addDays(nextGridEnd, 7));
+    queryClient.prefetchQuery({
+      queryKey: ["calendarMonthEvents", prevWindowStart.toISOString(), prevWindowEnd.toISOString()],
+      queryFn: () => calendarService.getRange(prevWindowStart, prevWindowEnd),
+      staleTime: 60_000,
+    });
+    queryClient.prefetchQuery({
+      queryKey: ["calendarMonthEvents", nextWindowStart.toISOString(), nextWindowEnd.toISOString()],
+      queryFn: () => calendarService.getRange(nextWindowStart, nextWindowEnd),
+      staleTime: 60_000,
+    });
+  }, [queryClient, viewAnchorDate]);
+
   const openNewEvent = () => {
     setEditingEvent(null);
-    setTitle("");
-    setDate(formatInputDate(new Date()));
-    setStartTime(formatInputTime(new Date()));
-    setEndTime("");
-    setLocation("");
-    setNotes("");
-    setError(null);
     setIsDialogOpen(true);
   };
 
   const openEditEvent = (event: CalendarEvent) => {
-    const start = new Date(event.dateTimeStart);
-    const end = event.dateTimeEnd ? new Date(event.dateTimeEnd) : null;
     setEditingEvent(event);
-    setTitle(event.title);
-    setDate(formatInputDate(start));
-    setStartTime(formatInputTime(start));
-    setEndTime(end ? formatInputTime(end) : "");
-    setLocation(event.location ?? "");
-    setNotes(event.notes ?? "");
-    setError(null);
     setIsDialogOpen(true);
   };
 
-  const handleSave = () => {
-    if (!title.trim()) {
-      setError("Event title is required.");
-      return;
-    }
-    const start = buildDateTime(date, startTime || "09:00");
-    const end = endTime ? buildDateTime(date, endTime) : undefined;
+  const handleSave = async (payload: {
+    title: string;
+    dateTimeStart: string;
+    dateTimeEnd?: string;
+    location?: string;
+    notes?: string;
+  }) => {
     if (editingEvent) {
-      updateEvent(editingEvent.id, {
-        title: title.trim(),
-        dateTimeStart: start,
-        dateTimeEnd: end,
-        location,
-        notes,
-      });
+      calendarService.update(editingEvent.id, payload);
     } else {
-      addEvent({
-        title: title.trim(),
-        dateTimeStart: start,
-        dateTimeEnd: end,
-        location,
-        notes,
-      });
+      calendarService.create(payload);
     }
-    setIsDialogOpen(false);
+    queryClient.invalidateQueries({ queryKey: tabQueryKey });
+    queryClient.invalidateQueries({ queryKey: monthQueryKey });
   };
 
   const handleDelete = () => {
     if (deleteTarget) {
-      removeEvent(deleteTarget.id);
+      calendarService.remove(deleteTarget.id);
+      queryClient.invalidateQueries({ queryKey: tabQueryKey });
+      queryClient.invalidateQueries({ queryKey: monthQueryKey });
       setDeleteTarget(null);
     }
   };
 
-  const orderedDays = Object.keys(groupedEvents).sort();
+  const handleTodayClick = () => {
+    const todayDate = new Date();
+    const todayKey = toDateOnly(todayDate);
+    setSelectedDay(todayKey);
+    setViewAnchorDate(todayDate);
+    if (filter === "week") {
+      setPendingScrollDay(todayKey);
+      return;
+    }
+    if (filter === "today") {
+      setPendingScrollDay(todayKey);
+      return;
+    }
+    if (eventsByDay[todayKey]) {
+      setPendingScrollDay(todayKey);
+      return;
+    }
+    const nextKey = orderedDays.find((day) => day >= todayKey) ?? orderedDays[0];
+    setPendingScrollDay(nextKey ?? null);
+  };
+  useEffect(() => {
+    if (!pendingScrollDay) return;
+    const target = dayRefs.current[pendingScrollDay];
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    setPendingScrollDay(null);
+  }, [pendingScrollDay, eventsByDay, filter, viewAnchorDate]);
+
+  useEffect(() => {
+    saveCalendarUiState({
+      activeTab: filter,
+      viewAnchorDate: formatDayKey(viewAnchorDate),
+      selectedDay,
+      searchQuery,
+      hasLocationOnly,
+      hasNotesOnly,
+    });
+  }, [filter, viewAnchorDate, selectedDay, searchQuery, hasLocationOnly, hasNotesOnly]);
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setHasLocationOnly(false);
+    setHasNotesOnly(false);
+  };
+
+  const resetSecondaryFilters = () => {
+    setSearchQuery("");
+    setHasLocationOnly(false);
+    setHasNotesOnly(false);
+  };
+
+  const dayScopedEvents = useMemo(() => {
+    if (!selectedDay) return eventsByDay;
+    return monthEventsByDay[selectedDay]
+      ? { [selectedDay]: monthEventsByDay[selectedDay] }
+      : {};
+  }, [eventsByDay, monthEventsByDay, selectedDay]);
+
+  const orderedDays = Object.keys(dayScopedEvents).sort();
+  const hasAnyEvents = selectedDay ? monthEvents.length > 0 : rangeEvents.length > 0;
+  const isFiltering = !!searchQuery.trim() || hasLocationOnly || hasNotesOnly;
+  const selectedDayKey = selectedDay ?? formatDayKey(new Date());
+  const now = new Date();
+  const selectedDayHasEvents = !!(selectedDay && monthEventsByDay[selectedDay]?.length);
+
+  const weekStripDays = useMemo(() => {
+    const anchor = weekStart;
+    return Array.from({ length: 7 }, (_, idx) => addDays(anchor, idx));
+  }, [weekStart]);
+
+  const monthLabel = useMemo(() => {
+    return viewAnchorDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  }, [viewAnchorDate]);
+
+  const monthGridDays = useMemo(() => {
+    return Array.from({ length: 42 }, (_, idx) => addDays(gridStart, idx));
+  }, [gridStart]);
+
+  const weekdayLabels = useMemo(
+    () => ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    [],
+  );
+
+  const handleSelectDay = (day: Date) => {
+    const key = formatDayKey(day);
+    resetSecondaryFilters();
+    setSelectedDay(key);
+    setViewAnchorDate(day);
+    setPendingScrollDay(key);
+    if (import.meta.env.DEV) {
+      console.debug("[calendar] select day", key);
+    }
+  };
+
+  const handlePrevMonth = () => {
+    const target = startOfMonth(addMonths(viewAnchorDate, -1));
+    resetSecondaryFilters();
+    setViewAnchorDate(target);
+    if (import.meta.env.DEV) {
+      console.debug("[calendar] prev month", { target });
+    }
+  };
+
+  const handleNextMonth = () => {
+    const target = startOfMonth(addMonths(viewAnchorDate, 1));
+    resetSecondaryFilters();
+    setViewAnchorDate(target);
+    if (import.meta.env.DEV) {
+      console.debug("[calendar] next month", { target });
+    }
+  };
+
+  const handlePrevWeek = () => {
+    const next = addDays(viewAnchorDate, -7);
+    resetSecondaryFilters();
+    setViewAnchorDate(next);
+    if (import.meta.env.DEV) {
+      console.debug("[calendar] prev week", next.toISOString());
+    }
+  };
+
+  const handleNextWeek = () => {
+    const next = addDays(viewAnchorDate, 7);
+    resetSecondaryFilters();
+    setViewAnchorDate(next);
+    if (import.meta.env.DEV) {
+      console.debug("[calendar] next week", next.toISOString());
+    }
+  };
 
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-8"
+        className="flex items-center justify-between mb-4"
       >
         <div>
           <h1 className="text-2xl lg:text-3xl font-semibold mb-1">Calendar</h1>
-          <p className="text-muted-foreground">Your agenda at a glance</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 shadow-glow" onClick={openNewEvent}>
-              <Plus className="w-4 h-4" />
-              Add Event
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>{editingEvent ? "Edit Event" : "New Event"}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              <div className="space-y-2">
-                <Label>Title</Label>
-                <Input value={title} onChange={(event) => setTitle(event.target.value)} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Date</Label>
-                  <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Start Time</Label>
-                  <Input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>End Time</Label>
-                <Input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Location</Label>
-                <Input value={location} onChange={(event) => setLocation(event.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Notes</Label>
-                <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} />
-              </div>
-              <Button className="w-full" onClick={handleSave}>
-                {editingEvent ? "Save Changes" : "Create Event"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button className="gap-2 shadow-glow" onClick={openNewEvent}>
+          <Plus className="w-4 h-4" />
+          Add Event
+        </Button>
       </motion.div>
 
-      <Tabs value={filter} onValueChange={(value) => setFilter(value as EventFilter)} className="mb-6">
-        <TabsList className="bg-secondary">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="today">Today</TabsTrigger>
-          <TabsTrigger value="week">This Week</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <CalendarFormDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        mode={editingEvent ? "edit" : "create"}
+        initialEvent={editingEvent}
+        onSubmit={handleSave}
+      />
 
-      {orderedDays.length === 0 ? (
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <Tabs value={filter} onValueChange={(value) => setFilter(value as EventFilter)}>
+            <TabsList className="bg-secondary">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="today">Today</TabsTrigger>
+              <TabsTrigger value="week">This Week</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Button variant="secondary" size="sm" onClick={handleTodayClick}>
+            Go to Today
+          </Button>
+          {filter === "week" && (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  handlePrevWeek();
+                }}
+              >
+                ◀ Prev Week
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  handleNextWeek();
+                }}
+              >
+                Next Week ▶
+              </Button>
+            </>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={handlePrevMonth}>
+              Prev Month
+            </Button>
+            <span className="text-sm font-medium">{monthLabel}</span>
+            <Button variant="secondary" size="sm" onClick={handleNextMonth}>
+              Next Month
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto">
+            {weekStripDays.map((day) => {
+              const key = formatDayKey(day);
+              const isSelected = key === selectedDayKey;
+              const isToday = key === formatDayKey(new Date());
+              return (
+                <Button
+                  key={key}
+                  variant={isSelected ? "default" : "secondary"}
+                  size="sm"
+                  className={isToday && !isSelected ? "border border-primary" : ""}
+                  onClick={() => handleSelectDay(day)}
+                >
+                  <span className="mr-1">{day.toLocaleDateString(undefined, { weekday: "short" })}</span>
+                  {day.getDate()}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="rounded-xl border border-border/60 bg-card/60 p-2">
+          <div className="grid grid-cols-7 gap-1.5 text-center text-[11px] font-semibold text-muted-foreground">
+            {weekdayLabels.map((label) => (
+              <div key={label} className="py-1">
+                {label}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1.5">
+            {monthGridDays.map((day) => {
+              const key = formatDayKey(day);
+              const count = monthEventsByDay[key]?.length ?? 0;
+              const isSelected = selectedDay === key;
+              const isToday = key === formatDayKey(new Date());
+              const isCurrentMonth = day.getMonth() === viewAnchorDate.getMonth();
+              return (
+                <Button
+                  key={key}
+                  variant={isSelected ? "default" : "secondary"}
+                  className={cn(
+                    "h-9 items-start justify-between px-1 py-1 text-left",
+                    !isCurrentMonth && "opacity-60",
+                    isToday && !isSelected && "border border-primary",
+                  )}
+                  onClick={() => handleSelectDay(day)}
+                >
+                  <span className="text-xs font-semibold">{day.getDate()}</span>
+                  {count > 0 && (
+                    <Badge variant="secondary" className="rounded-full px-1.5 text-[10px]">
+                      {count}
+                    </Badge>
+                  )}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {isLoading ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            No events scheduled yet.
+            Loading events...
+          </CardContent>
+        </Card>
+      ) : !hasAnyEvents ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground space-y-4">
+            <p>No events scheduled yet.</p>
+            <Button onClick={openNewEvent}>Add Event</Button>
+          </CardContent>
+        </Card>
+      ) : filter === "week" && orderedDays.length === 0 && !selectedDay ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground space-y-4">
+            <p>No events this week.</p>
+            <Button onClick={openNewEvent}>Add Event</Button>
+          </CardContent>
+        </Card>
+      ) : orderedDays.length === 0 && !selectedDay ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground space-y-4">
+            <p>No results for your current filters.</p>
+            {isFiltering && (
+              <Button variant="secondary" onClick={handleClearFilters}>
+                Clear filters
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
-          {orderedDays.map((dayKey) => (
-            <Card key={dayKey}>
-              <CardHeader className="flex flex-row items-center justify-between">
+        <div ref={listContainerRef} className="space-y-6 max-h-[70vh] overflow-auto pr-1">
+          {selectedDay && !selectedDayHasEvents ? (
+            <Card ref={(node) => { dayRefs.current[selectedDayKey] = node; }}>
+              <CardHeader className="flex flex-row items-center justify-between sticky top-0 z-10 bg-card/95 backdrop-blur">
                 <CardTitle className="text-base flex items-center gap-2">
                   <CalendarIcon className="w-4 h-4 text-primary" />
-                  {new Date(dayKey).toLocaleDateString(undefined, {
+                  {new Date(selectedDayKey).toLocaleDateString(undefined, {
                     weekday: "short",
                     month: "short",
                     day: "numeric",
                   })}
                 </CardTitle>
-                <Badge variant="secondary">{groupedEvents[dayKey].length} event(s)</Badge>
+                <Badge variant="secondary">0 event(s)</Badge>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {groupedEvents[dayKey].map((event) => (
-                  <div
-                    key={event.id}
-                    className={cn(
-                      "flex flex-col gap-2 rounded-lg border border-border/60 p-3",
-                      "bg-secondary/40",
-                    )}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-sm font-medium">{event.title}</p>
-                        <p className="text-xs text-muted-foreground">{formatDateTime(event.dateTimeStart)}</p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-muted-foreground hover:text-foreground"
-                          onClick={() => openEditEvent(event)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-muted-foreground hover:text-destructive"
-                          onClick={() => setDeleteTarget(event)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    {(event.location || event.notes) && (
-                      <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                        {event.location && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {event.location}
-                          </span>
-                        )}
-                        {event.notes && <span>{event.notes}</span>}
-                      </div>
-                    )}
-                  </div>
-                ))}
+              <CardContent className="py-6 text-sm text-muted-foreground">
+                No events on this day.
               </CardContent>
             </Card>
-          ))}
+          ) : (
+            orderedDays.map((dayKey) => (
+              <Card key={dayKey} ref={(node) => { dayRefs.current[dayKey] = node; }}>
+                <CardHeader className="flex flex-row items-center justify-between sticky top-0 z-10 bg-card/95 backdrop-blur">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4 text-primary" />
+                    {parseDayKeyLocal(dayKey).toLocaleDateString(undefined, {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </CardTitle>
+                  <Badge variant={dayScopedEvents[dayKey].length >= 3 ? "default" : "secondary"}>
+                    {dayScopedEvents[dayKey].length} event(s)
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {dayScopedEvents[dayKey].map((event) => {
+                    const { start, end } = getEventWindow(event);
+                    const isTodayEvent = start ? isSameDay(start, now) : false;
+                    const eventState = getEventState(now, start, end);
+                    const timeStart = formatTime(event.dateTimeStart);
+                    const timeEnd = event.dateTimeEnd ? formatTime(event.dateTimeEnd) : null;
+                    const timeLabel = timeStart
+                      ? timeEnd
+                        ? `${timeStart}\u2013${timeEnd}`
+                        : timeStart
+                      : "All day";
+                    return (
+                      <div
+                        key={event.id}
+                        className={cn(
+                          "flex flex-col gap-2 rounded-lg border border-border/60 p-3",
+                          "bg-secondary/40",
+                          eventState === "current" && "border-l-4 border-l-primary ring-1 ring-primary/30",
+                          eventState === "past" && "opacity-70",
+                          isTodayEvent && eventState !== "current" && "border-l-4 border-l-primary/60",
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-3">
+                            <div className="min-w-[64px] text-sm font-semibold text-foreground">
+                              {timeLabel}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium">{event.title}</p>
+                                {eventState === "current" && <Badge variant="secondary">Now</Badge>}
+                                {isTodayEvent && eventState !== "current" && (
+                                  <Badge variant="secondary">Today</Badge>
+                                )}
+                                {eventState === "upcoming" && <Badge variant="outline">Upcoming</Badge>}
+                              </div>
+                              <p className="text-xs text-muted-foreground">{formatDateTime(event.dateTimeStart)}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-muted-foreground hover:text-foreground"
+                              onClick={() => openEditEvent(event)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-muted-foreground hover:text-destructive"
+                              onClick={() => setDeleteTarget(event)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        {(event.location || event.notes) && (
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            {event.location && (
+                              <Badge variant="secondary" className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                <span className="max-w-[220px] truncate">{event.location}</span>
+                              </Badge>
+                            )}
+                            {event.notes && (
+                              <Badge variant="secondary" className="flex items-center gap-1">
+                                <StickyNote className="w-3 h-3" />
+                                Notes
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       )}
 
@@ -310,6 +786,8 @@ export default function CalendarPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <p className="mt-6 text-sm text-muted-foreground">Your agenda at a glance</p>
     </div>
   );
 }
+

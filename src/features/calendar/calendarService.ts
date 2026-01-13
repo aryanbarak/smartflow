@@ -26,6 +26,16 @@ export const calendarService = {
   getAll() {
     return readAll();
   },
+  getRange(start?: Date, end?: Date) {
+    const events = readAll();
+    if (!start || !end) return events;
+    const startMs = start.getTime();
+    const endMs = end.getTime();
+    return events.filter((event) => {
+      const startTime = new Date(event.dateTimeStart).getTime();
+      return startTime >= startMs && startTime <= endMs;
+    });
+  },
   create(input: Omit<CalendarEvent, "id" | "createdAt" | "updatedAt">) {
     const now = new Date().toISOString();
     const event: CalendarEvent = {
@@ -66,3 +76,31 @@ export const calendarService = {
     return true;
   },
 };
+
+function parseLocalDate(date: string) {
+  const [yearStr, monthStr, dayStr] = date.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (!year || !month || !day) {
+    throw new Error("Invalid date");
+  }
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+}
+
+export async function createCalendarEventFromFamily(input: {
+  title: string;
+  date: string;
+  childName: string;
+}): Promise<{ id: string }> {
+  const dateTimeStart = parseLocalDate(input.date).toISOString();
+  const event = calendarService.create({
+    title: `${input.childName} - ${input.title}`,
+    dateTimeStart,
+  });
+  return { id: event.id };
+}
+
+export async function deleteCalendarEventById(id: string): Promise<void> {
+  calendarService.remove(id);
+}
