@@ -9,7 +9,8 @@ import {
   Music, 
   Globe, 
   Settings,
-  Sparkles
+  Sparkles,
+  Brain
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,6 +25,7 @@ const navItems = [
   { icon: FileText, label: "Documents", path: "/documents" },
   { icon: Music, label: "Music", path: "/music" },
   { icon: Globe, label: "Web Links", path: "/links" },
+  { icon: Brain, label: "Learn with AI", path: "/learn-ai" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 

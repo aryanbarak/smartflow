@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
+import { StatePanel } from "@/components/common/StatePanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -207,11 +208,6 @@ export default function DocumentsPage() {
             <CardDescription>PDFs up to 20MB</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
             {formError && (
               <Alert variant="destructive">
                 <AlertDescription>{formError}</AlertDescription>
@@ -261,15 +257,26 @@ export default function DocumentsPage() {
             <CardDescription>{sortedDocs.length} document(s)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {isLoading ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Loading documents...
-              </div>
+            {error ? (
+              <StatePanel
+                variant="error"
+                title="Unable to load documents"
+                description={error}
+              />
+            ) : isLoading ? (
+              <StatePanel
+                variant="loading"
+                title="Loading documents"
+                description="Fetching your files..."
+              />
             ) : sortedDocs.length === 0 ? (
-              <div className="text-sm text-muted-foreground py-6 text-center">
-                No documents yet. Upload your first file.
-              </div>
+              <StatePanel
+                variant="empty"
+                title="No documents yet"
+                description="Upload your first PDF to get started."
+                actionLabel="Upload file"
+                onAction={() => inputRef.current?.click()}
+              />
             ) : (
               sortedDocs.map((doc) => (
                 <div

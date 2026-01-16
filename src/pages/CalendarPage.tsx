@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, Calendar as CalendarIcon, MapPin, Pencil, StickyNote, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { StatePanel } from "@/components/common/StatePanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -176,7 +177,7 @@ export default function CalendarPage() {
     [monthWindowEnd, monthWindowStart],
   );
 
-  const { data: rangeEvents = [], isLoading } = useQuery({
+  const { data: rangeEvents = [], isLoading, error: rangeError } = useQuery({
     queryKey: tabQueryKey,
     queryFn: async () => {
       const started = performance.now();
@@ -197,7 +198,7 @@ export default function CalendarPage() {
     staleTime: 60_000,
   });
 
-  const { data: monthEvents = [] } = useQuery({
+  const { data: monthEvents = [], error: monthError } = useQuery({
     queryKey: monthQueryKey,
     queryFn: async () => {
       const started = performance.now();
@@ -493,6 +494,11 @@ export default function CalendarPage() {
     }
   };
 
+  const calendarError = rangeError ?? monthError;
+  const calendarErrorMessage = calendarError instanceof Error
+    ? calendarError.message
+    : "Failed to load calendar events.";
+
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
       <motion.div
@@ -538,7 +544,7 @@ export default function CalendarPage() {
                   handlePrevWeek();
                 }}
               >
-                ◀ Prev Week
+                Prev Week
               </Button>
               <Button
                 variant="secondary"
@@ -547,7 +553,7 @@ export default function CalendarPage() {
                   handleNextWeek();
                 }}
               >
-                Next Week ▶
+                Next Week
               </Button>
             </>
           )}
@@ -621,37 +627,42 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {isLoading ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            Loading events...
-          </CardContent>
-        </Card>
+      {calendarError ? (
+        <StatePanel
+          variant="error"
+          title="Calendar failed to load"
+          description={calendarErrorMessage}
+        />
+      ) : isLoading ? (
+        <StatePanel
+          variant="loading"
+          title="Loading calendar..."
+          description="Fetching your events."
+        />
       ) : !hasAnyEvents ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground space-y-4">
-            <p>No events scheduled yet.</p>
-            <Button onClick={openNewEvent}>Add Event</Button>
-          </CardContent>
-        </Card>
+        <StatePanel
+          variant="empty"
+          title="No events found"
+          description="Create your first event to see it here."
+          actionLabel="Add event"
+          onAction={openNewEvent}
+        />
       ) : filter === "week" && orderedDays.length === 0 && !selectedDay ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground space-y-4">
-            <p>No events this week.</p>
-            <Button onClick={openNewEvent}>Add Event</Button>
-          </CardContent>
-        </Card>
+        <StatePanel
+          variant="empty"
+          title="No events this week"
+          description="Add an event to get started."
+          actionLabel="Add event"
+          onAction={openNewEvent}
+        />
       ) : orderedDays.length === 0 && !selectedDay ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground space-y-4">
-            <p>No results for your current filters.</p>
-            {isFiltering && (
-              <Button variant="secondary" onClick={handleClearFilters}>
-                Clear filters
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+        <StatePanel
+          variant="empty"
+          title="No results for your current filters"
+          description="Try adjusting your search or filters."
+          actionLabel={isFiltering ? "Clear filters" : undefined}
+          onAction={isFiltering ? handleClearFilters : undefined}
+        />
       ) : (
         <div ref={listContainerRef} className="space-y-6 max-h-[70vh] overflow-auto pr-1">
           {selectedDay && !selectedDayHasEvents ? (
@@ -790,4 +801,6 @@ export default function CalendarPage() {
     </div>
   );
 }
+
+
 

@@ -14,7 +14,8 @@ import {
   Music, 
   Globe, 
   Settings,
-  Sparkles
+  Sparkles,
+  Brain
 } from "lucide-react";
 
 const mainNavItems = [
@@ -29,6 +30,7 @@ const moreNavItems = [
   { icon: FileText, label: "Documents", path: "/documents" },
   { icon: Music, label: "Music", path: "/music" },
   { icon: Globe, label: "Web Links", path: "/links" },
+  { icon: Brain, label: "Learn with AI", path: "/learn-ai" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 

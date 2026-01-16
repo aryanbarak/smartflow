@@ -13,6 +13,7 @@ import DocumentsPage from "./pages/DocumentsPage";
 import MusicPage from "./pages/MusicPage";
 import LinksPage from "./pages/LinksPage";
 import SettingsPage from "./pages/SettingsPage";
+import LearnAIPage from "./pages/LearnAIPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/documents" element={<DocumentsPage />} />
               <Route path="/music" element={<MusicPage />} />
               <Route path="/links" element={<LinksPage />} />
+              <Route path="/learn-ai" element={<LearnAIPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />

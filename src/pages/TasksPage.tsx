@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Calendar, Trash2, Pencil, Loader2 } from "lucide-react";
+import { Plus, Calendar, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { StatePanel } from "@/components/common/StatePanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -173,17 +173,14 @@ export default function TasksPage() {
       </motion.div>
 
       {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {isLoading ? (
-        <div className="flex items-center gap-2 text-muted-foreground mb-4">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Loading tasks...
+        <div className="mb-4">
+          <StatePanel
+            variant="error"
+            title="Unable to load tasks"
+            description={error}
+          />
         </div>
-      ) : null}
+      )}
 
       <Tabs value={filter} onValueChange={(value) => setFilter(value as TaskFilter)} className="space-y-6">
         <TabsList className="bg-secondary">
@@ -194,7 +191,13 @@ export default function TasksPage() {
         </TabsList>
 
         <TabsContent value={filter} className="space-y-3">
-          {filteredTasks.length > 0 ? (
+          {isLoading ? (
+            <StatePanel
+              variant="loading"
+              title="Loading tasks"
+              description="Fetching your tasks..."
+            />
+          ) : filteredTasks.length > 0 ? (
             filteredTasks.map((task) => (
               <motion.div
                 key={task.id}
@@ -240,11 +243,13 @@ export default function TasksPage() {
               </motion.div>
             ))
           ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">No tasks in this view</p>
-              </CardContent>
-            </Card>
+            <StatePanel
+              variant="empty"
+              title="No tasks in this view"
+              description="Try a different filter or add a new task."
+              actionLabel="Add task"
+              onAction={openNewTask}
+            />
           )}
         </TabsContent>
       </Tabs>

@@ -1,0 +1,118 @@
+import type { LearnAIMode, LearnAILanguage } from "./types";
+import { buildAgentUrl, isConfigured } from "@/config/aiAgent";
+
+type AskInput = {
+  message: string;
+  mode: LearnAIMode;
+  language: LearnAILanguage;
+};
+
+type AIAgentErrorCode =
+  | "AI_AGENT_NOT_CONFIGURED"
+  | "AI_AGENT_REQUEST_FAILED"
+  | "AI_AGENT_BAD_RESPONSE"
+  | "AI_AGENT_TIMEOUT";
+
+class AIAgentError extends Error {
+  code: AIAgentErrorCode;
+  debug?: string;
+
+  constructor(code: AIAgentErrorCode, message: string, debug?: string) {
+    super(message);
+    this.name = "AIAgentError";
+    this.code = code;
+    this.debug = debug;
+  }
+}
+
+const logDebug = (message: string, details?: string) => {
+  if (!import.meta.env.DEV) return;
+  if (details) {
+    console.debug(`[LearnAI] ${message}`, details);
+  } else {
+    console.debug(`[LearnAI] ${message}`);
+  }
+};
+
+export async function askLearnAI(input: AskInput): Promise<{ answer: string }> {
+  const useProxy = import.meta.env.DEV;
+  if (!isConfigured() && !useProxy) {
+    logDebug("AI agent not configured", "Missing VITE_AI_AGENT_URL");
+    throw new AIAgentError(
+      "AI_AGENT_NOT_CONFIGURED",
+      "AI endpoint not configured. Set VITE_AI_AGENT_URL=https://api.barakzai.cloud (or http://localhost:8000 for local)."
+    );
+  }
+
+  const url = useProxy ? "/__ai/analyze" : buildAgentUrl("/analyze");
+  const controller = new AbortController();
+  const timeoutMs = 20_000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        message: input.message,
+        language: input.language,
+      }),
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      logDebug("AI request timed out", `timeout=${timeoutMs}ms url=${url}`);
+      throw new AIAgentError(
+        "AI_AGENT_TIMEOUT",
+        "AI request timed out after 20 seconds.",
+        `timeout=${timeoutMs}ms url=${url}`
+      );
+    }
+    const debug = err instanceof Error ? err.message : String(err);
+    logDebug("AI request failed", `fetch failed: ${debug}; url=${url}`);
+    throw new AIAgentError(
+      "AI_AGENT_REQUEST_FAILED",
+      "Unable to reach the AI endpoint. Check network or CORS settings.",
+      `fetch failed: ${debug}; url=${url}`
+    );
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  if (!response.ok) {
+    let bodyText = "";
+    try {
+      bodyText = await response.text();
+    } catch {
+      bodyText = "[unable to read response body]";
+    }
+    logDebug(
+      "AI bad response",
+      `status=${response.status} ${response.statusText}; body=${bodyText}`
+    );
+    throw new AIAgentError(
+      "AI_AGENT_BAD_RESPONSE",
+      `AI endpoint returned ${response.status}.`,
+      `status=${response.status} ${response.statusText}; body=${bodyText}`
+    );
+  }
+
+  let data: { answer?: string };
+  try {
+    data = (await response.json()) as { answer?: string };
+  } catch (err) {
+    const debug = err instanceof Error ? err.message : String(err);
+    logDebug("AI invalid JSON", `json parse failed: ${debug}`);
+    throw new AIAgentError(
+      "AI_AGENT_BAD_RESPONSE",
+      "AI endpoint returned invalid JSON.",
+      `json parse failed: ${debug}`
+    );
+  }
+  return {
+    answer: data.answer ?? "No response from AI.",
+  };
+}

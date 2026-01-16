@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Plus,
@@ -32,6 +32,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { StatePanel } from "@/components/common/StatePanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -212,7 +213,7 @@ export default function FinancePage() {
         key = `week-${formatDateISO(wkStart)}`;
         const wkEnd = new Date(wkStart);
         wkEnd.setDate(wkEnd.getDate() + 6);
-        label = `${wkStart.toLocaleDateString()} – ${wkEnd.toLocaleDateString()}`;
+        label = `${wkStart.toLocaleDateString()} - ${wkEnd.toLocaleDateString()}`;
       }
 
       if (!map.has(key)) {
@@ -239,7 +240,7 @@ export default function FinancePage() {
     return result;
   }, [filteredTransactions, groupBy]);
 
-  // ---------- Totals = خلاصه‌ی دیتای قابل مشاهده ----------
+  // ---------- Totals = Ø®Ù„Ø§ØµÙ‡â€ŒÛŒ Ø¯ÛŒØªØ§ÛŒ Ù‚Ø§Ø¨Ù„ Ù…Ø´Ø§Ù‡Ø¯Ù‡ ----------
 
   const totals = useMemo(() => {
     const income = filteredTransactions
@@ -375,8 +376,8 @@ export default function FinancePage() {
 
     const docTitle =
       filter === "all"
-        ? "Finance – All transactions"
-        : `Finance – ${monthLabel}`;
+        ? "Finance - All transactions"
+        : `Finance - ${monthLabel}`;
 
     const win = window.open("", "_blank");
     if (!win) return;
@@ -477,11 +478,13 @@ export default function FinancePage() {
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
       {financeError && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>
-            {financeError || "Failed to load finance data. Please try again."}
-          </AlertDescription>
-        </Alert>
+        <div className="mb-4">
+          <StatePanel
+            variant="error"
+            title="Finance failed to load"
+            description={financeError || "Failed to load finance data. Please try again."}
+          />
+        </div>
       )}
       {/* Header */}
       <motion.div
@@ -600,7 +603,7 @@ export default function FinancePage() {
               <div>
                 <p className="text-xs text-muted-foreground">Income</p>
                 <p className="text-xl font-semibold text-success">
-                  {isInitialLoading ? "Loading…" : formatCurrency(totals.income)}
+                  {isInitialLoading ? "Loading..." : formatCurrency(totals.income)}
                 </p>
               </div>
               <div className="w-9 h-9 rounded-lg bg-success/20 flex items-center justify-center">
@@ -616,7 +619,7 @@ export default function FinancePage() {
               <div>
                 <p className="text-xs text-muted-foreground">Expenses</p>
                 <p className="text-xl font-semibold text-destructive">
-                  {isInitialLoading ? "Loading…" : formatCurrency(totals.expense)}
+                  {isInitialLoading ? "Loading..." : formatCurrency(totals.expense)}
                 </p>
               </div>
               <div className="w-9 h-9 rounded-lg bg-destructive/20 flex items-center justify-center">
@@ -632,7 +635,7 @@ export default function FinancePage() {
               <div>
                 <p className="text-xs text-muted-foreground">Balance</p>
                 <p className="text-xl font-semibold text-primary">
-                  {isInitialLoading ? "Loading…" : formatCurrency(totals.net)}
+                  {isInitialLoading ? "Loading..." : formatCurrency(totals.net)}
                 </p>
               </div>
               <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center">
@@ -780,26 +783,30 @@ export default function FinancePage() {
       </Card>
 
       {/* Simple bar chart */}
-      <Card className="mb-6">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">
-            {groupBy === "week"
-              ? "Weekly income vs expenses"
-              : groupBy === "day"
-              ? "Daily income vs expenses"
-              : "Income vs expenses"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isInitialLoading ? (
-            <p className="text-xs text-muted-foreground">
-              Loading chart…
-            </p>
-          ) : !hasFilteredResults ? (
-            <p className="text-xs text-muted-foreground">
-              No data for chart with current filters.
-            </p>
-          ) : (
+      {isInitialLoading ? (
+        <StatePanel
+          variant="loading"
+          title="Loading chart..."
+          description="Fetching your finance data."
+        />
+      ) : !hasFilteredResults ? (
+        <StatePanel
+          variant="empty"
+          title="No data for chart"
+          description="Adjust your filters to see chart data."
+        />
+      ) : (
+        <Card className="mb-6">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">
+              {groupBy === "week"
+                ? "Weekly income vs expenses"
+                : groupBy === "day"
+                ? "Daily income vs expenses"
+                : "Income vs expenses"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
               {chartGroups.map((g) => (
                 <div key={g.key} className="space-y-1">
@@ -854,39 +861,37 @@ export default function FinancePage() {
                 </div>
               ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Grouped list + empty states */}
-      <Card>
-        <CardContent className="space-y-4 pt-6">
-          {isInitialLoading ? (
-            <div className="py-8 text-center text-muted-foreground">
-              Loading transactions…
-            </div>
-          ) : !hasAnyTransactions ? (
-            <div className="py-8 text-center text-muted-foreground space-y-4">
-              <p>No transactions yet.</p>
-              <p className="text-xs text-muted-foreground">
-                Start by adding your first income or expense. Once you have data, charts and category insights will appear here.
-              </p>
-              <Button variant="secondary" onClick={openNew}>
-                Add Entry
-              </Button>
-            </div>
-          ) : !hasFilteredResults ? (
-            <div className="py-8 text-center text-muted-foreground space-y-4">
-              <p>No results for your current filters.</p>
-              <p className="text-xs text-muted-foreground">
-                Try adjusting your search, type toggles, or category filter.
-              </p>
-              <Button variant="secondary" onClick={handleClearFilters}>
-                Clear filters
-              </Button>
-            </div>
-          ) : (
-            groups.map((g) => (
+      {isInitialLoading ? (
+        <StatePanel
+          variant="loading"
+          title="Loading transactions..."
+          description="Fetching your finance data."
+        />
+      ) : !hasAnyTransactions ? (
+        <StatePanel
+          variant="empty"
+          title="No transactions yet"
+          description="Start by adding your first income or expense. Once you have data, charts and category insights will appear here."
+          actionLabel="Add entry"
+          onAction={openNew}
+        />
+      ) : !hasFilteredResults ? (
+        <StatePanel
+          variant="empty"
+          title="No results for your current filters"
+          description="Try adjusting your search, type toggles, or category filter."
+          actionLabel="Clear filters"
+          onAction={handleClearFilters}
+        />
+      ) : (
+        <Card>
+          <CardContent className="space-y-4 pt-6">
+            {groups.map((g) => (
               <div key={g.key} className="space-y-2">
                 {groupBy !== "none" && (
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -895,7 +900,7 @@ export default function FinancePage() {
                     </span>
                     <span>
                       {g.transactions.length} item
-                      {g.transactions.length > 1 ? "s" : ""} · Net:{" "}
+                      {g.transactions.length > 1 ? "s" : ""} Net:{" "}
                       <span
                         className={cn(
                           g.net >= 0 ? "text-success" : "text-destructive"
@@ -971,12 +976,11 @@ export default function FinancePage() {
                   );
                 })}
               </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
-
-      <AlertDialog
+            ))}
+          </CardContent>
+        </Card>
+      )}
+<AlertDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
       >
@@ -998,3 +1002,13 @@ export default function FinancePage() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+

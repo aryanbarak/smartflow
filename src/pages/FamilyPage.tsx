@@ -1,4 +1,4 @@
-// src/pages/FamilyPage.tsx
+﻿// src/pages/FamilyPage.tsx
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { StatePanel } from "@/components/common/StatePanel";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useFamily } from "@/hooks/useFamily";
 import {
@@ -75,7 +76,7 @@ export default function FamilyPage() {
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Form state for Add Child (v1: فقط پروفایل ساده)
+  // Form state for Add Child (v1: ÙÙ‚Ø· Ù¾Ø±ÙˆÙØ§ÛŒÙ„ Ø³Ø§Ø¯Ù‡)
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [color, setColor] = useState<string>(defaultColors[0]);
@@ -187,7 +188,7 @@ export default function FamilyPage() {
       age: numericAge,
       color,
       initials,
-      schedule: [], // v1: خالی؛ بعداً فیچرهای ویرایش را اضافه می‌کنیم
+      schedule: [], // v1: Ø®Ø§Ù„ÛŒØ› Ø¨Ø¹Ø¯Ø§Ù‹ ÙÛŒÚ†Ø±Ù‡Ø§ÛŒ ÙˆÛŒØ±Ø§ÛŒØ´ Ø±Ø§ Ø§Ø¶Ø§ÙÙ‡ Ù…ÛŒâ€ŒÚ©Ù†ÛŒÙ…
       notes: [],
       events: [],
     });
@@ -306,11 +307,13 @@ export default function FamilyPage() {
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
       {/* Error banner */}
       {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>
-            {error || "Failed to load family data."}
-          </AlertDescription>
-        </Alert>
+        <div className="mb-4">
+          <StatePanel
+            variant="error"
+            title="Family failed to load"
+            description={error || "Failed to load family data."}
+          />
+        </div>
       )}
 
       {/* Header */}
@@ -388,22 +391,19 @@ export default function FamilyPage() {
 
       {/* Main content */}
       {isInitialLoading ? (
-        <div className="py-16 text-center text-muted-foreground">
-          Loading family data…
-        </div>
+        <StatePanel
+          variant="loading"
+          title="Loading family data..."
+          description="Fetching your family profiles."
+        />
       ) : !hasChildren ? (
-        <Card>
-          <CardContent className="py-10 text-center space-y-3">
-            <p className="font-medium">No family members yet.</p>
-            <p className="text-sm text-muted-foreground">
-              Add your children to track schedules, notes, and important
-              events in one place.
-            </p>
-            <Button variant="secondary" onClick={handleOpenNew}>
-              Add First Child
-            </Button>
-          </CardContent>
-        </Card>
+        <StatePanel
+          variant="empty"
+          title="No family members yet"
+          description="Add your children to track schedules, notes, and important events in one place."
+          actionLabel="Add first child"
+          onAction={handleOpenNew}
+        />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[260px,1fr]">
           {/* Left: children list */}
@@ -805,3 +805,7 @@ export default function FamilyPage() {
     </div>
   );
 }
+
+
+
+
