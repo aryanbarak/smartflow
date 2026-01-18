@@ -48,6 +48,10 @@ export async function askLearnAI(input: AskInput): Promise<{ answer: string }> {
   const controller = new AbortController();
   const timeoutMs = 20_000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  // Generate request ID for tracking
+  const requestId = crypto.randomUUID();
+  logDebug(`Request ID: ${requestId}`, `message="${input.message.substring(0, 50)}..."`);
 
   let response: Response;
   try {
@@ -55,6 +59,7 @@ export async function askLearnAI(input: AskInput): Promise<{ answer: string }> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "X-Request-ID": requestId,  // Send request ID to backend
       },
       signal: controller.signal,
       body: JSON.stringify({
@@ -65,19 +70,19 @@ export async function askLearnAI(input: AskInput): Promise<{ answer: string }> {
     });
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
-      logDebug("AI request timed out", `timeout=${timeoutMs}ms url=${url}`);
+      logDebug("AI request timed out", `timeout=${timeoutMs}ms url=${url} requestId=${requestId}`);
       throw new AIAgentError(
         "AI_AGENT_TIMEOUT",
         "AI request timed out after 20 seconds.",
-        `timeout=${timeoutMs}ms url=${url}`
+        `timeout=${timeoutMs}ms url=${url} requestId=${requestId}`
       );
     }
     const debug = err instanceof Error ? err.message : String(err);
-    logDebug("AI request failed", `fetch failed: ${debug}; url=${url}`);
+    logDebug("AI request failed", `fetch failed: ${debug}; url=${url} requestId=${requestId}`);
     throw new AIAgentError(
       "AI_AGENT_REQUEST_FAILED",
       "Unable to reach the AI endpoint. Check network or CORS settings.",
-      `fetch failed: ${debug}; url=${url}`
+      `fetch failed: ${debug}; url=${url} requestId=${requestId}`
     );
   } finally {
     clearTimeout(timeoutId);
@@ -90,15 +95,23 @@ export async function askLearnAI(input: AskInput): Promise<{ answer: string }> {
     } catch {
       bodyText = "[unable to read response body]";
     }
+    // Try to get request ID from response header
+    const responseRequestId = response.headers.get("X-Request-ID");
     logDebug(
       "AI bad response",
-      `status=${response.status} ${response.statusText}; body=${bodyText}`
+      `status=${response.status} ${response.statusText}; body=${bodyText} requestId=${responseRequestId || requestId}`
     );
     throw new AIAgentError(
       "AI_AGENT_BAD_RESPONSE",
       `AI endpoint returned ${response.status}.`,
-      `status=${response.status} ${response.statusText}; body=${bodyText}`
+      `status=${response.status} ${response.statusText}; body=${bodyText} requestId=${responseRequestId || requestId}`
     );
+  }
+  
+  // Log successful response with request ID from backend
+  const backendRequestId = response.headers.get("X-Request-ID");
+  if (backendRequestId) {
+    logDebug(`Response received`, `requestId=${backendRequestId}`);
   }
 
   type AnalyzeResult = {

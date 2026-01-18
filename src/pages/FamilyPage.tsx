@@ -20,6 +20,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { StatePanel } from "@/components/common/StatePanel";
+import {
+  SkeletonBlock,
+  SkeletonCard,
+  SkeletonListItem,
+  SkeletonSection,
+} from "@/components/common/Skeletons";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useFamily } from "@/hooks/useFamily";
 import {
@@ -391,11 +397,33 @@ export default function FamilyPage() {
 
       {/* Main content */}
       {isInitialLoading ? (
-        <StatePanel
-          variant="loading"
-          title="Loading family data..."
-          description="Fetching your family profiles."
-        />
+        <div className="grid gap-6 lg:grid-cols-[260px,1fr]">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">
+                <SkeletonBlock className="h-4 w-20" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <SkeletonListItem key={idx} />
+              ))}
+            </CardContent>
+          </Card>
+          <div className="space-y-4">
+            <SkeletonCard />
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  <SkeletonBlock className="h-4 w-40" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <SkeletonSection rows={2} />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       ) : !hasChildren ? (
         <StatePanel
           variant="empty"

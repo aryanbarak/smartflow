@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { StatePanel } from "@/components/common/StatePanel";
+import { SkeletonBlock, SkeletonListItem } from "@/components/common/Skeletons";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -498,6 +499,7 @@ export default function CalendarPage() {
   const calendarErrorMessage = calendarError instanceof Error
     ? calendarError.message
     : "Failed to load calendar events.";
+  const isInitialLoading = isLoading && rangeEvents.length === 0;
 
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
@@ -633,12 +635,23 @@ export default function CalendarPage() {
           title="Calendar failed to load"
           description={calendarErrorMessage}
         />
-      ) : isLoading ? (
-        <StatePanel
-          variant="loading"
-          title="Loading calendar..."
-          description="Fetching your events."
-        />
+      ) : isInitialLoading ? (
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <Card key={idx}>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">
+                  <SkeletonBlock className="h-4 w-36" />
+                </CardTitle>
+                <SkeletonBlock className="h-5 w-16 rounded-full" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <SkeletonListItem />
+                <SkeletonListItem />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : !hasAnyEvents ? (
         <StatePanel
           variant="empty"

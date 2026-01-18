@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { StatePanel } from "@/components/common/StatePanel";
+import { SkeletonListItem } from "@/components/common/Skeletons";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -83,6 +84,7 @@ export default function DocumentsPage() {
         return bTime - aTime;
       });
   }, [documents]);
+  const isInitialLoading = isLoading && sortedDocs.length === 0;
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
@@ -263,12 +265,12 @@ export default function DocumentsPage() {
                 title="Unable to load documents"
                 description={error}
               />
-            ) : isLoading ? (
-              <StatePanel
-                variant="loading"
-                title="Loading documents"
-                description="Fetching your files..."
-              />
+            ) : isInitialLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <SkeletonListItem key={idx} />
+                ))}
+              </div>
             ) : sortedDocs.length === 0 ? (
               <StatePanel
                 variant="empty"

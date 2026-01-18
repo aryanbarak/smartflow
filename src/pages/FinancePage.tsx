@@ -34,6 +34,11 @@ import { Toggle } from "@/components/ui/toggle";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { StatePanel } from "@/components/common/StatePanel";
 import {
+  SkeletonBlock,
+  SkeletonCard,
+  SkeletonListItem,
+} from "@/components/common/Skeletons";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -591,60 +596,68 @@ export default function FinancePage() {
       </motion.div>
 
       {/* Totals */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="grid sm:grid-cols-3 gap-3 mb-6"
-      >
-        <Card className="bg-success/10 border-success/20">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Income</p>
-                <p className="text-xl font-semibold text-success">
-                  {isInitialLoading ? "Loading..." : formatCurrency(totals.income)}
-                </p>
+      {isInitialLoading ? (
+        <div className="grid sm:grid-cols-3 gap-3 mb-6">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <SkeletonCard key={idx} />
+          ))}
+        </div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="grid sm:grid-cols-3 gap-3 mb-6"
+        >
+          <Card className="bg-success/10 border-success/20">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">Income</p>
+                  <p className="text-xl font-semibold text-success">
+                    {formatCurrency(totals.income)}
+                  </p>
+                </div>
+                <div className="w-9 h-9 rounded-lg bg-success/20 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-success" />
+                </div>
               </div>
-              <div className="w-9 h-9 rounded-lg bg-success/20 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4 text-success" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="bg-destructive/10 border-destructive/20">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Expenses</p>
-                <p className="text-xl font-semibold text-destructive">
-                  {isInitialLoading ? "Loading..." : formatCurrency(totals.expense)}
-                </p>
+          <Card className="bg-destructive/10 border-destructive/20">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">Expenses</p>
+                  <p className="text-xl font-semibold text-destructive">
+                    {formatCurrency(totals.expense)}
+                  </p>
+                </div>
+                <div className="w-9 h-9 rounded-lg bg-destructive/20 flex items-center justify-center">
+                  <TrendingDown className="w-4 h-4 text-destructive" />
+                </div>
               </div>
-              <div className="w-9 h-9 rounded-lg bg-destructive/20 flex items-center justify-center">
-                <TrendingDown className="w-4 h-4 text-destructive" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="bg-primary/10 border-primary/20">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Balance</p>
-                <p className="text-xl font-semibold text-primary">
-                  {isInitialLoading ? "Loading..." : formatCurrency(totals.net)}
-                </p>
+          <Card className="bg-primary/10 border-primary/20">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">Balance</p>
+                  <p className="text-xl font-semibold text-primary">
+                    {formatCurrency(totals.net)}
+                  </p>
+                </div>
+                <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 text-primary" />
+                </div>
               </div>
-              <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center">
-                <DollarSign className="w-4 h-4 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Transactions header: tabs + month nav + group by */}
       <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
@@ -784,11 +797,20 @@ export default function FinancePage() {
 
       {/* Simple bar chart */}
       {isInitialLoading ? (
-        <StatePanel
-          variant="loading"
-          title="Loading chart..."
-          description="Fetching your finance data."
-        />
+        <Card className="mb-6">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">
+              <SkeletonBlock className="h-4 w-40" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <SkeletonBlock key={idx} className="h-8 w-full" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       ) : !hasFilteredResults ? (
         <StatePanel
           variant="empty"
@@ -867,11 +889,13 @@ export default function FinancePage() {
 
       {/* Grouped list + empty states */}
       {isInitialLoading ? (
-        <StatePanel
-          variant="loading"
-          title="Loading transactions..."
-          description="Fetching your finance data."
-        />
+        <Card>
+          <CardContent className="space-y-3 pt-6">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <SkeletonListItem key={idx} />
+            ))}
+          </CardContent>
+        </Card>
       ) : !hasAnyTransactions ? (
         <StatePanel
           variant="empty"

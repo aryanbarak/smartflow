@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { StatePanel } from "@/components/common/StatePanel";
+import { SkeletonListItem } from "@/components/common/Skeletons";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +45,7 @@ export default function TasksPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const today = new Date();
+  const isInitialLoading = isLoading && tasks.length === 0;
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -191,12 +193,12 @@ export default function TasksPage() {
         </TabsList>
 
         <TabsContent value={filter} className="space-y-3">
-          {isLoading ? (
-            <StatePanel
-              variant="loading"
-              title="Loading tasks"
-              description="Fetching your tasks..."
-            />
+          {isInitialLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 8 }).map((_, idx) => (
+                <SkeletonListItem key={idx} />
+              ))}
+            </div>
           ) : filteredTasks.length > 0 ? (
             filteredTasks.map((task) => (
               <motion.div
