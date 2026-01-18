@@ -170,7 +170,7 @@ export default function LearnAIPage() {
             {error && messages.length > 0 && (
               <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
                 <p className="text-xs text-destructive font-medium">
-                  {typeof error === 'string' ? error : error.message || 'خطایی رخ داده است'}
+                  {error.message || 'خطایی رخ داده است'}
                 </p>
               </div>
             )}
