@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { StatePanel } from "@/components/common/StatePanel";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { cn } from "@/lib/utils";
 import { useLearnAI } from "@/hooks/useLearnAI";
 import type { LearnAILanguage, LearnAIMode } from "@/features/learn-ai/types";
@@ -46,9 +47,15 @@ export default function LearnAIPage() {
   const handleSend = async () => {
     if (!draft.trim()) return;
     setIsSending(true);
-    await sendMessage(draft);
-    setDraft("");
-    setIsSending(false);
+    try {
+      await sendMessage(draft);
+      setDraft("");
+    } catch (err) {
+      console.error('[LearnAI] Unexpected error in handleSend:', err);
+      // Error is already handled in useLearnAI hook
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleHistoryClick = (id: string) => {
@@ -74,21 +81,22 @@ export default function LearnAIPage() {
   }, []);
 
   return (
-    <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-start justify-between gap-4 flex-wrap"
-      >
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-semibold mb-1">
-            Learn with AI
-          </h1>
-          <p className="text-muted-foreground">
-            Learn algorithms and IT concepts with your personal AI tutor
-          </p>
-        </div>
-      </motion.div>
+    <ErrorBoundary>
+      <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-start justify-between gap-4 flex-wrap"
+        >
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-semibold mb-1">
+              Learn with AI
+            </h1>
+            <p className="text-muted-foreground">
+              Learn algorithms and IT concepts with your personal AI tutor
+            </p>
+          </div>
+        </motion.div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
         <Card className="min-h-[360px]">
@@ -160,7 +168,18 @@ export default function LearnAIPage() {
             )}
 
             {error && messages.length > 0 && (
-              <p className="text-xs text-destructive">{error}</p>
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
+                <p className="text-xs text-destructive font-medium">
+                  {typeof error === 'string' ? error : error.message || 'خطایی رخ داده است'}
+                </p>
+              </div>
+            )}
+
+            {isSending && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                <span>در حال ارسال پیام...</span>
+              </div>
             )}
 
             <div className="space-y-2">
@@ -281,6 +300,6 @@ export default function LearnAIPage() {
           </Card>
         </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

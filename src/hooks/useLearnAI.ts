@@ -96,6 +96,7 @@ export function useLearnAI() {
           console.debug(`[LearnAI] Response from cache (requestId=${result.requestId})`);
         }
       } catch (err) {
+        console.error('[LearnAI] Error getting AI response:', err);
         aiError = formatError(err, language);
         setError(aiError);
         
@@ -115,8 +116,10 @@ export function useLearnAI() {
         language,
       };
 
+      // Always add message to UI even if storage fails
       setMessages((prev) => [...prev, assistantMessage]);
 
+      // Try to save to localStorage, but don't let it crash the UI
       try {
         await insertMessage({
           userId: user.id,
@@ -126,8 +129,12 @@ export function useLearnAI() {
           content: answer,
         });
       } catch (err) {
-        const formattedError = formatError(err, language);
-        setError(formattedError);
+        console.error('[LearnAI] Failed to save message to localStorage:', err);
+        // Don't update error state here to avoid overwriting AI error
+        if (!aiError) {
+          const formattedError = formatError(err, language);
+          setError(formattedError);
+        }
       }
     },
     [language, mode, user]
