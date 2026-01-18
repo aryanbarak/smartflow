@@ -60,6 +60,7 @@ export async function askLearnAI(input: AskInput): Promise<{ answer: string }> {
       body: JSON.stringify({
         message: input.message,
         language: input.language,
+        mode: input.mode,
       }),
     });
   } catch (err) {
@@ -100,19 +101,81 @@ export async function askLearnAI(input: AskInput): Promise<{ answer: string }> {
     );
   }
 
-  let data: { answer?: string };
+  type AnalyzeResult = {
+    summary?: string;
+    steps?: string[];
+    example?: string | null;
+    pseudocode?: string | null;
+    visual?: string | null;
+    meta?: {
+      type?: string;
+      lang?: string;
+      mode?: string;
+      model?: string;
+      cached?: boolean;
+      retry_after_seconds?: number | null;
+    };
+    // Some responses might include answer as plain text.
+    answer?: string;
+  };
+
+  const parseErrorMessage =
+    input.language === "fa"
+      ? "پاسخ قابل پردازش نبود. لطفا دوباره تلاش کنید."
+      : input.language === "en"
+      ? "The response could not be parsed. Please try again."
+      : "Antwort konnte nicht verarbeitet werden. Bitte erneut versuchen.";
+
+  function toText(r: AnalyzeResult): string {
+    if (typeof r.answer === "string" && r.answer.trim()) return r.answer.trim();
+
+    const parts: string[] = [];
+    if (r.summary) parts.push(r.summary.trim());
+
+    if (Array.isArray(r.steps) && r.steps.length) {
+      parts.push(
+        input.language === "fa"
+          ? "گام‌ها:"
+          : input.language === "en"
+          ? "Steps:"
+          : "Schritte:"
+      );
+      r.steps.forEach((s, i) => parts.push(`${i + 1}. ${String(s).trim()}`));
+    }
+
+    if (r.example) {
+      parts.push(
+        input.language === "fa"
+          ? "مثال:"
+          : input.language === "en"
+          ? "Example:"
+          : "Beispiel:"
+      );
+      parts.push(String(r.example).trim());
+    }
+
+    if (r.pseudocode) {
+      parts.push(input.language === "fa" ? "شبه‌کد:" : "Pseudocode:");
+      parts.push(String(r.pseudocode).trim());
+    }
+
+    if (r.visual) {
+      parts.push(input.language === "fa" ? "نمایش:" : "Visual:");
+      parts.push(String(r.visual).trim());
+    }
+
+    const out = parts.join("\n").trim();
+    return out || "No response from AI.";
+  }
+
+  let data: AnalyzeResult = {};
   try {
-    data = (await response.json()) as { answer?: string };
+    data = (await response.json()) as AnalyzeResult;
   } catch (err) {
     const debug = err instanceof Error ? err.message : String(err);
     logDebug("AI invalid JSON", `json parse failed: ${debug}`);
-    throw new AIAgentError(
-      "AI_AGENT_BAD_RESPONSE",
-      "AI endpoint returned invalid JSON.",
-      `json parse failed: ${debug}`
-    );
+    data = { summary: parseErrorMessage };
   }
-  return {
-    answer: data.answer ?? "No response from AI.",
-  };
+
+  return { answer: toText(data) };
 }

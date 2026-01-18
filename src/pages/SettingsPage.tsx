@@ -425,7 +425,7 @@ export default function SettingsPage() {
                 DailyFlow - Your Personal Life Organizer
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Built with security in mind
+                Barakzai.Cloud 2024 © All rights reserved.
               </p>
             </div>
           </CardContent>
