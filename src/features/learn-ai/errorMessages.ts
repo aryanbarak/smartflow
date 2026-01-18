@@ -7,6 +7,7 @@ type ErrorMessageKey =
   | "bad_response"
   | "quota_exceeded"
   | "parse_error"
+  | "api_key_error"
   | "unknown_error";
 
 type ErrorMessages = {
@@ -122,6 +123,23 @@ export const ERROR_MESSAGES: ErrorMessages = {
       action: "Please try again.",
     },
   },
+  api_key_error: {
+    de: {
+      title: "API-Schlüssel Problem",
+      message: "Der Google Gemini API-Schlüssel ist abgelaufen oder ungültig.",
+      action: "Bitte kontaktieren Sie den Administrator für einen neuen Schlüssel.",
+    },
+    fa: {
+      title: "مشکل کلید API",
+      message: "کلید API Google Gemini منقضی شده یا نامعتبر است.",
+      action: "لطفاً با مدیر سیستم تماس بگیرید تا کلید جدیدی دریافت کنید.",
+    },
+    en: {
+      title: "API Key Problem",
+      message: "The Google Gemini API key has expired or is invalid.",
+      action: "Please contact the administrator for a new key.",
+    },
+  },
   unknown_error: {
     de: {
       title: "Unbekannter Fehler",
@@ -158,8 +176,20 @@ export function formatErrorForUser(
 
   if (error instanceof Error) {
     const errorCode = (error as any).code;
+    const errorMsg = error.message.toLowerCase();
 
-    switch (errorCode) {
+    // Check for API key errors first
+    if (
+      errorMsg.includes("api key") &&
+      (errorMsg.includes("expired") ||
+        errorMsg.includes("invalid") ||
+        errorMsg.includes("abgelaufen") ||
+        errorMsg.includes("منقضی"))
+    ) {
+      key = "api_key_error";
+      canRetry = false;
+    } else {
+      switch (errorCode) {
       case "AI_AGENT_NOT_CONFIGURED":
         key = "not_configured";
         canRetry = false;
@@ -179,9 +209,9 @@ export function formatErrorForUser(
       default:
         // Check if it's a quota error by message
         if (
-          error.message.toLowerCase().includes("quota") ||
-          error.message.toLowerCase().includes("429") ||
-          error.message.toLowerCase().includes("سهمیه")
+          errorMsg.includes("quota") ||
+          errorMsg.includes("429") ||
+          errorMsg.includes("سهمیه")
         ) {
           key = "quota_exceeded";
           canRetry = true;
@@ -189,6 +219,7 @@ export function formatErrorForUser(
           key = "unknown_error";
           canRetry = true;
         }
+      }
     }
   }
 
