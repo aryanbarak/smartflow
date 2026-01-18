@@ -1,5 +1,6 @@
 import type { LearnAIMode, LearnAILanguage } from "./types";
 import { buildAgentUrl, isConfigured } from "@/config/aiAgent";
+import { formatErrorForUser } from "./errorMessages";
 
 type AskInput = {
   message: string;
@@ -7,11 +8,26 @@ type AskInput = {
   language: LearnAILanguage;
 };
 
+export type AIResult = {
+  answer: string;
+  requestId?: string;
+  cached?: boolean;
+};
+
+export type AIError = {
+  title: string;
+  message: string;
+  action?: string;
+  canRetry: boolean;
+  debug?: string;
+};
+
 type AIAgentErrorCode =
   | "AI_AGENT_NOT_CONFIGURED"
   | "AI_AGENT_REQUEST_FAILED"
   | "AI_AGENT_BAD_RESPONSE"
-  | "AI_AGENT_TIMEOUT";
+  | "AI_AGENT_TIMEOUT"
+  | "AI_AGENT_QUOTA_EXCEEDED";
 
 class AIAgentError extends Error {
   code: AIAgentErrorCode;
@@ -190,5 +206,28 @@ export async function askLearnAI(input: AskInput): Promise<{ answer: string }> {
     data = { summary: parseErrorMessage };
   }
 
-  return { answer: toText(data) };
+  // Check for quota error in meta
+  if (data.meta?.type === "quota") {
+    throw new AIAgentError(
+      "AI_AGENT_QUOTA_EXCEEDED",
+      "AI quota exceeded",
+      `retry_after=${data.meta.retry_after_seconds}s`
+    );
+  }
+
+  return {
+    answer: toText(data),
+    requestId: backendRequestId || undefined,
+    cached: data.meta?.cached,
+  };
+}
+
+export function formatError(error: unknown, language: LearnAILanguage): AIError {
+  const formatted = formatErrorForUser(error, language);
+  const debug = error instanceof Error ? (error as any).debug : undefined;
+
+  return {
+    ...formatted,
+    debug,
+  };
 }
