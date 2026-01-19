@@ -3,7 +3,7 @@ name: Deploy DailyFlow
 on:
   push:
     branches: ["main"]
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 jobs:
   deploy:
@@ -37,33 +37,45 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keygen -lf ~/.ssh/deploy_key
 
-      - name: Upload dist (rsync)
+      - name: Upload dist (rsync to tmp)
         shell: bash
         run: |
           set -euo pipefail
           RELEASE_ID=$(date +%Y%m%d_%H%M%S)
-          echo "RELEASE_ID=$RELEASE_ID" >> $GITHUB_ENV
+          echo "RELEASE_ID=$RELEASE_ID" >> "$GITHUB_ENV"
 
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "sudo mkdir -p /var/www/barakzai.cloud/releases/$RELEASE_ID"
+            "rm -rf /home/${{ secrets.SSH_USER }}/dailyflow_upload_$RELEASE_ID && mkdir -p /home/${{ secrets.SSH_USER }}/dailyflow_upload_$RELEASE_ID"
 
-          rsync -az \
+          rsync -az --delete \
             -e "ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
             dist/ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/barakzai.cloud/releases/$RELEASE_ID/
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/dailyflow_upload_$RELEASE_ID/
 
-      - name: Activate release + reload nginx
+      - name: Activate release + cleanup + reload nginx
         shell: bash
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'SSH'
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" <<'SSH'
           set -euo pipefail
 
           BASE="/var/www/barakzai.cloud"
           RELEASES="$BASE/releases"
+          RELEASE_ID="${RELEASE_ID}"
+          SRC="/home/ec2-user/dailyflow_upload_${RELEASE_ID}"
+
+          sudo mkdir -p "$RELEASES"
+          sudo rm -rf "$RELEASES/$RELEASE_ID"
+          sudo mv "$SRC" "$RELEASES/$RELEASE_ID"
+
+          sudo chown -R root:root "$RELEASES/$RELEASE_ID"
+          sudo find "$RELEASES/$RELEASE_ID" -type d -exec chmod 755 {} \;
+          sudo find "$RELEASES/$RELEASE_ID" -type f -exec chmod 644 {} \;
 
           sudo ln -sfn "$RELEASES/$RELEASE_ID" "$BASE/dist"
+
+          sudo ls -1dt "$RELEASES"/* | tail -n +4 | xargs -r sudo rm -rf
 
           sudo nginx -t
           sudo systemctl reload nginx
