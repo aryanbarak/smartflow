@@ -56,26 +56,29 @@ jobs:
       - name: Activate release + cleanup + reload nginx
         shell: bash
         run: |
+          set -euo pipefail
+          RELEASE_ID="${{ env.RELEASE_ID }}"
+
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" <<'SSH'
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "bash -s" <<SSH
           set -euo pipefail
 
           BASE="/var/www/barakzai.cloud"
-          RELEASES="$BASE/releases"
-          RELEASE_ID="${RELEASE_ID}"
+          RELEASES="\$BASE/releases"
           SRC="/home/ec2-user/dailyflow_upload_${RELEASE_ID}"
 
-          sudo mkdir -p "$RELEASES"
-          sudo rm -rf "$RELEASES/$RELEASE_ID"
-          sudo mv "$SRC" "$RELEASES/$RELEASE_ID"
+          sudo mkdir -p "\$RELEASES"
+          sudo rm -rf "\$RELEASES/${RELEASE_ID}"
+          sudo mv "\$SRC" "\$RELEASES/${RELEASE_ID}"
 
-          sudo chown -R root:root "$RELEASES/$RELEASE_ID"
-          sudo find "$RELEASES/$RELEASE_ID" -type d -exec chmod 755 {} \;
-          sudo find "$RELEASES/$RELEASE_ID" -type f -exec chmod 644 {} \;
+          sudo chown -R root:root "\$RELEASES/${RELEASE_ID}"
+          sudo find "\$RELEASES/${RELEASE_ID}" -type d -exec chmod 755 {} \;
+          sudo find "\$RELEASES/${RELEASE_ID}" -type f -exec chmod 644 {} \;
 
-          sudo ln -sfn "$RELEASES/$RELEASE_ID" "$BASE/dist"
+          sudo ln -sfn "\$RELEASES/${RELEASE_ID}" "\$BASE/dist"
 
-          sudo ls -1dt "$RELEASES"/* | tail -n +4 | xargs -r sudo rm -rf
+          sudo ls -1dt "\$RELEASES"/* | tail -n +4 | xargs -r sudo rm -rf
 
           sudo nginx -t
           sudo systemctl reload nginx
