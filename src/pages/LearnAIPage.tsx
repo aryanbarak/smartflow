@@ -98,8 +98,8 @@ export default function LearnAIPage() {
           </div>
         </motion.div>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <Card className="min-h-[360px]">
+        <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+          <Card className="min-h-[360px]">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary" />
