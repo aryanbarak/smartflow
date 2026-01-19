@@ -1,0 +1,74 @@
+name: Deploy DailyFlow
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify dist
+        run: test -f dist/index.html
+
+      - name: Add SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Upload dist (rsync)
+        run: |
+          RELEASE_ID=$(date +%Y%m%d_%H%M%S)
+          echo "RELEASE_ID=$RELEASE_ID" >> $GITHUB_ENV
+
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "sudo mkdir -p /var/www/barakzai.cloud/releases/$RELEASE_ID"
+
+          rsync -az --delete \
+            -e "ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
+            dist/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/barakzai.cloud/releases/$RELEASE_ID/
+
+      - name: Activate release + cleanup + reload nginx
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'SSH'
+          set -euo pipefail
+
+          BASE="/var/www/barakzai.cloud"
+          RELEASES="$BASE/releases"
+          RELEASE_ID="${RELEASE_ID}"
+
+          sudo chown -R root:root "$RELEASES/$RELEASE_ID"
+          sudo find "$RELEASES/$RELEASE_ID" -type d -exec chmod 755 {} \;
+          sudo find "$RELEASES/$RELEASE_ID" -type f -exec chmod 644 {} \;
+
+          # atomic switch dist -> new release
+          sudo ln -sfn "$RELEASES/$RELEASE_ID" "$BASE/dist"
+
+          # keep last 3 releases
+          sudo ls -1dt "$RELEASES"/* | tail -n +4 | xargs -r sudo rm -rf
+
+          sudo nginx -t
+          sudo systemctl reload nginx
+          SSH
+
