@@ -52,7 +52,7 @@ jobs:
             -e "ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
             dist/ \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/dailyflow_upload_$RELEASE_ID/
-    
+
       - name: Activate release + cleanup + reload nginx
         shell: bash
         run: |
@@ -87,5 +87,3 @@ jobs:
             sudo systemctl restart nginx || true
           fi
           SSH
-
-     
