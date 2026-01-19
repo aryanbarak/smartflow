@@ -98,8 +98,8 @@ export default function LearnAIPage() {
           </div>
         </motion.div>
 
-        <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-          <Card className="min-h-[360px]">
+      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+        <Card className="min-h-[360px]">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary" />
@@ -170,7 +170,7 @@ export default function LearnAIPage() {
             {error && messages.length > 0 && (
               <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
                 <p className="text-xs text-destructive font-medium">
-                  {error.message || 'خطایی رخ داده است'}
+                  {typeof error === 'string' ? error : error.message || 'خطایی رخ داده است'}
                 </p>
               </div>
             )}
@@ -299,6 +299,7 @@ export default function LearnAIPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
       </div>
     </ErrorBoundary>
   );
