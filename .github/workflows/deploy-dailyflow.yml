@@ -1,8 +1,70 @@
-- name: Add SSH key (base64)
-  shell: bash
-  run: |
-    set -euo pipefail
-    mkdir -p ~/.ssh
-    echo "${{ secrets.SSH_PRIVATE_KEY_B64 }}" | base64 -d > ~/.ssh/deploy_key
-    chmod 600 ~/.ssh/deploy_key
-    ssh-keygen -lf ~/.ssh/deploy_key
+name: Deploy DailyFlow
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify dist
+        run: test -f dist/index.html
+
+      - name: Add SSH key (base64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY_B64 }}" | base64 -d > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -lf ~/.ssh/deploy_key
+
+      - name: Upload dist (rsync)
+        shell: bash
+        run: |
+          set -euo pipefail
+          RELEASE_ID=$(date +%Y%m%d_%H%M%S)
+          echo "RELEASE_ID=$RELEASE_ID" >> $GITHUB_ENV
+
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "sudo mkdir -p /var/www/barakzai.cloud/releases/$RELEASE_ID"
+
+          rsync -az \
+            -e "ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
+            dist/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/barakzai.cloud/releases/$RELEASE_ID/
+
+      - name: Activate release + reload nginx
+        shell: bash
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'SSH'
+          set -euo pipefail
+
+          BASE="/var/www/barakzai.cloud"
+          RELEASES="$BASE/releases"
+
+          sudo ln -sfn "$RELEASES/$RELEASE_ID" "$BASE/dist"
+
+          sudo nginx -t
+          sudo systemctl reload nginx
+          SSH
