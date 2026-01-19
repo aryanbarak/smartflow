@@ -1,6 +1,8 @@
-# DailyFlow
+# DailyFlow 🚀
 
 Local-first MVP for tasks, calendar, and finance tracking. This build uses a demo auth session stored in `localStorage` and does not connect to Supabase.
+
+> **✨ Now with automated GitHub Actions deployment!** Every push to `main` automatically deploys to production.
 
 ## Requirements
 
@@ -42,3 +44,16 @@ This MVP runs without secrets. See `.env.example` for an optional example.
 ## Supabase (future)
 
 This project can be extended to use Supabase later. Add your Supabase env variables and wire the services to the API layer when you are ready.
+
+---
+
+## 🚀 Deployment
+
+This project uses **GitHub Actions** for automated deployment to AWS EC2:
+
+- **Production URL**: https://barakzai.cloud
+- **API**: https://api.barakzai.cloud
+- **Auto-deploy**: Every push to `main` triggers deployment
+- **Zero-downtime**: Atomic symlink deployment with rollback support
+
+See [DEPLOYMENT_SETUP.md](DEPLOYMENT_SETUP.md) for complete deployment documentation.
