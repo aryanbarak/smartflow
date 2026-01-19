@@ -117,7 +117,7 @@ export default function LearnAIPage() {
               <StatePanel
                 variant="error"
                 title="Learning history failed to load"
-                description={error}
+                description={typeof error === 'string' ? error : error.message}
               />
             ) : messages.length === 0 ? (
               <StatePanel
@@ -145,7 +145,7 @@ export default function LearnAIPage() {
                       <div
                         id={`learnai-msg-${message.id}`}
                         dir={isRtl ? "rtl" : "ltr"}
-                        lang={isRtl ? "fa" : messageLanguage}
+                        lang={isRtl ? "fa" : (messageLanguage || "de")}
                         className={cn(
                           "max-w-[85%] rounded-lg px-3 py-2 text-sm transition-shadow",
                           message.role === "user"
@@ -257,7 +257,7 @@ export default function LearnAIPage() {
                 <StatePanel
                   variant="error"
                   title="History failed to load"
-                  description={error}
+                  description={typeof error === 'string' ? error : error.message}
                 />
               ) : historyItems.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -278,7 +278,7 @@ export default function LearnAIPage() {
                           <button
                             type="button"
                             dir={isRtl ? "rtl" : "ltr"}
-                            lang={isRtl ? "fa" : itemLanguage}
+                            lang={isRtl ? "fa" : (itemLanguage || "de")}
                             aria-label={`Go to message: ${item.content}`}
                             onClick={() => handleHistoryClick(item.id)}
                             className={cn(
