@@ -15,7 +15,8 @@ import {
   Globe, 
   Settings,
   Sparkles,
-  Brain
+  Brain,
+  GraduationCap,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -31,6 +32,7 @@ const moreNavItems = [
   { icon: Music, label: "Music", path: "/music" },
   { icon: Globe, label: "Web Links", path: "/links" },
   { icon: Brain, label: "Learn with AI", path: "/learn-ai" },
+  { icon: GraduationCap, label: "Tutor", path: "/tutor" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 

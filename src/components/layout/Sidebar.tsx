@@ -10,7 +10,8 @@ import {
   Globe, 
   Settings,
   Sparkles,
-  Brain
+  Brain,
+  GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,6 +27,7 @@ const navItems = [
   { icon: Music, label: "Music", path: "/music" },
   { icon: Globe, label: "Web Links", path: "/links" },
   { icon: Brain, label: "Learn with AI", path: "/learn-ai" },
+  { icon: GraduationCap, label: "Tutor", path: "/tutor" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
