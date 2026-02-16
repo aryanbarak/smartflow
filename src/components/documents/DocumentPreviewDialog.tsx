@@ -1,6 +1,7 @@
 ﻿
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
+import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
   Dialog,
   DialogContent,
@@ -28,19 +29,10 @@ import { useToast } from "@/hooks/use-toast";
 // Text tool: click to edit, Enter=save, Esc=cancel, drag to move.
 const DEBUG = false;
 const DEBUG_TEXT = false;
-let workerSrcUrl: string;
-try {
-  workerSrcUrl = new URL(
-    "pdfjs-dist/build/pdf.worker.min.js",
-    import.meta.url,
-  ).toString();
-} catch {
-  workerSrcUrl = new URL(
-    "pdfjs-dist/legacy/build/pdf.worker.min.js",
-    import.meta.url,
-  ).toString();
-}
-pdfjs.GlobalWorkerOptions.workerSrc = workerSrcUrl;
+const workerVersion = encodeURIComponent(pdfjs.version || "");
+pdfjs.GlobalWorkerOptions.workerSrc = workerVersion
+  ? `${pdfWorkerSrc}${pdfWorkerSrc.includes("?") ? "&" : "?"}v=${workerVersion}`
+  : pdfWorkerSrc;
 
 export interface DocumentPreviewItem {
   id: string;

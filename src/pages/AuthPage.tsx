@@ -82,16 +82,31 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen auth-shell flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
         className="w-full max-w-md"
       >
-        <Card className="border-border/50 shadow-lg">
-          <CardHeader className="text-center space-y-2">
-            <CardTitle className="text-2xl font-bold">
+        <Card className="border-border/50 shadow-card-lg overflow-hidden">
+          <div className="auth-card-banner px-6 py-5 border-b border-border/60">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  DailyFlow
+                </p>
+                <h2 className="text-lg font-semibold font-display">
+                  Organize with clarity.
+                </h2>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-primary-foreground" />
+              </div>
+            </div>
+          </div>
+          <CardHeader className="text-left space-y-2">
+            <CardTitle className="text-2xl font-bold font-display">
               {isSignUp ? "Create Account" : "Welcome Back"}
             </CardTitle>
             <CardDescription>
@@ -99,6 +114,17 @@ export default function AuthPage() {
                 ? "Sign up to start organizing your life"
                 : "Sign in to continue to DailyFlow"}
             </CardDescription>
+            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <span className="rounded-full border border-border/60 px-2 py-1">
+                Plan smarter
+              </span>
+              <span className="rounded-full border border-border/60 px-2 py-1">
+                Track money
+              </span>
+              <span className="rounded-full border border-border/60 px-2 py-1">
+                Learn faster
+              </span>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">

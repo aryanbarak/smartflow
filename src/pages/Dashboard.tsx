@@ -177,16 +177,54 @@ export default function Dashboard() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-2xl lg:text-3xl font-semibold mb-1">
+        <h1 className="text-2xl sm:text-3xl font-semibold mb-1 font-display tracking-tight">
           Dashboard
         </h1>
         <p className="text-muted-foreground">{todayLabel}</p>
       </motion.div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
+      <Card className="mb-6 border-0 text-primary-foreground hero-surface shadow-card-lg">
+        <CardContent className="pt-6">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-[0.2em] text-white/70">
+                DailyFlow
+              </p>
+              <h2 className="text-2xl sm:text-3xl font-semibold font-display leading-tight">
+                Your day, simplified.
+              </h2>
+              <p className="text-sm text-white/80 max-w-xl">
+                Keep tasks, events, and money in one calm space. Focus on what
+                matters most today.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 w-full lg:w-auto">
+              <div className="rounded-xl bg-white/12 border border-white/15 px-4 py-3">
+                <p className="text-xs text-white/70">Open tasks</p>
+                <p className="text-lg font-semibold">{incompleteCount}</p>
+              </div>
+              <div className="rounded-xl bg-white/12 border border-white/15 px-4 py-3">
+                <p className="text-xs text-white/70">Events today</p>
+                <p className="text-lg font-semibold">{todayEvents.length}</p>
+              </div>
+              <div className="rounded-xl bg-white/12 border border-white/15 px-4 py-3 sm:col-auto col-span-2">
+                <p className="text-xs text-white/70">Net this month</p>
+                <p className="text-lg font-semibold">
+                  {formatCurrency(financeSummary.net)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="glass-card card-accent">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/80 sm:hidden">
+              Overview
+            </p>
+            <CardTitle className="text-base sm:text-sm font-semibold flex items-center gap-2">
               <Calendar className="w-4 h-4 text-primary" />
               Today
             </CardTitle>
@@ -217,9 +255,12 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card card-accent">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/80 sm:hidden">
+              Overview
+            </p>
+            <CardTitle className="text-base sm:text-sm font-semibold flex items-center gap-2">
               <CheckSquare className="w-4 h-4 text-primary" />
               Tasks
             </CardTitle>
@@ -269,9 +310,12 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card card-accent">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/80 sm:hidden">
+              Overview
+            </p>
+            <CardTitle className="text-base sm:text-sm font-semibold flex items-center gap-2">
               <Wallet className="w-4 h-4 text-primary" />
               Finance
             </CardTitle>
@@ -317,9 +361,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="glass-card card-accent lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CardTitle className="text-base sm:text-sm font-semibold flex items-center gap-2">
               <Users className="w-4 h-4 text-primary" />
               Family
             </CardTitle>
@@ -369,9 +413,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card card-accent">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CardTitle className="text-base sm:text-sm font-semibold flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary" />
               Learn with AI
             </CardTitle>

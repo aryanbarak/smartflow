@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
@@ -136,7 +137,7 @@
   }
 
   html {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Sora', 'Inter', system-ui, sans-serif;
   }
 }
 
@@ -171,6 +172,40 @@
 
   .nav-link-active {
     @apply bg-primary/10 text-primary font-medium;
+  }
+
+  .hero-surface {
+    background:
+      radial-gradient(800px circle at 10% 20%, rgba(255, 255, 255, 0.18), transparent 55%),
+      radial-gradient(600px circle at 90% 10%, rgba(255, 255, 255, 0.12), transparent 45%),
+      var(--gradient-primary);
+    box-shadow: var(--shadow-glow);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .card-accent {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-accent::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: var(--gradient-primary);
+    opacity: 0.7;
+  }
+
+  .auth-shell {
+    background:
+      radial-gradient(1200px circle at 12% 12%, rgba(45, 152, 141, 0.18), transparent 55%),
+      radial-gradient(900px circle at 88% 0%, rgba(255, 180, 90, 0.16), transparent 45%),
+      hsl(var(--background));
+  }
+
+  .auth-card-banner {
+    background: linear-gradient(135deg, rgba(45, 152, 141, 0.22), rgba(45, 152, 141, 0.04));
   }
 }
 

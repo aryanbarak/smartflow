@@ -27,5 +27,21 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
+    build: {
+      chunkSizeWarningLimit: 650,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes("node_modules/pdfjs-dist")) return "pdfjs";
+            if (id.includes("node_modules/react-pdf")) return "react-pdf";
+            if (id.includes("node_modules/recharts")) return "recharts";
+            if (id.includes("node_modules/@supabase/supabase-js")) return "supabase";
+            if (id.includes("node_modules/framer-motion")) return "framer-motion";
+            if (id.includes("node_modules/@tanstack/react-query")) return "tanstack-query";
+            if (id.includes("node_modules/pdf-lib")) return "pdf-lib";
+          },
+        },
+      },
+    },
   };
 });
