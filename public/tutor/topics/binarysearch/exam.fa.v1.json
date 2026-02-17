@@ -1,6 +1,6 @@
 {
-  "content_revision": "18591f0dc9ac9207118fe0f32589f5a373aaa33d",
-  "generated_at": "2026-02-15T20:56:08+01:00",
+  "content_revision": "e103b08de106462c1e5fd1662cd2143788fdda5d",
+  "generated_at": "2026-02-17T03:10:09+01:00",
   "lang": "fa",
   "question_count": 10,
   "questions": [
@@ -22,9 +22,9 @@
         "arr": "int[]",
         "target": "int"
       },
-      "solution": "l=0,r=4 -> mid=2 (5<7) l=3? mid=3 (7) پیدا شد، اندیس 3.",
+      "solution": "l=0,r=4 -> mid=2 (5<7) l=3? mid=3 (7)    3.",
       "solution_de": "l=0,r=4 -> mid=2 (5<7) l=3; mid=3 (7) gefunden, Index 3.",
-      "solution_fa": "l=0,r=4 -> mid=2 (5<7) l=3? mid=3 (7) پیدا شد، اندیس 3.",
+      "solution_fa": "l=0,r=4 -> mid=2 (5<7) l=3? mid=3 (7)    3.",
       "task": "جست‌وجوی دودویی روی arr=[1,3,5,7,9] با target=7 را اجرا کن. توالی midها و اندیس نهایی را بنویس.",
       "task_de": "Fuehre die binaere Suche auf arr=[1,3,5,7,9] mit target=7 aus. Gib die mid-Indizes und den Trefferindex an.",
       "task_fa": "جست‌وجوی دودویی روی arr=[1,3,5,7,9] با target=7 را اجرا کن. توالی midها و اندیس نهایی را بنویس.",
@@ -63,9 +63,9 @@
         "arr": "int[]",
         "target": "int"
       },
-      "solution": "mid=2 (6<7) l=3? mid=3 (8>7) r=2? l>r -> پیدا نشد.",
+      "solution": "mid=2 (6<7) l=3? mid=3 (8>7) r=2? l>r ->  .",
       "solution_de": "mid=2 (6<7) l=3; mid=3 (8>7) r=2; l>r -> nicht gefunden.",
-      "solution_fa": "mid=2 (6<7) l=3? mid=3 (8>7) r=2? l>r -> پیدا نشد.",
+      "solution_fa": "mid=2 (6<7) l=3? mid=3 (8>7) r=2? l>r ->  .",
       "task": "arr=[2,4,6,8,10] و target=7. نتیجه جست‌وجوی دودویی چیست؟",
       "task_de": "arr=[2,4,6,8,10], target=7. Gib das Ergebnis der binaeren Suche an.",
       "task_fa": "arr=[2,4,6,8,10] و target=7. نتیجه جست‌وجوی دودویی چیست؟",
@@ -350,7 +350,7 @@
       "solution_fa": "با low < high اندیس 2 بررسی نمی‌شود و 12 ممکن است پیدا نشود.",
       "task": "خطای off-by-one: arr=[5,8,12], target=12. با شرط اشتباه low < high چه می‌شود؟",
       "task_de": "Off-by-one: arr=[5,8,12], target=12. Was passiert mit der falschen Bedingung low < high?",
-      "task_fa": "???? off-by-one: arr=[5,8,12], target=12. ?? ??? ?????? low < high ?? ???????",
+      "task_fa": "خطای off-by-one: arr=[5,8,12], target=12. با شرط اشتباه low < high چه می‌شود؟",
       "traps": [
         "low < high آخرین عنصر را جا می‌اندازد",
         "شرط درست low <= high است",
