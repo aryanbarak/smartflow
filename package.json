@@ -15,6 +15,8 @@
     "tutor:prep": "npm run tutor:export && npm run tutor:sync && npm run tutor:verify",
     "dev:tutor": "npm run tutor:prep && vite",
     "build:tutor": "npm run tutor:prep && vite build"
+    ,
+    "test": "vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -90,5 +92,7 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^7.3.1"
+    ,
+    "vitest": "^2.1.9"
   }
 }

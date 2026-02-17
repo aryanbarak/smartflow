@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,13 +15,14 @@ import MusicPage from "./pages/MusicPage";
 import LinksPage from "./pages/LinksPage";
 import SettingsPage from "./pages/SettingsPage";
 import LearnAIPage from "./pages/LearnAIPage";
-import TutorPage from "./pages/TutorPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import { AppLoader } from "@/components/AppLoader";
 
 const queryClient = new QueryClient();
+const TutorPage = lazy(() => import("./pages/TutorPage"));
+const TutorAppPage = lazy(() => import("./pages/TutorAppPage"));
 
 const ProtectedRoute = () => {
   const { session, isLoading } = useAuth();
@@ -55,7 +57,22 @@ const App = () => (
               <Route path="/music" element={<MusicPage />} />
               <Route path="/links" element={<LinksPage />} />
               <Route path="/learn-ai" element={<LearnAIPage />} />
-              <Route path="/tutor" element={<TutorPage />} />
+              <Route
+                path="/tutor"
+                element={
+                  <Suspense fallback={<AppLoader />}>
+                    <TutorPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/tutor/app"
+                element={
+                  <Suspense fallback={<AppLoader />}>
+                    <TutorAppPage />
+                  </Suspense>
+                }
+              />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />

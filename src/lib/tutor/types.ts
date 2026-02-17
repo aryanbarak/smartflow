@@ -51,3 +51,31 @@ export interface TutorExamBankAp2Bundle {
   exam: TutorExamBank;
 }
 
+export type TutorRunMode = "pseudocode" | "trace" | "quiz" | "exam" | "explain";
+export type TutorRunLang = "de" | "fa";
+
+export interface TutorVariant {
+  id: string;
+  label?: string;
+  description?: string;
+  is_default?: boolean;
+}
+
+export interface TutorRunRequestPayload {
+  api_version: "v1";
+  request_id: string;
+  topic: string;
+  mode: TutorRunMode;
+  lang: TutorRunLang;
+  params: Record<string, unknown>;
+}
+
+export interface TutorRunExecution {
+  request: TutorRunRequestPayload;
+  raw: Record<string, unknown>;
+  result: unknown;
+  events: unknown[];
+  stats: Record<string, unknown> | null;
+  questions: unknown[];
+  logs: string[];
+}

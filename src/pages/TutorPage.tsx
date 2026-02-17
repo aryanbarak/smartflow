@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { StatePanel } from "@/components/common/StatePanel";
 import { ExamBankToolbar } from "@/components/tutor/ExamBankToolbar";
 import { ExamQuestionList } from "@/components/tutor/ExamQuestionList";
@@ -89,6 +91,11 @@ export default function TutorPage() {
         <p className="text-muted-foreground">
           Static source: manifest, index, and exam bank from <code>/tutor</code>.
         </p>
+        <div className="pt-2">
+          <Button asChild size="sm" variant="outline">
+            <Link to="/tutor/app">Open Tutor App</Link>
+          </Button>
+        </div>
       </motion.div>
 
       {isLoading ? (
@@ -145,4 +152,3 @@ export default function TutorPage() {
     </div>
   );
 }
-
