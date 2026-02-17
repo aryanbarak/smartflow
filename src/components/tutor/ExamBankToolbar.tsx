@@ -23,41 +23,46 @@ export function ExamBankToolbar({
   categories,
 }: ExamBankToolbarProps) {
   return (
-    <div className="grid gap-3 md:grid-cols-3">
-      <Input
-        value={search}
-        onChange={(event) => onSearchChange(event.target.value)}
-        placeholder="Search question, answer, explain..."
-      />
+    <div className="grid gap-3 md:grid-cols-12">
+      <div className="md:col-span-3">
+        <Select value={category} onValueChange={onCategoryChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All categories</SelectItem>
+            {categories.map((item) => (
+              <SelectItem key={item} value={item}>
+                {item}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      <Select value={difficulty} onValueChange={onDifficultyChange}>
-        <SelectTrigger>
-          <SelectValue placeholder="Difficulty" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All difficulties</SelectItem>
-          {difficulties.map((item) => (
-            <SelectItem key={item} value={item}>
-              {item}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="md:col-span-3">
+        <Select value={difficulty} onValueChange={onDifficultyChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Difficulty" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All difficulties</SelectItem>
+            {difficulties.map((item) => (
+              <SelectItem key={item} value={item}>
+                {item}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      <Select value={category} onValueChange={onCategoryChange}>
-        <SelectTrigger>
-          <SelectValue placeholder="Category" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All categories</SelectItem>
-          {categories.map((item) => (
-            <SelectItem key={item} value={item}>
-              {item}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="md:col-span-6">
+        <Input
+          value={search}
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="Search question text"
+        />
+      </div>
     </div>
   );
 }
-

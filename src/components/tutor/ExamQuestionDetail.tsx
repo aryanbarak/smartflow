@@ -34,11 +34,11 @@ export function ExamQuestionDetail({ question }: ExamQuestionDetailProps) {
   const explainText = pickExplainText(question);
 
   return (
-    <Card>
+    <Card className="lg:max-h-[calc(100vh-230px)]">
       <CardHeader>
         <CardTitle className="text-base">{question.id}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 lg:overflow-y-auto lg:max-h-[calc(100vh-310px)] pr-1">
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">Question</h3>
           <p className="text-sm whitespace-pre-wrap">{questionText || "No question text available."}</p>
@@ -64,4 +64,3 @@ export function ExamQuestionDetail({ question }: ExamQuestionDetailProps) {
     </Card>
   );
 }
-
