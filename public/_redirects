@@ -1,2 +1,3 @@
 ﻿/tutor-api/*  /tutor-api/:splat  200
 /*            /index.html        200
+# keep tutor-api static
