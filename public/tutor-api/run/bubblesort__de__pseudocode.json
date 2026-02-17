@@ -1,0 +1,1 @@
+﻿{"detail":[{"type":"missing","loc":["body","params"],"msg":"Field required","input":{"api_version":"v1","request_id":"11111111-1111-1111-1111-111111111111","topic":"bubblesort","lang":"de","mode":"pseudocode"}}]}
