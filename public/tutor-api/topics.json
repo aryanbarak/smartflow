@@ -1,0 +1,4 @@
+﻿{
+  "topics": ["bubblesort", "selectionsort", "insertionsort"],
+  "source": "static-test"
+}
