@@ -1248,7 +1248,7 @@ export function DocumentPreviewDialog({
 
         <div
           ref={viewportRef}
-          className="h-[calc(100dvh-170px)] min-h-[300px] overflow-y-auto overflow-x-hidden rounded-md border border-border/60 bg-muted/20 sm:h-auto sm:min-h-[60vh] sm:max-h-[75vh] sm:overflow-auto"
+          className="h-[calc(100dvh-170px)] min-h-[300px] overflow-auto touch-pan-x touch-pan-y rounded-md border border-border/60 bg-muted/20 sm:h-auto sm:min-h-[60vh] sm:max-h-[75vh] sm:overflow-auto"
         >
           <div className="p-2 sm:p-4">
             {isLoading && (
@@ -1287,7 +1287,7 @@ export function DocumentPreviewDialog({
                           ref={(node) => {
                             pageContainerRefs.current[pageIndex] = node;
                           }}
-                          className="relative mx-auto my-2 inline-block w-fit max-w-full sm:my-3"
+                          className="relative mx-auto my-2 inline-block w-fit sm:my-3"
                           style={{
                             display: isHidden ? "none" : "inline-block",
                             cursor: tool === "text" ? "text" : "default",
