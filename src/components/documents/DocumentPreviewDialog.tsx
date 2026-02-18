@@ -188,6 +188,9 @@ export function DocumentPreviewDialog({
   const dragTextRef = useRef<DragState | null>(null);
   const lastTextOpenRef = useRef(0);
   const isHydratingRef = useRef(false);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const [isCompactViewport, setIsCompactViewport] = useState(false);
+  const [mobilePageWidth, setMobilePageWidth] = useState<number | null>(null);
 
   const docKey = useMemo(
     () => `${document?.id ?? ""}:${document?.path ?? ""}`,
@@ -317,6 +320,28 @@ export function DocumentPreviewDialog({
     }, 400);
     return () => window.clearTimeout(handle);
   }, [annotations, logDebug, open, storageKey]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 640px)");
+    const syncCompactViewport = () => setIsCompactViewport(media.matches);
+    syncCompactViewport();
+    media.addEventListener("change", syncCompactViewport);
+    return () => media.removeEventListener("change", syncCompactViewport);
+  }, []);
+
+  useEffect(() => {
+    if (!open || !isPdf || !isCompactViewport) {
+      setMobilePageWidth(null);
+      return;
+    }
+    const node = viewportRef.current;
+    if (!node) return;
+    const syncWidth = () => setMobilePageWidth(Math.floor(node.clientWidth));
+    syncWidth();
+    const observer = new ResizeObserver(syncWidth);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [isCompactViewport, isPdf, open]);
 
   useEffect(() => {
     if (!open || !textPrefsKey) return;
@@ -1015,7 +1040,7 @@ export function DocumentPreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl w-[95vw]">
+      <DialogContent className="left-0 top-0 h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 gap-2 rounded-none border-0 p-3 sm:left-[50%] sm:top-[50%] sm:h-auto sm:w-[95vw] sm:max-w-5xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:gap-4 sm:rounded-lg sm:border sm:p-6">
         <DialogHeader>
           <DialogTitle>{document.name}</DialogTitle>
           <div className="text-xs text-muted-foreground">
@@ -1023,7 +1048,7 @@ export function DocumentPreviewDialog({
           </div>
         </DialogHeader>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border border-border/60 rounded-md px-3 py-2">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-2 overflow-x-auto rounded-md border border-border/60 bg-background/95 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:flex-wrap sm:overflow-visible sm:px-3">
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="icon" onClick={() => setScale((s) => Math.max(0.5, s - 0.2))}>
               <ZoomOut className="w-4 h-4" />
@@ -1208,8 +1233,11 @@ export function DocumentPreviewDialog({
           </div>
         )}
 
-        <div className="min-h-[60vh] max-h-[75vh] overflow-auto rounded-md border border-border/60 bg-muted/20">
-          <div className="p-4">
+        <div
+          ref={viewportRef}
+          className="h-[calc(100dvh-170px)] min-h-[300px] overflow-y-auto overflow-x-hidden rounded-md border border-border/60 bg-muted/20 sm:h-auto sm:min-h-[60vh] sm:max-h-[75vh] sm:overflow-auto"
+        >
+          <div className="p-2 sm:p-4">
             {isLoading && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -1220,7 +1248,7 @@ export function DocumentPreviewDialog({
               <div className="text-sm text-destructive">{error}</div>
             )}
             {!isLoading && !error && signedUrl && isPdf && pdfFile && (
-              <div className="w-full">
+              <div className="w-full text-center">
                 <Document
                   key={docKey}
                   file={pdfFile}
@@ -1246,7 +1274,7 @@ export function DocumentPreviewDialog({
                           ref={(node) => {
                             pageContainerRefs.current[pageIndex] = node;
                           }}
-                          className="relative inline-block my-3"
+                          className="relative mx-auto my-2 inline-block w-fit max-w-full sm:my-3"
                           style={{
                             display: isHidden ? "none" : "inline-block",
                             cursor: tool === "text" ? "text" : "default",
@@ -1262,6 +1290,7 @@ export function DocumentPreviewDialog({
                         >
                           <Page
                             pageNumber={pageIndex}
+                            width={isCompactViewport && mobilePageWidth ? Math.max(240, mobilePageWidth - 16) : undefined}
                             scale={scale}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
