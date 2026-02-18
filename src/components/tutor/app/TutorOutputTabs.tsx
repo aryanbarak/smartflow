@@ -336,6 +336,39 @@ function renderQuestions(questions: unknown[]) {
 function renderExplainResult(result: unknown) {
   if (!isRecord(result)) return null;
 
+  const schemaName = typeof result.schema_name === "string" ? result.schema_name : "";
+  if (schemaName === "tutor_asset.explain.v1") {
+    const title = typeof result.title === "string" ? result.title : "";
+    const summary = typeof result.summary === "string" ? result.summary : "";
+    const lang = typeof result.lang === "string" ? result.lang.toLowerCase() : "de";
+    const rtl = lang === "fa";
+    const blocks = Array.isArray(result.blocks) ? result.blocks : [];
+    if (!title && !summary && blocks.length === 0) return null;
+
+    return (
+      <div className="space-y-4">
+        {title && <h3 className="text-base font-semibold">{title}</h3>}
+        {summary && (
+          <div className="rounded-md border p-3">
+            {renderMultilineText(summary, rtl)}
+          </div>
+        )}
+        {blocks.map((block, index) => {
+          if (!isRecord(block)) return null;
+          const kind = typeof block.kind === "string" ? block.kind : `block-${index + 1}`;
+          const text = typeof block.text === "string" ? block.text : "";
+          if (!text.trim()) return null;
+          return (
+            <div key={`${kind}-${index}`} className="rounded-md border p-3 space-y-2">
+              <div className="font-medium capitalize">{kind.replaceAll("_", " ")}</div>
+              {renderMultilineText(text, rtl)}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   const title = typeof result.title === "string" ? result.title : "";
   const sectionsRaw = Array.isArray(result.sections) ? result.sections : [];
   if (!title && sectionsRaw.length === 0) return null;
