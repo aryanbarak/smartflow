@@ -151,15 +151,20 @@ function normalizeGlossaryEntries(rawGlossary: unknown): Array<{ term: string; d
   return [];
 }
 
-function renderPseudocodeResult(result: unknown, lang: string) {
+function renderPseudocodeResult(result: unknown, lang: string, selectedVariantFromUi?: string) {
   if (!isRecord(result) || result.mode !== "pseudocode") return null;
 
   const topic = typeof result.topic === "string" ? result.topic : "";
-  const selectedVariant = typeof result.selected_variant === "string" ? result.selected_variant : "";
-  const pseudocode = typeof result.pseudocode === "string" ? result.pseudocode : "";
   const variants = Array.isArray(result.variants) ? result.variants : [];
-
+  const selectedVariantFromResult = typeof result.selected_variant === "string" ? result.selected_variant : "";
+  const selectedVariant = selectedVariantFromUi && variants.some((item) => isRecord(item) && item.id === selectedVariantFromUi)
+    ? selectedVariantFromUi
+    : selectedVariantFromResult;
   const selectedVariantItem = variants.find((item) => isRecord(item) && item.id === selectedVariant);
+  const pseudocodeFromVariant = isRecord(selectedVariantItem) && typeof selectedVariantItem.pseudocode === "string"
+    ? selectedVariantItem.pseudocode
+    : "";
+  const pseudocode = pseudocodeFromVariant || (typeof result.pseudocode === "string" ? result.pseudocode : "");
   const variantLabels = isRecord(selectedVariantItem) && isRecord(selectedVariantItem.labels)
     ? selectedVariantItem.labels
     : null;
@@ -606,7 +611,7 @@ export function TutorOutputTabs({
                 </div>
               </div>
             )}
-            {renderPseudocodeResult(execution.result, execution.request.lang) ?? renderExplainResult(execution.result) ?? (
+            {renderPseudocodeResult(execution.result, execution.request.lang, selectedVariant) ?? renderExplainResult(execution.result) ?? (
               <pre className="max-h-[55vh] overflow-auto rounded-md border p-3 text-xs">{stringify(execution.result)}</pre>
             )}
           </TabsContent>
