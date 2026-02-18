@@ -310,7 +310,7 @@ export default function TutorAppPage() {
         </div>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
+      <div className="grid gap-4 2xl:grid-cols-[420px_1fr]">
         <TutorControlPanel
           topics={topics}
           topic={topic}
@@ -340,9 +340,9 @@ export default function TutorAppPage() {
           onPresetExplainFa={applyExplainFaDemo}
         />
 
-        <div className="space-y-3">
+        <div className="space-y-3 min-w-0">
           {requestPreview && (
-            <div className="rounded-md border p-3">
+            <div className="rounded-md border p-2.5 sm:p-3">
               <div className="mb-2 text-xs font-medium text-muted-foreground">Request Preview</div>
               <pre className="max-h-[180px] overflow-auto text-xs">{requestPreview}</pre>
             </div>

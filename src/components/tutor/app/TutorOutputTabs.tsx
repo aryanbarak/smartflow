@@ -212,9 +212,9 @@ function renderPseudocodeResult(result: unknown, lang: string, selectedVariantFr
       </div>
 
       {pseudocode && (
-        <div className="rounded-md border border-emerald-500/50 bg-[#0b2a13] p-3 space-y-2">
+        <div className="rounded-md border border-emerald-500/50 bg-[#0b2a13] p-2.5 sm:p-3 space-y-2">
           <div className="font-medium text-emerald-300">Pseudocode</div>
-          <pre className="text-xs overflow-auto whitespace-pre-wrap text-emerald-100">{pseudocode}</pre>
+          <pre className="text-[11px] sm:text-xs leading-6 overflow-auto whitespace-pre-wrap text-emerald-100">{pseudocode}</pre>
         </div>
       )}
 
@@ -555,10 +555,10 @@ export function TutorOutputTabs({
 
   return (
     <Card className="h-full border-slate-700/70 bg-[#090d1a]">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-2xl font-semibold leading-none tracking-tight">Execution Output</CardTitle>
-          <div className="flex items-center gap-2">
+      <CardHeader className="pb-3 px-3 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle className="text-xl sm:text-2xl font-semibold leading-none tracking-tight">Execution Output</CardTitle>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button size="sm" variant="outline" onClick={() => void handleCopyCode()}>
               {copyStatus === "copied" ? "Copied" : copyStatus === "error" ? "Copy failed" : "Copy Code"}
             </Button>
@@ -568,32 +568,32 @@ export function TutorOutputTabs({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 px-3 sm:px-6">
         <Tabs defaultValue="result" className="w-full">
-          <TabsList className="grid grid-cols-3 lg:grid-cols-6 w-full h-12 rounded-lg bg-[#131b2e] p-1">
-            <TabsTrigger value="result" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-300">
+          <TabsList className="flex w-full overflow-x-auto rounded-lg bg-[#131b2e] p-1 gap-1 h-auto scrollbar-thin">
+            <TabsTrigger value="result" className="min-w-[90px] data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-300">
               Result
             </TabsTrigger>
-            <TabsTrigger value="events" className="data-[state=active]:bg-slate-800 data-[state=active]:text-slate-100">
+            <TabsTrigger value="events" className="min-w-[90px] data-[state=active]:bg-slate-800 data-[state=active]:text-slate-100">
               Events
             </TabsTrigger>
-            <TabsTrigger value="questions" className="data-[state=active]:bg-slate-800 data-[state=active]:text-slate-100">
+            <TabsTrigger value="questions" className="min-w-[90px] data-[state=active]:bg-slate-800 data-[state=active]:text-slate-100">
               Questions
             </TabsTrigger>
-            <TabsTrigger value="stats" className="data-[state=active]:bg-slate-800 data-[state=active]:text-slate-100">
+            <TabsTrigger value="stats" className="min-w-[90px] data-[state=active]:bg-slate-800 data-[state=active]:text-slate-100">
               Stats
             </TabsTrigger>
-            <TabsTrigger value="raw" className="data-[state=active]:bg-slate-800 data-[state=active]:text-slate-100">
+            <TabsTrigger value="raw" className="min-w-[90px] data-[state=active]:bg-slate-800 data-[state=active]:text-slate-100">
               Raw
             </TabsTrigger>
-            <TabsTrigger value="logs" className="data-[state=active]:bg-slate-800 data-[state=active]:text-slate-100">
+            <TabsTrigger value="logs" className="min-w-[90px] data-[state=active]:bg-slate-800 data-[state=active]:text-slate-100">
               Logs
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="result" className="mt-4">
             {variantsForSelector.length > 0 && (
-              <div className="rounded-md border border-indigo-500/50 bg-indigo-500/5 p-3 mb-3">
+              <div className="sticky top-2 z-10 rounded-md border border-indigo-500/50 bg-[#0f1730]/95 backdrop-blur p-3 mb-3">
                 <div className="grid gap-2 md:grid-cols-[140px_1fr] md:items-center">
                   <div className="text-sm font-medium text-muted-foreground">Variants ({variantsForSelector.length})</div>
                   <Select value={selectedVariant} onValueChange={(value) => onVariantChange?.(value)}>

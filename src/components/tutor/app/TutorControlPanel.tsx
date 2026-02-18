@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -82,7 +81,7 @@ export function TutorControlPanel(props: TutorControlPanelProps) {
       <CardHeader className="pb-3">
         <CardTitle className="text-xl font-semibold">FIAE Tutor</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6">
         <div className="space-y-2">
           <Label>Topic</Label>
           <Select value={topic} onValueChange={onTopicChange}>
@@ -168,17 +167,17 @@ export function TutorControlPanel(props: TutorControlPanelProps) {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <Button onClick={onRun} disabled={!apiConfigured || isRunning}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <Button className="w-full" onClick={onRun} disabled={!apiConfigured || isRunning}>
             Run
           </Button>
-          <Button variant="secondary" onClick={onTest} disabled={!apiConfigured || isRunning}>
+          <Button className="w-full" variant="secondary" onClick={onTest} disabled={!apiConfigured || isRunning}>
             Test
           </Button>
-          <Button variant="outline" onClick={onExportPdf}>
+          <Button className="w-full" variant="outline" onClick={onExportPdf}>
             Export PDF
           </Button>
-          <Button variant="outline" onClick={onRequestPreview}>
+          <Button className="w-full" variant="outline" onClick={onRequestPreview}>
             Request
           </Button>
         </div>
