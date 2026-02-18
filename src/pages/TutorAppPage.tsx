@@ -89,7 +89,7 @@ export default function TutorAppPage() {
   useEffect(() => {
     let mounted = true;
     setTopicsError(null);
-    fetchTutorTopics()
+    fetchTutorTopics(mode, lang)
       .then((items) => {
         if (!mounted) return;
         setTopics(items);
@@ -108,7 +108,7 @@ export default function TutorAppPage() {
     return () => {
       mounted = false;
     };
-  }, [topic, apiConfigured]);
+  }, [topic, apiConfigured, mode, lang]);
 
   useEffect(() => {
     let mounted = true;

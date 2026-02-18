@@ -10,7 +10,7 @@ const REQUEST_HEADERS = {
   "X-Adapter-Token": API_TOKEN,
 };
 
-let topicsCache: string[] | null = null;
+const topicsCache = new Map<string, string[]>();
 let fallbackTopicsCache: string[] | null = null;
 const variantsCache = new Map<string, TutorVariant[]>();
 
@@ -72,17 +72,28 @@ export class TutorApiHttpError extends Error {
   }
 }
 
-export async function fetchTutorTopics(): Promise<string[]> {
-  if (topicsCache) return topicsCache;
+export async function fetchTutorTopics(mode?: string, lang?: TutorRunLang): Promise<string[]> {
+  const modeKey = (mode || "").trim().toLowerCase();
+  const langKey = (lang || "").trim().toLowerCase();
+  const cacheKey = `${modeKey}:${langKey}`;
+  if (topicsCache.has(cacheKey)) {
+    return topicsCache.get(cacheKey) ?? [];
+  }
 
   if (!isTutorApiConfigured()) {
-    topicsCache = await fetchStaticTopics();
-    return topicsCache;
+    const staticTopics = await fetchStaticTopics();
+    topicsCache.set(cacheKey, staticTopics);
+    return staticTopics;
   }
+
+  const query = new URLSearchParams();
+  if (modeKey) query.set("mode", modeKey);
+  if (langKey) query.set("lang", langKey);
+  const topicsUrl = `${API_URL}/v1/topics${query.toString() ? `?${query.toString()}` : ""}`;
 
   let response: Response;
   try {
-    response = await fetch(`${API_URL}/v1/topics`, { headers: REQUEST_HEADERS });
+    response = await fetch(topicsUrl, { headers: REQUEST_HEADERS });
   } catch {
     throw new TopicsEndpointError(`Topics endpoint failed (adapter unreachable at ${API_URL})`);
   }
@@ -92,7 +103,7 @@ export async function fetchTutorTopics(): Promise<string[]> {
   const payload = await response.json();
   const topics = toTopicsFromUnknown(payload);
   if (topics.length > 0) {
-    topicsCache = topics;
+    topicsCache.set(cacheKey, topics);
     return topics;
   }
 
