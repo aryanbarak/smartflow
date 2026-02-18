@@ -61,4 +61,21 @@ describe("normalizeTutorRunPayload", () => {
     expect(execution.stats).toEqual({ count: 1 });
     expect(execution.questions).toEqual([{ id: "q3" }]);
   });
+
+  it("uses direct payload as result when no result wrapper exists", () => {
+    const execution = normalizeTutorRunPayload(
+      {
+        mode: "pseudocode",
+        topic: "bubblesort",
+        pseudocode: "FUNKTION ...",
+      },
+      request,
+    );
+
+    expect(execution.result).toEqual({
+      mode: "pseudocode",
+      topic: "bubblesort",
+      pseudocode: "FUNKTION ...",
+    });
+  });
 });

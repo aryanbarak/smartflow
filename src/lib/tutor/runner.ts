@@ -56,6 +56,22 @@ export class TopicsEndpointError extends Error {
   }
 }
 
+export class TutorApiHttpError extends Error {
+  readonly status: number;
+  readonly payload: unknown;
+  readonly request: TutorRunRequestPayload;
+  readonly responseText: string;
+
+  constructor(status: number, payload: unknown, request: TutorRunRequestPayload, responseText: string) {
+    super(`Tutor API error (${status})`);
+    this.name = "TutorApiHttpError";
+    this.status = status;
+    this.payload = payload;
+    this.request = request;
+    this.responseText = responseText;
+  }
+}
+
 export async function fetchTutorTopics(): Promise<string[]> {
   if (topicsCache) return topicsCache;
 
@@ -255,7 +271,7 @@ export function normalizeTutorRunPayload(
   const nested = isRecord(outerResult) ? outerResult : null;
   const innerResult = nested && "result" in nested ? nested.result : undefined;
 
-  const result = innerResult ?? outerResult ?? null;
+  const result = innerResult ?? outerResult ?? safePayload ?? null;
 
   const events = asArray(safePayload.events ?? (nested ? nested.events : undefined));
   const statsCandidate = safePayload.stats ?? (nested ? nested.stats : undefined);
@@ -310,11 +326,21 @@ export async function runTutorRequest(
 
   if (!response.ok) {
     let detail = "";
+    let errorPayload: unknown = null;
+    let responseText = "";
     try {
-      const data = await response.json();
-      detail = extractApiErrorDetail(data);
+      responseText = await response.text();
+      errorPayload = responseText ? JSON.parse(responseText) : null;
+      detail = extractApiErrorDetail(errorPayload);
     } catch {
       // keep generic status-only error
+    }
+    if (errorPayload !== null || responseText) {
+      const error = new TutorApiHttpError(response.status, errorPayload, payload, responseText);
+      if (detail) {
+        error.message = `Tutor API error (${response.status}): ${detail}`;
+      }
+      throw error;
     }
     throw new Error(detail ? `Tutor API error (${response.status}): ${detail}` : `Tutor API error (${response.status})`);
   }

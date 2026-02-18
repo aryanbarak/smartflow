@@ -9,6 +9,7 @@ import {
   fetchTutorVariants,
   isTutorApiConfigured,
   runTutorRequest,
+  TutorApiHttpError,
 } from "@/lib/tutor/runner";
 import type { TutorRunExecution, TutorRunLang, TutorRunMode, TutorVariant } from "@/lib/tutor/types";
 
@@ -18,6 +19,10 @@ function safeParseParams(value: string): Record<string, unknown> {
     throw new Error("Params JSON must be an object");
   }
   return parsed as Record<string, unknown>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function exportExecutionPdf(execution: TutorRunExecution): void {
@@ -167,10 +172,35 @@ export default function TutorAppPage() {
       const output = await runTutorRequest({ topic, mode, lang, params: mergedParams });
       setExecution(output);
       setLogs((prev) => [...prev, `[${label}] request_id=${output.request.request_id}`]);
+      if (import.meta.env.DEV) {
+        const debugResponse = JSON.stringify(output.raw).slice(0, 500);
+        const debugRequest = JSON.stringify(output.request);
+        setLogs((prev) => [...prev, `[api-debug] request=${debugRequest}`, `[api-debug] status=200 body=${debugResponse}`]);
+      }
       setStatusText("SUCCESS");
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      setLogs((prev) => [...prev, `[${label}] failed: ${message}`]);
+      if (error instanceof TutorApiHttpError) {
+        const errorBody = isRecord(error.payload) ? error.payload : { detail: error.responseText || error.message };
+        setExecution({
+          request: error.request,
+          raw: errorBody,
+          result: errorBody,
+          events: [],
+          stats: null,
+          questions: [],
+          logs: [],
+        });
+        const preview = JSON.stringify(errorBody).slice(0, 500);
+        const requestJson = JSON.stringify(error.request);
+        setLogs((prev) => [
+          ...prev,
+          `[${label}] failed: Tutor API error (${error.status})`,
+          ...(import.meta.env.DEV ? [`[api-debug] request=${requestJson}`, `[api-debug] status=${error.status} body=${preview}`] : []),
+        ]);
+      } else {
+        const message = error instanceof Error ? error.message : String(error);
+        setLogs((prev) => [...prev, `[${label}] failed: ${message}`]);
+      }
       setStatusText("FAILED");
     } finally {
       setIsRunning(false);
