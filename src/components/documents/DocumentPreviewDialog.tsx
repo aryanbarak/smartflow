@@ -1059,6 +1059,19 @@ export function DocumentPreviewDialog({
             <Button variant="secondary" size="icon" onClick={() => setScale(1)}>
               <RotateCcw className="w-4 h-4" />
             </Button>
+            {isPdf && (
+              <div className="flex items-center gap-1">
+                <Button variant="secondary" size="sm" onClick={() => setScale(1)}>
+                  Fit width
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setScale(1)}>
+                  100%
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setScale(1.25)}>
+                  125%
+                </Button>
+              </div>
+            )}
           </div>
 
           {isPdf && viewMode === "single" && numPages > 1 && (
