@@ -34,3 +34,11 @@ This project can prepare static tutor content under `public/tutor` by calling th
 4. Open:
    - `http://localhost:8080/tutor/app`
    - If Vite picks another port, use the URL printed in terminal.
+
+## GitHub Actions (Cloudflare Pages)
+- Active workflow: `.github/workflows/deploy-cloudflare-pages.yml`
+- Required repository secrets:
+  - `CLOUDFLARE_API_TOKEN`
+  - `CLOUDFLARE_ACCOUNT_ID`
+  - `CLOUDFLARE_PAGES_PROJECT_NAME`
+- Trigger: push to `main` (or manual via `workflow_dispatch`).
