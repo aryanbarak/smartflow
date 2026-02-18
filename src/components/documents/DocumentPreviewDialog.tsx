@@ -189,6 +189,7 @@ export function DocumentPreviewDialog({
   const lastTextOpenRef = useRef(0);
   const isHydratingRef = useRef(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const pinchStateRef = useRef<{ startDistance: number; startScale: number; active: boolean } | null>(null);
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const [mobilePageWidth, setMobilePageWidth] = useState<number | null>(null);
 
@@ -231,6 +232,8 @@ export function DocumentPreviewDialog({
     setUndoStack((prev) => [...prev, snapshot]);
     setRedoStack([]);
   }, []);
+
+  const clampScale = useCallback((value: number) => Math.min(3, Math.max(0.5, value)), []);
 
   const commitAnnotations = useCallback((next: Annotation[]) => {
     pushUndoSnapshot(annotationsRef.current);
@@ -1038,6 +1041,80 @@ export function DocumentPreviewDialog({
     }
   };
 
+  const getVisiblePageSize = useCallback(() => {
+    if (pageSizes[activePage]) return pageSizes[activePage];
+    if (pageSizes[pageNumber]) return pageSizes[pageNumber];
+    const keys = Object.keys(pageSizes)
+      .map((key) => Number(key))
+      .filter((key) => !Number.isNaN(key))
+      .sort((a, b) => a - b);
+    if (keys.length === 0) return null;
+    return pageSizes[keys[0]];
+  }, [activePage, pageNumber, pageSizes]);
+
+  const handleFitWidth = useCallback(() => {
+    const viewport = viewportRef.current;
+    const visiblePage = getVisiblePageSize();
+    if (!viewport || !visiblePage) return;
+    const contentWidth = Math.max(0, viewport.clientWidth - 16);
+    if (!contentWidth || !visiblePage.width) return;
+    const nextScale = clampScale((contentWidth * scale) / visiblePage.width);
+    setScale(nextScale);
+  }, [clampScale, getVisiblePageSize, scale]);
+
+  const handleFitPage = useCallback(() => {
+    const viewport = viewportRef.current;
+    const visiblePage = getVisiblePageSize();
+    if (!viewport || !visiblePage) return;
+    const contentWidth = Math.max(0, viewport.clientWidth - 16);
+    const contentHeight = Math.max(0, viewport.clientHeight - 16);
+    if (!contentWidth || !contentHeight || !visiblePage.width || !visiblePage.height) return;
+    const widthScale = (contentWidth * scale) / visiblePage.width;
+    const heightScale = (contentHeight * scale) / visiblePage.height;
+    setScale(clampScale(Math.min(widthScale, heightScale)));
+  }, [clampScale, getVisiblePageSize, scale]);
+
+  const handleViewportTouchStart = useCallback(
+    (event: React.TouchEvent<HTMLDivElement>) => {
+      if (!isPdf || tool !== "pan") return;
+      if (event.touches.length !== 2) return;
+      const [first, second] = [event.touches[0], event.touches[1]];
+      const distance = Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+      pinchStateRef.current = {
+        startDistance: distance,
+        startScale: scale,
+        active: true,
+      };
+    },
+    [isPdf, scale, tool],
+  );
+
+  const handleViewportTouchMove = useCallback(
+    (event: React.TouchEvent<HTMLDivElement>) => {
+      if (!isPdf || tool !== "pan") return;
+      const pinch = pinchStateRef.current;
+      if (!pinch?.active) return;
+      if (event.touches.length !== 2) return;
+      const [first, second] = [event.touches[0], event.touches[1]];
+      const currentDistance = Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+      if (!pinch.startDistance) return;
+      const ratio = currentDistance / pinch.startDistance;
+      if (event.cancelable) event.preventDefault();
+      setScale(clampScale(pinch.startScale * ratio));
+    },
+    [clampScale, isPdf, tool],
+  );
+
+  const handleViewportTouchEnd = useCallback(
+    (event: React.TouchEvent<HTMLDivElement>) => {
+      if (!isPdf || tool !== "pan") return;
+      if (event.touches.length < 2) {
+        pinchStateRef.current = null;
+      }
+    },
+    [isPdf, tool],
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="left-0 top-0 h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 gap-2 rounded-none border-0 p-3 sm:left-[50%] sm:top-[50%] sm:h-auto sm:w-[95vw] sm:max-w-5xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:gap-4 sm:rounded-lg sm:border sm:p-6">
@@ -1050,10 +1127,10 @@ export function DocumentPreviewDialog({
 
         <div className="sticky top-0 z-10 flex items-center justify-between gap-2 overflow-x-auto rounded-md border border-border/60 bg-background/95 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:flex-wrap sm:overflow-visible sm:px-3">
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="icon" onClick={() => setScale((s) => Math.max(0.5, s - 0.2))}>
+            <Button variant="secondary" size="icon" onClick={() => setScale((s) => clampScale(s - 0.2))}>
               <ZoomOut className="w-4 h-4" />
             </Button>
-            <Button variant="secondary" size="icon" onClick={() => setScale((s) => Math.min(3, s + 0.2))}>
+            <Button variant="secondary" size="icon" onClick={() => setScale((s) => clampScale(s + 0.2))}>
               <ZoomIn className="w-4 h-4" />
             </Button>
             <Button variant="secondary" size="icon" onClick={() => setScale(1)}>
@@ -1061,7 +1138,7 @@ export function DocumentPreviewDialog({
             </Button>
             {isPdf && (
               <div className="flex items-center gap-1">
-                <Button variant="secondary" size="sm" onClick={() => setScale(1)}>
+                <Button variant="secondary" size="sm" onClick={handleFitWidth}>
                   Fit width
                 </Button>
                 <Button variant="secondary" size="sm" onClick={() => setScale(1)}>
@@ -1069,6 +1146,9 @@ export function DocumentPreviewDialog({
                 </Button>
                 <Button variant="secondary" size="sm" onClick={() => setScale(1.25)}>
                   125%
+                </Button>
+                <Button variant="secondary" size="sm" onClick={handleFitPage}>
+                  Fit page
                 </Button>
               </div>
             )}
@@ -1249,6 +1329,10 @@ export function DocumentPreviewDialog({
         <div
           ref={viewportRef}
           className="h-[calc(100dvh-170px)] min-h-[300px] overflow-auto touch-pan-x touch-pan-y rounded-md border border-border/60 bg-muted/20 sm:h-auto sm:min-h-[60vh] sm:max-h-[75vh] sm:overflow-auto"
+          onTouchStart={handleViewportTouchStart}
+          onTouchMove={handleViewportTouchMove}
+          onTouchEnd={handleViewportTouchEnd}
+          onTouchCancel={handleViewportTouchEnd}
         >
           <div className="p-2 sm:p-4">
             {isLoading && (
