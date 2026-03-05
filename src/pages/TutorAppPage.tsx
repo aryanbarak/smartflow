@@ -70,7 +70,7 @@ export default function TutorAppPage() {
 
   const [topics, setTopics] = useState<string[]>([]);
   const [topic, setTopic] = useState("exam_bank_ap2");
-  const [mode, setMode] = useState<TutorRunMode>("trace");
+  const [mode, setMode] = useState<TutorRunMode>("exam");
   const [lang, setLang] = useState<TutorRunLang>("de");
   const [variants, setVariants] = useState<TutorVariant[]>([]);
   const [selectedVariant, setSelectedVariant] = useState("");
@@ -111,6 +111,7 @@ export default function TutorAppPage() {
         }
         setLogs((prev) => [...prev, `[topics] ${message}`]);
         if (isWisoView) {
+          setTopicsError(null);
           setTopics((prev) => (prev.includes("wiso") ? prev : ["wiso", ...prev]));
           return;
         }
