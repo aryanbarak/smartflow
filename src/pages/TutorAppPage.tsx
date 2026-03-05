@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { TutorControlPanel } from "@/components/tutor/app/TutorControlPanel";
 import { TutorOutputTabs } from "@/components/tutor/app/TutorOutputTabs";
 import {
@@ -63,6 +63,9 @@ function exportExecutionPdf(execution: TutorRunExecution): void {
 }
 
 export default function TutorAppPage() {
+  const [searchParams] = useSearchParams();
+  const tutorView = (searchParams.get("view") || "").trim().toLowerCase();
+  const isWisoView = tutorView === "wiso";
   const apiConfigured = useMemo(() => isTutorApiConfigured(), []);
 
   const [topics, setTopics] = useState<string[]>([]);
@@ -81,10 +84,13 @@ export default function TutorAppPage() {
   const [requestPreview, setRequestPreview] = useState<string>("");
 
   const topicHint = useMemo(() => {
+    if (isWisoView) {
+      return "WISO AP2 bundle (Wissensbasis + Trainingsfragen + Pruefungssimulation)";
+    }
     const pretty = topic.replaceAll("_", " ");
     const topicTitle = pretty.charAt(0).toUpperCase() + pretty.slice(1);
     return `${topicTitle}: ${mode} mode (${lang.toUpperCase()})`;
-  }, [topic, mode, lang]);
+  }, [isWisoView, topic, mode, lang]);
 
   useEffect(() => {
     let mounted = true;
@@ -104,11 +110,54 @@ export default function TutorAppPage() {
           setTopicsError(message);
         }
         setLogs((prev) => [...prev, `[topics] ${message}`]);
+        if (isWisoView) {
+          setTopics((prev) => (prev.includes("wiso") ? prev : ["wiso", ...prev]));
+          return;
+        }
+        void fetchTutorFallbackTopics()
+          .then((items) => {
+            if (!mounted) return;
+            setTopics(items);
+            if (items.length > 0 && !items.includes(topic)) {
+              setTopic(items[0]);
+            }
+            setLogs((prev) => [...prev, "[topics] auto fallback topics loaded"]);
+          })
+          .catch(() => {
+            // Keep original topicsError; no-op on fallback failure.
+          });
       });
     return () => {
       mounted = false;
     };
-  }, [topic, apiConfigured, mode, lang]);
+  }, [topic, apiConfigured, mode, lang, isWisoView]);
+
+  useEffect(() => {
+    if (!isWisoView) return;
+    setTopics((prev) => (prev.includes("wiso") ? prev : ["wiso", ...prev]));
+    setTopic("wiso");
+    setMode("trace");
+    setLang("de");
+    try {
+      const parsed = safeParseParams(paramsText);
+      const hasWisoShape = parsed && typeof parsed.section === "string";
+      if (hasWisoShape) return;
+    } catch {
+      // If params are invalid JSON, overwrite with WISO defaults below.
+    }
+    setParamsText(
+      JSON.stringify(
+        {
+          section: "bundle",
+          topic: "arbeitsrecht",
+          seed: 20260301,
+          n_questions: 10,
+        },
+        null,
+        2,
+      ),
+    );
+  }, [isWisoView, paramsText]);
 
   useEffect(() => {
     let mounted = true;
@@ -280,11 +329,14 @@ export default function TutorAppPage() {
   return (
     <div className="p-4 lg:p-6 max-w-[1500px] mx-auto">
       <div className="mb-4 flex items-center gap-2 rounded-md border border-slate-700/60 bg-slate-950/60 px-3 py-2">
-        <Link to="/tutor" className="rounded border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm font-medium hover:bg-slate-800">
+        <Link to="/tutor/app" className="rounded border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm font-medium hover:bg-slate-800">
           Tutor
         </Link>
         <Link to="/tutor" className="rounded border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm font-medium hover:bg-slate-800">
           Exam Bank (AP2)
+        </Link>
+        <Link to="/tutor/app?view=wiso" className="rounded border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm font-medium hover:bg-slate-800">
+          WISO
         </Link>
       </div>
       <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
