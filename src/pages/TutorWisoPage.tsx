@@ -1,49 +1,68 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { runTutorRequest, isTutorApiConfigured } from "@/lib/tutor/runner";
+import { isTutorApiConfigured, runTutorRequest } from "@/lib/tutor/runner";
 
-type WisoTab = "wissensbasis" | "trainingsfragen" | "pruefungssimulation";
+type TabId = "wissensbasis" | "trainingsfragen" | "pruefung";
 
-const WISSENSBASIS_FALLBACK = [
-  "AR-A Rechtsquellen / Hierarchie / Guenstigkeitsprinzip",
-  "AR-B Arbeitsvertrag / Formfreiheit / Nachweisgesetz",
-  "AR-C Rechte und Pflichten (AN/AG)",
-  "AR-D Probezeit",
-  "AR-E Befristung",
-  "AR-F Arbeitszeitgesetz",
-  "AR-G Urlaub",
-  "AR-H Krankheit",
-  "AR-I Kuendigung",
-  "AR-J Kuendigungsschutz (KSchG)",
-  "AR-K Abmahnung",
-  "AR-L Sonderkuendigungsschutz",
-  "AR-M Betriebsrat Basics",
-  "AR-N Datenschutz im Arbeitsverhaeltnis",
-];
+type WisoKnowledgeItem = {
+  topic?: string;
+  explain_de?: string;
+  explain_fa?: string;
+  typische_pruefungsfallen?: string[];
+};
 
-const TRAININGS_FALLBACK = [
-  "Fallfrage: Welche Aussage zur Ruhezeit ist richtig?",
-  "Fallfrage: Welche Form ist fuer eine ordentliche Kuendigung erforderlich?",
-  "Fallfrage: Wann greift Entgeltfortzahlung bei Krankheit?",
-];
+type WisoQuestion = {
+  id?: string;
+  frage?: string;
+  optionen?: Record<string, string>;
+  richtige_antwort?: string;
+  erklaerung_de?: string;
+  erklaerung_fa?: string;
+  fehleranalyse?: string[];
+};
 
-const PRUEFUNG_FALLBACK = {
-  name: "WISO Pruefungssimulation",
-  stats: "Fragen: 10 | Punkte: 10 | Zeit: 60 Minuten",
+type WisoTrainingTopic = {
+  topic?: string;
+  fragen?: WisoQuestion[];
+};
+
+type WisoSimulation = {
+  rahmen?: {
+    exam_name?: string;
+    anzahl_fragen?: number;
+    punkte_gesamt?: number;
+    zeit_minuten?: number;
+  };
+  fragen?: WisoQuestion[];
+};
+
+type WisoSections = {
+  wissensbasis?: WisoKnowledgeItem[];
+  trainingsfragen?: WisoTrainingTopic[];
+  pruefungssimulation?: WisoSimulation;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function toStr(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function toStrList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((v) => toStr(v)).filter((v) => v.length > 0);
+}
+
 export default function TutorWisoPage() {
-  const [tab, setTab] = useState<WisoTab>("wissensbasis");
+  const [tab, setTab] = useState<TabId>("wissensbasis");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
-  const [summary, setSummary] = useState<string>("Wissensbasis, Trainingsfragen und Pruefungssimulation fuer WISO AP2.");
-  const [overview, setOverview] = useState<string[]>(WISSENSBASIS_FALLBACK);
-  const [traps, setTraps] = useState<string[]>([]);
+  const [error, setError] = useState("");
+  const [title, setTitle] = useState("WISO AP2 - Bundle");
+  const [summary, setSummary] = useState("Wissensbasis, Trainingsfragen und Pruefungssimulation fuer WISO AP2.");
+  const [sections, setSections] = useState<WisoSections>({});
 
   const configured = isTutorApiConfigured();
 
@@ -59,83 +78,39 @@ export default function TutorWisoPage() {
         topic: "wiso",
         mode: "trace",
         lang: "de",
-        params: { section: "bundle", topic: "arbeitsrecht" },
+        params: { section: "bundle", topic: "arbeitsrecht", seed: 20260301, n_questions: 10 },
       });
 
       const result = execution.result;
-      if (!isRecord(result)) return;
+      if (!isRecord(result)) throw new Error("Invalid WISO response");
 
-      if (typeof result.summary === "string" && result.summary.trim()) {
-        setSummary(result.summary.trim());
-      }
+      setTitle(toStr(result.title) || "WISO AP2 - Bundle");
+      setSummary(toStr(result.summary) || "Wissensbasis, Trainingsfragen und Pruefungssimulation fuer WISO AP2.");
 
-      const blocks = Array.isArray(result.blocks) ? result.blocks : [];
-      const overviewBlock = blocks.find((b) => isRecord(b) && b.kind === "overview");
-      const trapsBlock = blocks.find((b) => isRecord(b) && b.kind === "typische_pruefungsfallen");
-
-      if (isRecord(overviewBlock) && typeof overviewBlock.text === "string") {
-        const lines = overviewBlock.text
-          .split(/\r?\n/)
-          .map((line) => line.trim())
-          .filter((line) => line.length > 0 && !line.toLowerCase().startsWith("arbeitsrecht"));
-        if (lines.length > 0) setOverview(lines);
-      }
-
-      if (isRecord(trapsBlock) && typeof trapsBlock.text === "string") {
-        const lines = trapsBlock.text
-          .split(/\r?\n/)
-          .map((line) => line.trim())
-          .filter((line) => line.startsWith("- "));
-        setTraps(lines);
+      if (isRecord(result.sections)) {
+        const raw = result.sections;
+        setSections({
+          wissensbasis: Array.isArray(raw.wissensbasis) ? (raw.wissensbasis as WisoKnowledgeItem[]) : [],
+          trainingsfragen: Array.isArray(raw.trainingsfragen) ? (raw.trainingsfragen as WisoTrainingTopic[]) : [],
+          pruefungssimulation: isRecord(raw.pruefungssimulation) ? (raw.pruefungssimulation as WisoSimulation) : {},
+        });
+      } else {
+        setSections({});
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
   };
 
-  const content = useMemo(() => {
-    if (tab === "wissensbasis") {
-      return (
-        <div className="space-y-2 rounded-md border p-4">
-          <h3 className="text-2xl font-semibold">arbeitsrecht</h3>
-          {overview.map((item) => (
-            <div key={item} className="text-lg text-muted-foreground">
-              {item}
-            </div>
-          ))}
-        </div>
-      );
-    }
-    if (tab === "trainingsfragen") {
-      return (
-        <div className="space-y-3 rounded-md border p-4">
-          {TRAININGS_FALLBACK.map((q) => (
-            <div key={q} className="text-lg">
-              • {q}
-            </div>
-          ))}
-          {traps.length > 0 && (
-            <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-              <div className="font-medium mb-2">Typische Pruefungsfallen</div>
-              {traps.map((line) => (
-                <div key={line}>{line}</div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
-    return (
-      <div className="space-y-4 rounded-md border p-4">
-        <div className="text-3xl font-semibold">Pruefungssimulation</div>
-        <div className="text-xl">Name: {PRUEFUNG_FALLBACK.name}</div>
-        <div className="text-xl">{PRUEFUNG_FALLBACK.stats}</div>
-      </div>
-    );
-  }, [tab, overview, traps]);
+  useEffect(() => {
+    void loadBundle();
+  }, []);
+
+  const wissensbasis = useMemo(() => sections.wissensbasis ?? [], [sections.wissensbasis]);
+  const trainingsfragen = useMemo(() => sections.trainingsfragen ?? [], [sections.trainingsfragen]);
+  const pruefung = useMemo(() => sections.pruefungssimulation ?? {}, [sections.pruefungssimulation]);
 
   return (
     <div className="p-4 lg:p-6 max-w-[1500px] mx-auto space-y-4">
@@ -152,7 +127,7 @@ export default function TutorWisoPage() {
       </div>
 
       <div className="flex items-center gap-3">
-        <h1 className="text-4xl font-semibold text-emerald-300">WISO AP2 - Bundle</h1>
+        <h1 className="text-4xl font-semibold text-emerald-300">{title}</h1>
         <Button variant="outline" onClick={() => void loadBundle()} disabled={loading}>
           {loading ? "Loading..." : "Reload"}
         </Button>
@@ -165,7 +140,7 @@ export default function TutorWisoPage() {
         <Button variant={tab === "trainingsfragen" ? "secondary" : "outline"} onClick={() => setTab("trainingsfragen")}>
           Trainingsfragen
         </Button>
-        <Button variant={tab === "pruefungssimulation" ? "secondary" : "outline"} onClick={() => setTab("pruefungssimulation")}>
+        <Button variant={tab === "pruefung" ? "secondary" : "outline"} onClick={() => setTab("pruefung")}>
           Pruefungssimulation
         </Button>
       </div>
@@ -174,7 +149,106 @@ export default function TutorWisoPage() {
 
       {error && <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</div>}
 
-      {content}
+      {!error && tab === "wissensbasis" && (
+        <div className="space-y-4">
+          {wissensbasis.map((item, idx) => (
+            <div key={`${item.topic || "topic"}-${idx}`} className="rounded-md border p-4 space-y-3">
+              <h3 className="text-4xl font-semibold">{toStr(item.topic) || "Topic"}</h3>
+              <p className="whitespace-pre-wrap text-lg text-muted-foreground">{toStr(item.explain_de)}</p>
+              {toStrList(item.typische_pruefungsfallen).length > 0 && (
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3">
+                  <div className="font-medium mb-2">Typische Pruefungsfallen</div>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {toStrList(item.typische_pruefungsfallen).map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {toStr(item.explain_fa) && (
+                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3" dir="rtl">
+                  <div className="font-medium mb-2 text-right">توضیح فارسی</div>
+                  <p className="whitespace-pre-wrap leading-8">{toStr(item.explain_fa)}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!error && tab === "trainingsfragen" && (
+        <div className="space-y-4">
+          {trainingsfragen.map((group, gidx) => (
+            <div key={`${group.topic || "group"}-${gidx}`} className="rounded-md border p-4 space-y-3">
+              <h3 className="text-3xl font-semibold">{toStr(group.topic) || "Thema"}</h3>
+              {(group.fragen || []).map((frage, qidx) => (
+                <div key={`${frage.id || "q"}-${qidx}`} className="rounded-md border p-3 space-y-2">
+                  <div className="text-xl font-medium">{toStr(frage.id)} - {toStr(frage.frage)}</div>
+                  {isRecord(frage.optionen) && (
+                    <ul className="list-disc pl-6 space-y-1">
+                      {Object.entries(frage.optionen).map(([k, v]) => (
+                        <li key={`${frage.id || "q"}-${k}`}><strong>{k}:</strong> {toStr(v)}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {toStr(frage.richtige_antwort) && (
+                    <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2">
+                      <strong>Antwort:</strong> {toStr(frage.richtige_antwort)}
+                    </div>
+                  )}
+                  {toStr(frage.erklaerung_de) && <div className="text-muted-foreground">{toStr(frage.erklaerung_de)}</div>}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!error && tab === "pruefung" && (
+        <div className="space-y-4">
+          <div className="rounded-md border p-4 space-y-2">
+            <h3 className="text-3xl font-semibold">Pruefungssimulation</h3>
+            <div className="text-xl">Name: {toStr(pruefung.rahmen?.exam_name) || "WISO Pruefungssimulation"}</div>
+            <div className="text-xl">
+              Fragen: {pruefung.rahmen?.anzahl_fragen ?? 0} | Punkte: {pruefung.rahmen?.punkte_gesamt ?? 0} | Zeit: {pruefung.rahmen?.zeit_minuten ?? 0} Minuten
+            </div>
+          </div>
+          {(pruefung.fragen || []).map((q, idx) => (
+            <div key={`${q.id || "sim"}-${idx}`} className="rounded-md border p-4 space-y-2">
+              <div className="text-xl font-medium">{toStr(q.id)} - {toStr(q.frage)}</div>
+              {isRecord(q.optionen) && (
+                <ul className="list-disc pl-6 space-y-1">
+                  {Object.entries(q.optionen).map(([k, v]) => (
+                    <li key={`${q.id || "sim"}-${k}`}><strong>{k}:</strong> {toStr(v)}</li>
+                  ))}
+                </ul>
+              )}
+              {toStr(q.richtige_antwort) && (
+                <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2">
+                  <strong>Antwort:</strong> {toStr(q.richtige_antwort)}
+                </div>
+              )}
+              {toStr(q.erklaerung_de) && <div className="text-muted-foreground">{toStr(q.erklaerung_de)}</div>}
+              {toStr(q.erklaerung_fa) && (
+                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3" dir="rtl">
+                  <div className="font-medium mb-2 text-right">توضیح فارسی</div>
+                  <p className="whitespace-pre-wrap leading-8">{toStr(q.erklaerung_fa)}</p>
+                </div>
+              )}
+              {toStrList(q.fehleranalyse).length > 0 && (
+                <div>
+                  <div className="font-medium mb-1">Fehleranalyse</div>
+                  <ul className="list-disc pl-6 space-y-1">
+                    {toStrList(q.fehleranalyse).map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
