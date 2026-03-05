@@ -43,6 +43,69 @@ type WisoSections = {
   pruefungssimulation?: WisoSimulation;
 };
 
+const FALLBACK_SECTIONS: WisoSections = {
+  wissensbasis: [
+    {
+      topic: "arbeitsrecht",
+      explain_de:
+        "AR-A Rechtsquellen / Hierarchie / Guenstigkeitsprinzip\nAR-B Arbeitsvertrag / Formfreiheit / Nachweisgesetz\nAR-C Rechte und Pflichten (AN/AG)\nAR-D Probezeit\nAR-E Befristung\nAR-F Arbeitszeitgesetz\nAR-G Urlaub\nAR-H Krankheit\nAR-I Kuendigung\nAR-J Kuendigungsschutz (KSchG)\nAR-K Abmahnung\nAR-L Sonderkuendigungsschutz\nAR-M Betriebsrat Basics\nAR-N Datenschutz im Arbeitsverhaeltnis\n\nPruefungslogik: Rechtsquelle -> Tatbestand -> Rechtsfolge.",
+      explain_fa:
+        "در AP2-WISO برای Arbeitsrecht باید همیشه از منطق «مبنای قانونی -> تحقق شرایط -> نتیجه حقوقی» استفاده کنید. خطاهای رایج زمانی رخ می‌دهد که مهلت‌ها، فرم قانونی و حوزه شمول قانون بررسی نشود.",
+      typische_pruefungsfallen: [
+        "Normenhierarchie ohne Guenstigkeitsprinzip anwenden.",
+        "Formfreiheit mit fehlender Nachweispflicht verwechseln.",
+        "Probezeit und Befristung gleichsetzen.",
+        "Kuendigung per E-Mail als wirksam bewerten.",
+      ],
+    },
+  ],
+  trainingsfragen: [
+    {
+      topic: "arbeitsrecht",
+      fragen: [
+        {
+          id: "arbeitsrecht_v1_q012",
+          frage: "Fallfrage: Welche Form ist fuer eine ordentliche Kuendigung erforderlich?",
+          optionen: {
+            A: "Muendlich reicht aus, wenn ein Zeuge dabei ist.",
+            B: "E-Mail mit Firmenadresse reicht aus.",
+            C: "Schriftform mit eigenhaendiger Unterschrift.",
+            D: "WhatsApp mit Scan der Unterschrift.",
+          },
+          richtige_antwort: "C",
+          erklaerung_de: "Eine ordentliche Kuendigung erfordert Schriftform mit eigenhaendiger Unterschrift.",
+        },
+      ],
+    },
+  ],
+  pruefungssimulation: {
+    rahmen: {
+      exam_name: "WISO Pruefungssimulation",
+      anzahl_fragen: 10,
+      punkte_gesamt: 10,
+      zeit_minuten: 60,
+    },
+    fragen: [
+      {
+        id: "arbeitsrecht_v1_q038",
+        frage: "Fallfrage: Im Betrieb gibt es Streit zur Ruhezeit. Welche Option ist in der Regel richtig?",
+        optionen: {
+          A: "Sie gilt immer ohne weitere Voraussetzungen.",
+          B: "Sie gilt nur mit vorheriger Zustimmung des Betriebsrats.",
+          C: "Sie ist im Arbeitsrecht grundsaetzlich nie relevant.",
+          D: "Zwischen zwei Einsaetzen ist Mindestruhezeit einzuhalten.",
+        },
+        richtige_antwort: "D",
+        erklaerung_de:
+          "Zwischen zwei Einsaetzen ist Mindestruhezeit einzuhalten. ist korrekt; die anderen Antworten sind AP2-typische Uebertreibungen oder lassen Voraussetzungen aus.",
+        erklaerung_fa:
+          "(1) موضوع سوال: Fallfrage درباره Ruhezeit در محیط کار است.\n(2) خواسته سوال: گزینه‌ای را انتخاب کنید که با قواعد حقوق کار AP2 هماهنگ‌تر است.\n(3) منطق پاسخ درست: گزینه درست D است چون الزام Mindestruhezeit بین دو شیفت یک قاعده قانونی پایه است. گزینه‌های دیگر یا مطلق‌گویی دارند یا شرط قانونی را حذف می‌کنند.\n(4) نکات امتحانی/دام‌ها:\n- به واژه‌های مطلق مثل immer/nie حساس باشید.\n- شرط‌های قانونی را حذف نکنید.",
+        fehleranalyse: ["Nie/Immer-Fallen vermeiden.", "Voraussetzungen des Gesetzes immer pruefen."],
+      },
+    ],
+  },
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -108,9 +171,19 @@ export default function TutorWisoPage() {
     void loadBundle();
   }, []);
 
-  const wissensbasis = useMemo(() => sections.wissensbasis ?? [], [sections.wissensbasis]);
-  const trainingsfragen = useMemo(() => sections.trainingsfragen ?? [], [sections.trainingsfragen]);
-  const pruefung = useMemo(() => sections.pruefungssimulation ?? {}, [sections.pruefungssimulation]);
+  const wissensbasis = useMemo(
+    () => (sections.wissensbasis && sections.wissensbasis.length > 0 ? sections.wissensbasis : FALLBACK_SECTIONS.wissensbasis || []),
+    [sections.wissensbasis],
+  );
+  const trainingsfragen = useMemo(
+    () =>
+      sections.trainingsfragen && sections.trainingsfragen.length > 0 ? sections.trainingsfragen : FALLBACK_SECTIONS.trainingsfragen || [],
+    [sections.trainingsfragen],
+  );
+  const pruefung = useMemo(
+    () => (sections.pruefungssimulation && Object.keys(sections.pruefungssimulation).length > 0 ? sections.pruefungssimulation : FALLBACK_SECTIONS.pruefungssimulation || {}),
+    [sections.pruefungssimulation],
+  );
 
   return (
     <div className="p-4 lg:p-6 max-w-[1500px] mx-auto space-y-4">
