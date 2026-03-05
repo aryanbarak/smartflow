@@ -1,7 +1,10 @@
 import { fetchTutorIndex } from "@/lib/tutor/client";
 import type { TutorRunExecution, TutorRunRequestPayload, TutorRunLang, TutorVariant } from "@/lib/tutor/types";
 
-const rawApiUrl = (import.meta.env.VITE_TUTOR_API_URL as string | undefined)?.trim() || "";
+const rawApiUrl =
+  (import.meta.env.VITE_TUTOR_API_URL as string | undefined)?.trim() ||
+  (import.meta.env.VITE_AI_AGENT_URL as string | undefined)?.trim() ||
+  "";
 const API_URL = rawApiUrl.replace(/\/+$/, "");
 const API_TOKEN = (import.meta.env.VITE_TUTOR_API_TOKEN as string | undefined)?.trim() || "";
 const REQUEST_HEADERS = {
