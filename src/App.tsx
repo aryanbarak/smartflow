@@ -23,6 +23,7 @@ import { AppLoader } from "@/components/AppLoader";
 const queryClient = new QueryClient();
 const TutorPage = lazy(() => import("./pages/TutorPage"));
 const TutorAppPage = lazy(() => import("./pages/TutorAppPage"));
+const TutorWisoPage = lazy(() => import("./pages/TutorWisoPage"));
 
 const ProtectedRoute = () => {
   const { session, isLoading } = useAuth();
@@ -70,6 +71,14 @@ const App = () => (
                 element={
                   <Suspense fallback={<AppLoader />}>
                     <TutorAppPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/tutor/wiso"
+                element={
+                  <Suspense fallback={<AppLoader />}>
+                    <TutorWisoPage />
                   </Suspense>
                 }
               />

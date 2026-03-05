@@ -336,7 +336,7 @@ export default function TutorAppPage() {
         <Link to="/tutor" className="rounded border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm font-medium hover:bg-slate-800">
           Exam Bank (AP2)
         </Link>
-        <Link to="/tutor/app?view=wiso" className="rounded border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm font-medium hover:bg-slate-800">
+        <Link to="/tutor/wiso" className="rounded border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm font-medium hover:bg-slate-800">
           WISO
         </Link>
       </div>
