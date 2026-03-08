@@ -192,6 +192,7 @@ export function DocumentPreviewDialog({
   const pinchStateRef = useRef<{ startDistance: number; startScale: number; active: boolean } | null>(null);
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const [mobilePageWidth, setMobilePageWidth] = useState<number | null>(null);
+  const [preferNativePdfViewer, setPreferNativePdfViewer] = useState(false);
 
   const docKey = useMemo(
     () => `${document?.id ?? ""}:${document?.path ?? ""}`,
@@ -268,6 +269,7 @@ export function DocumentPreviewDialog({
       setAnnotations([]);
       setUndoStack([]);
       setRedoStack([]);
+      setPreferNativePdfViewer(false);
       setIsLoading(false);
       isHydratingRef.current = false;
       return;
@@ -289,6 +291,7 @@ export function DocumentPreviewDialog({
     setAnnotations([]);
     setUndoStack([]);
     setRedoStack([]);
+    setPreferNativePdfViewer(false);
     if (isPdf) setViewMode("scroll");
   }, [open, docKey, documentPath, isPdf]);
 
@@ -623,6 +626,7 @@ export function DocumentPreviewDialog({
         if (!alive) return;
         setSignedUrl(url);
         setError(null);
+        setPreferNativePdfViewer(false);
       } catch (err) {
         if (!alive) return;
         if (err instanceof DOMException && err.name === "AbortError") return;
@@ -712,6 +716,17 @@ export function DocumentPreviewDialog({
     a.click();
     a.remove();
   };
+
+  const handlePdfLoadFailure = useCallback((err: unknown) => {
+    const message = err instanceof Error ? err.message : String(err);
+    setError(message);
+    setPreferNativePdfViewer(true);
+    toast({
+      variant: "destructive",
+      title: "PDF.js preview failed",
+      description: "Using browser PDF viewer as fallback.",
+    });
+  }, [toast]);
 
   const getNormalizedPoint = (event: ClientPointEvent, pageIndex: number) => {
     const container = pageContainerRefs.current[pageIndex];
@@ -1344,7 +1359,14 @@ export function DocumentPreviewDialog({
             {!isLoading && error && (
               <div className="text-sm text-destructive">{error}</div>
             )}
-            {!isLoading && !error && signedUrl && isPdf && pdfFile && (
+            {!isLoading && signedUrl && isPdf && preferNativePdfViewer && (
+              <iframe
+                src={signedUrl}
+                title={document?.name ?? "PDF preview"}
+                className="h-[calc(100dvh-220px)] min-h-[420px] w-full rounded border border-border/60 bg-background sm:h-[70vh]"
+              />
+            )}
+            {!isLoading && !error && signedUrl && isPdf && pdfFile && !preferNativePdfViewer && (
               <div className="w-full text-center">
                 <Document
                   key={docKey}
@@ -1354,8 +1376,8 @@ export function DocumentPreviewDialog({
                     setPageNumber((p) => Math.min(Math.max(1, p), pdf.numPages));
                     logDebug("[preview] numPages=", pdf.numPages);
                   }}
-                  onSourceError={(err) => setError(err instanceof Error ? err.message : String(err))}
-                  onLoadError={(err) => setError(err instanceof Error ? err.message : String(err))}
+                  onSourceError={handlePdfLoadFailure}
+                  onLoadError={handlePdfLoadFailure}
                 >
                   {numPages > 0 &&
                     Array.from({ length: numPages }, (_, index) => {
