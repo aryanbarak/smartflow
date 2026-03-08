@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Upload, FileText, Download, Trash2, Loader2, Eye } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
@@ -22,13 +22,9 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useDocuments } from "@/features/documents/useDocuments";
 import { Document } from "@/features/documents/documentsService";
+import { DocumentPreviewDialog } from "@/components/documents/DocumentPreviewDialog";
 import type { DocumentPreviewItem } from "@/components/documents/DocumentPreviewDialog";
 import { cn } from "@/lib/utils";
-
-const DocumentPreviewDialog = lazy(async () => {
-  const mod = await import("@/components/documents/DocumentPreviewDialog");
-  return { default: mod.DocumentPreviewDialog };
-});
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
@@ -347,22 +343,20 @@ export default function DocumentsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Suspense fallback={null}>
-        <DocumentPreviewDialog
-          document={selectedDoc}
-          open={isViewerOpen}
-          onOpenChange={(open) => {
-            setIsViewerOpen(open);
-            if (!open) {
-              const nextParams = new URLSearchParams(searchParams);
-              nextParams.delete("doc");
-              nextParams.delete("mode");
-              setSearchParams(nextParams, { replace: true });
-              setSelectedDoc(null);
-            }
-          }}
-        />
-      </Suspense>
+      <DocumentPreviewDialog
+        document={selectedDoc}
+        open={isViewerOpen}
+        onOpenChange={(open) => {
+          setIsViewerOpen(open);
+          if (!open) {
+            const nextParams = new URLSearchParams(searchParams);
+            nextParams.delete("doc");
+            nextParams.delete("mode");
+            setSearchParams(nextParams, { replace: true });
+            setSelectedDoc(null);
+          }
+        }}
+      />
 
       <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
         <DialogContent className="sm:max-w-md">
