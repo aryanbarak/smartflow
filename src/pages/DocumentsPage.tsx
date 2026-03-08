@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Upload, FileText, Download, Trash2, Loader2, Eye } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,8 +21,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useDocuments } from "@/features/documents/useDocuments";
 import { Document } from "@/features/documents/documentsService";
-import { DocumentPreviewDialog } from "@/components/documents/DocumentPreviewDialog";
-import type { DocumentPreviewItem } from "@/components/documents/DocumentPreviewDialog";
+import { getDocumentSignedUrl } from "@/features/documents/getDocumentUrl";
 import { cn } from "@/lib/utils";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
@@ -59,7 +57,6 @@ export default function DocumentsPage() {
     remove,
     download,
   } = useDocuments();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [titleInput, setTitleInput] = useState("");
   const [descriptionInput, setDescriptionInput] = useState("");
@@ -68,10 +65,7 @@ export default function DocumentsPage() {
   const [editTarget, setEditTarget] = useState<Document | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [selectedDoc, setSelectedDoc] = useState<DocumentPreviewItem | null>(null);
-  const [isViewerOpen, setIsViewerOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const docParam = searchParams.get("doc");
 
   const sortedDocs = useMemo(() => {
     return documents
@@ -129,19 +123,14 @@ export default function DocumentsPage() {
     setDeleteTarget(null);
   };
 
-  const handleView = (doc: Document) => {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("doc", doc.id);
-    setSearchParams(nextParams);
-    setSelectedDoc({
-      id: doc.id,
-      name: doc.title ?? doc.fileName,
-      path: doc.storagePath,
-      contentType: doc.mimeType,
-      createdAt: doc.createdAt,
-      size: doc.sizeBytes,
-    });
-    setIsViewerOpen(true);
+  const handleView = async (doc: Document) => {
+    try {
+      const { url } = await getDocumentSignedUrl(doc.storagePath);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to open PDF.";
+      setFormError(message);
+    }
   };
 
   const handleStartEdit = (doc: Document) => {
@@ -158,32 +147,6 @@ export default function DocumentsPage() {
     });
     setEditTarget(null);
   };
-
-  useEffect(() => {
-    if (!docParam) return;
-    if (isLoading) return;
-
-    const match = documents.find((doc) => doc.id === docParam);
-    if (!match || !isPdf(match.mimeType, match.fileName)) {
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.delete("doc");
-      nextParams.delete("mode");
-      setSearchParams(nextParams, { replace: true });
-      return;
-    }
-
-    if (!selectedDoc || selectedDoc.id !== match.id) {
-      setSelectedDoc({
-        id: match.id,
-        name: match.title ?? match.fileName,
-        path: match.storagePath,
-        contentType: match.mimeType,
-        createdAt: match.createdAt,
-        size: match.sizeBytes,
-      });
-    }
-    if (!isViewerOpen) setIsViewerOpen(true);
-  }, [docParam, documents, isLoading, isViewerOpen, searchParams, selectedDoc, setSearchParams]);
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
@@ -342,21 +305,6 @@ export default function DocumentsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <DocumentPreviewDialog
-        document={selectedDoc}
-        open={isViewerOpen}
-        onOpenChange={(open) => {
-          setIsViewerOpen(open);
-          if (!open) {
-            const nextParams = new URLSearchParams(searchParams);
-            nextParams.delete("doc");
-            nextParams.delete("mode");
-            setSearchParams(nextParams, { replace: true });
-            setSelectedDoc(null);
-          }
-        }}
-      />
 
       <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
         <DialogContent className="sm:max-w-md">
