@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
+import { DOCUMENTS_BUCKET } from "@/features/documents/documentsService";
 
 interface DocumentViewerDialogProps {
   path: string;
@@ -38,7 +39,7 @@ export function DocumentViewerDialog({ path, open, onClose }: DocumentViewerDial
     setError(null);
 
     supabase.storage
-      .from("user-documents")
+      .from(DOCUMENTS_BUCKET)
       .createSignedUrl(path, 60 * 10)
       .then(({ data, error: signError }) => {
         if (!isMounted) return;

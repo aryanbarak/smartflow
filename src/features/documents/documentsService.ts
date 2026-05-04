@@ -1,7 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-const BUCKET = "user-documents";
+export const DOCUMENTS_BUCKET =
+  import.meta.env.VITE_SUPABASE_STORAGE_BUCKET || "documents";
 
 export interface Document {
   id: string;
@@ -94,7 +95,7 @@ export async function deleteDocument(id: string): Promise<void> {
     .single();
   if (error || !data) throw error ?? new Error("Failed to fetch document path");
   const storagePath = (data as { storage_path: string }).storage_path;
-  const { error: storageError } = await supabase.storage.from(BUCKET).remove([storagePath]);
+  const { error: storageError } = await supabase.storage.from(DOCUMENTS_BUCKET).remove([storagePath]);
   if (storageError) throw storageError;
   const { error: deleteError } = await supabase.from("documents").delete().eq("id", id);
   if (deleteError) throw deleteError;
@@ -103,7 +104,7 @@ export async function deleteDocument(id: string): Promise<void> {
 export async function uploadToStorage(userId: string, file: File) {
   const safeName = `${Date.now()}_${file.name.replace(/[^A-Za-z0-9._-]/g, "_")}`;
   const storagePath = `${userId}/${safeName}`;
-  const { error } = await supabase.storage.from(BUCKET).upload(storagePath, file, { upsert: false });
+  const { error } = await supabase.storage.from(DOCUMENTS_BUCKET).upload(storagePath, file, { upsert: false });
   if (error) throw error;
   return {
     storagePath,
@@ -112,7 +113,7 @@ export async function uploadToStorage(userId: string, file: File) {
 }
 
 export async function downloadDocument(storagePath: string): Promise<Blob> {
-  const { data, error } = await supabase.storage.from(BUCKET).download(storagePath);
+  const { data, error } = await supabase.storage.from(DOCUMENTS_BUCKET).download(storagePath);
   if (error || !data) throw error ?? new Error("Failed to download file");
   return data;
 }

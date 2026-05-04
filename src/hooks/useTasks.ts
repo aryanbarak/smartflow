@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Task, tasksService } from "@/features/tasks/tasksService";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/errors";
 
 export function useTasks() {
   const { user } = useAuth();
@@ -22,7 +23,7 @@ export function useTasks() {
       const data = await tasksService.listTasks(user.id);
       setTasks(data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = getErrorMessage(err);
       console.error("Failed to load tasks", err);
       setError(message);
       toast({
@@ -50,7 +51,7 @@ export function useTasks() {
         setTasks((prev) => [created, ...prev]);
         return created;
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = getErrorMessage(err);
         console.error("Failed to create task", err);
         toast({
           variant: "destructive",
@@ -77,7 +78,7 @@ export function useTasks() {
         setTasks((prev) => prev.map((task) => (task.id === id ? updated : task)));
         return updated;
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = getErrorMessage(err);
         console.error("Failed to update task", err);
         toast({
           variant: "destructive",
@@ -104,7 +105,7 @@ export function useTasks() {
         setTasks((prev) => prev.map((task) => (task.id === id ? updated : task)));
         return updated;
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = getErrorMessage(err);
         console.error("Failed to toggle task", err);
         toast({
           variant: "destructive",
@@ -128,7 +129,7 @@ export function useTasks() {
         setTasks((prev) => prev.filter((task) => task.id !== id));
         return true;
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = getErrorMessage(err);
         console.error("Failed to delete task", err);
         toast({
           variant: "destructive",

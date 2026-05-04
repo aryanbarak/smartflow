@@ -8,6 +8,7 @@ import {
 } from "@/features/finance/financeService";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/errors";
 
 type NewTransaction = Omit<Transaction, "id" | "createdAt" | "updatedAt">;
 
@@ -33,8 +34,7 @@ export function useFinance() {
       const data = await financeService.listTransactions(user.id);
       setTransactions(data);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load finance data.";
+      const message = getErrorMessage(err) || "Failed to load finance data.";
       console.error("[useFinance] load error", err);
       setError(message);
       toast({
@@ -60,10 +60,12 @@ export function useFinance() {
         setTransactions((prev) => [created, ...prev]);
         return created;
       } catch (err) {
+        const message = getErrorMessage(err);
         console.error("[useFinance] add error", err);
         toast({
           variant: "destructive",
           title: "Failed to add transaction",
+          description: message,
         });
         throw err;
       }
@@ -94,10 +96,12 @@ export function useFinance() {
         );
         return updated;
       } catch (err) {
+        const message = getErrorMessage(err);
         console.error("[useFinance] update error", err);
         toast({
           variant: "destructive",
           title: "Failed to update transaction",
+          description: message,
         });
         throw err;
       }
@@ -115,10 +119,12 @@ export function useFinance() {
         }
         return ok;
       } catch (err) {
+        const message = getErrorMessage(err);
         console.error("[useFinance] delete error", err);
         toast({
           variant: "destructive",
           title: "Failed to delete transaction",
+          description: message,
         });
         throw err;
       }
