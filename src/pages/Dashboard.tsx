@@ -190,7 +190,7 @@ export default function Dashboard() {
         <p className="text-muted-foreground">{todayLabel}</p>
       </motion.div>
 
-      <Card className="mb-6 border-0 text-primary-foreground hero-surface shadow-card-lg">
+      <Card className="mb-6 border-0 text-white hero-surface">
         <CardContent className="pt-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
@@ -454,7 +454,9 @@ export default function Dashboard() {
             <Button
               type="button"
               size="sm"
-              variant="secondary"
+              variant="ghost"
+              className="border-0 text-white hover:text-white hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, #38BDF8, #818CF8)" }}
               onClick={() => navigate("/learn-ai")}
             >
               Continue

@@ -1,13 +1,26 @@
-<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48">
   <defs>
     <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#38BDF8"/>
-      <stop offset="100%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#818CF8"/>
     </linearGradient>
   </defs>
-  <rect width="48" height="48" rx="11" fill="#0F172A"/>
-  <rect x="9" y="12" width="30" height="4.5" rx="2.25" fill="url(#g)"/>
-  <rect x="9" y="21" width="21" height="4.5" rx="2.25" fill="#ffffff" fill-opacity="0.88"/>
-  <rect x="9" y="30" width="13" height="4.5" rx="2.25" fill="url(#g)" fill-opacity="0.52"/>
-  <circle cx="36" cy="32.25" r="2.25" fill="url(#g)"/>
+  <!-- Icon box -->
+  <rect x="0" y="0" width="48" height="48" rx="11" fill="#0F172A"/>
+  <!-- Bar 1 - full -->
+  <rect x="9" y="12" width="30" height="6" rx="3" fill="url(#g)"/>
+  <!-- Bar 2 - 3/4 -->
+  <rect x="9" y="22" width="21" height="6" rx="3" fill="white" opacity="0.88"/>
+  <!-- Bar 3 - half -->
+  <rect x="9" y="32" width="13" height="6" rx="3" fill="url(#g)" opacity="0.55"/>
+  <!-- Accent dot -->
+  <circle cx="36" cy="35" r="3" fill="url(#g)"/>
+  <!-- Wordmark: daily (light) -->
+  <text x="60" y="32"
+    font-family="-apple-system, Inter, Helvetica Neue, Arial, sans-serif"
+    font-size="22" font-weight="300" fill="white" letter-spacing="-0.5">daily</text>
+  <!-- Wordmark: Flow (bold) -->
+  <text x="110" y="32"
+    font-family="-apple-system, Inter, Helvetica Neue, Arial, sans-serif"
+    font-size="22" font-weight="600" fill="white" letter-spacing="-0.5">Flow</text>
 </svg>
