@@ -52,7 +52,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <img src="/dailyflow-icon.svg" alt="dailyFlow" className="w-10 h-10" />
+          <img src="/dailyflow-icon.svg" alt="dailyFlow" className="w-9 h-9" />
           <div>
             <h1 className="text-lg leading-none">
               <span className="font-light text-sidebar-foreground">daily</span>

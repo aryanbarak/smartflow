@@ -177,14 +177,13 @@
   }
 
   .nav-link-active {
-    @apply text-primary font-medium;
-    background: rgba(56, 189, 248, 0.06);
-    border-left: 2px solid #38BDF8;
+    @apply text-primary font-medium rounded-none;
+    background: rgba(56, 189, 248, 0.08);
+    border-left: 3px solid #38BDF8;
   }
 
   .hero-surface {
     background: linear-gradient(135deg, #0F1E3A 0%, #1A1040 100%);
-    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.2);
   }
 
   .card-accent {

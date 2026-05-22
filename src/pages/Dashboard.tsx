@@ -190,7 +190,7 @@ export default function Dashboard() {
         <p className="text-muted-foreground">{todayLabel}</p>
       </motion.div>
 
-      <Card className="mb-6 border-0 text-white hero-surface">
+      <Card className="mb-6 border-0 text-white hero-surface" style={{ border: "1px solid rgba(56,189,248,0.15)" }}>
         <CardContent className="pt-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
