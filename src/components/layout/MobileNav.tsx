@@ -1,24 +1,22 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  CheckSquare, 
-  Wallet, 
-  Menu
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { 
-  Users, 
-  FileText, 
-  Music, 
-  Globe, 
+import {
+  LayoutDashboard,
+  Calendar,
+  CheckSquare,
+  Wallet,
+  Menu,
+  Users,
+  FileText,
+  Music,
+  Globe,
   Settings,
-  Sparkles,
   Brain,
   GraduationCap,
   Bot,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { DailyFlowLogo } from "@/components/DailyFlowLogo";
 
 const mainNavItems = [
   { icon: LayoutDashboard, label: "Home", path: "/" },
@@ -70,14 +68,8 @@ export function MobileNav() {
           </SheetTrigger>
           <SheetContent side="bottom" className="h-auto rounded-t-2xl">
             <div className="py-4">
-              <div className="flex items-center gap-3 mb-6 px-2">
-                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-primary-foreground" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold">LifeOS</h2>
-                  <p className="text-xs text-muted-foreground">More options</p>
-                </div>
+              <div className="mb-6 px-2">
+                <DailyFlowLogo size={36} />
               </div>
               <div className="grid grid-cols-4 gap-4">
                 {moreNavItems.map((item) => {

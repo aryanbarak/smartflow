@@ -1,15 +1,14 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  CheckSquare, 
-  Wallet, 
-  Users, 
-  FileText, 
-  Music, 
-  Globe, 
+import {
+  LayoutDashboard,
+  Calendar,
+  CheckSquare,
+  Wallet,
+  Users,
+  FileText,
+  Music,
+  Globe,
   Settings,
-  Sparkles,
   Brain,
   GraduationCap,
   Bot,
@@ -17,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/features/profile/useProfile";
+import { DailyFlowLogo } from "@/components/DailyFlowLogo";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -52,15 +52,7 @@ export function Sidebar() {
     <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-sidebar-foreground">LifeOS</h1>
-            <p className="text-xs text-muted-foreground">Personal Organizer</p>
-          </div>
-        </div>
+        <DailyFlowLogo size={40} showTagline />
       </div>
 
       {/* Navigation */}
