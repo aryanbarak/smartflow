@@ -18,7 +18,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 173 58% 39%;
+    --primary: 199 85% 38%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 20% 93%;
@@ -27,7 +27,7 @@
     --muted: 210 20% 93%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 173 58% 39%;
+    --accent: 199 85% 38%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -35,7 +35,7 @@
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 173 58% 39%;
+    --ring: 199 85% 38%;
 
     --radius: 0.75rem;
 
@@ -49,23 +49,23 @@
     --info: 199 89% 48%;
     
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(173 58% 39%), hsl(173 58% 29%));
+    --gradient-primary: linear-gradient(135deg, hsl(199 85% 38%), hsl(248 65% 55%));
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 20% 98%));
-    
+
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-    --shadow-glow: 0 0 20px rgba(45, 152, 141, 0.15);
+    --shadow-glow: 0 0 20px rgba(56, 189, 248, 0.18);
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 173 58% 39%;
+    --sidebar-primary: 199 85% 38%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 20% 96%;
     --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 173 58% 39%;
+    --sidebar-ring: 199 85% 38%;
   }
 
   .dark {
@@ -78,7 +78,7 @@
     --popover: 222 47% 9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 173 58% 45%;
+    --primary: 199 92% 60%;
     --primary-foreground: 222 47% 6%;
 
     --secondary: 217 33% 14%;
@@ -87,7 +87,7 @@
     --muted: 217 33% 14%;
     --muted-foreground: 215 20% 55%;
 
-    --accent: 173 58% 45%;
+    --accent: 199 92% 60%;
     --accent-foreground: 222 47% 6%;
 
     --destructive: 0 63% 50%;
@@ -95,7 +95,7 @@
 
     --border: 217 33% 18%;
     --input: 217 33% 18%;
-    --ring: 173 58% 45%;
+    --ring: 199 92% 60%;
 
     /* Custom tokens dark */
     --card-hover: 222 47% 12%;
@@ -107,23 +107,23 @@
     --info: 199 89% 55%;
 
     /* Gradients dark */
-    --gradient-primary: linear-gradient(135deg, hsl(173 58% 45%), hsl(173 58% 35%));
+    --gradient-primary: linear-gradient(135deg, hsl(199 92% 58%), hsl(248 80% 68%));
     --gradient-card: linear-gradient(180deg, hsl(222 47% 10%), hsl(222 47% 8%));
 
     /* Shadows dark */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
-    --shadow-glow: 0 0 30px rgba(45, 178, 164, 0.2);
+    --shadow-glow: 0 0 30px rgba(56, 189, 248, 0.25);
 
-    --sidebar-background: 222 47% 7%;
+    --sidebar-background: 225 50% 8%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 173 58% 45%;
+    --sidebar-primary: 199 92% 60%;
     --sidebar-primary-foreground: 222 47% 6%;
     --sidebar-accent: 217 33% 14%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 18%;
-    --sidebar-ring: 173 58% 45%;
+    --sidebar-border: 213 36% 18%;
+    --sidebar-ring: 199 92% 60%;
   }
 }
 
@@ -151,7 +151,12 @@
   }
 
   .glass-card {
-    @apply bg-card/80 backdrop-blur-sm border border-border/50;
+    @apply bg-card/80 backdrop-blur-sm transition-colors duration-200;
+    border: 1px solid #1E2D40;
+  }
+
+  .glass-card:hover {
+    border-color: #2D4460;
   }
 
   .priority-high {
@@ -171,7 +176,9 @@
   }
 
   .nav-link-active {
-    @apply bg-primary/10 text-primary font-medium;
+    @apply text-primary font-medium;
+    background: linear-gradient(90deg, hsl(var(--primary) / 0.18), transparent);
+    box-shadow: inset 3px 0 0 hsl(var(--primary) / 0.8);
   }
 
   .hero-surface {
@@ -199,13 +206,13 @@
 
   .auth-shell {
     background:
-      radial-gradient(1200px circle at 12% 12%, rgba(45, 152, 141, 0.18), transparent 55%),
-      radial-gradient(900px circle at 88% 0%, rgba(255, 180, 90, 0.16), transparent 45%),
+      radial-gradient(1200px circle at 12% 12%, rgba(56, 189, 248, 0.14), transparent 55%),
+      radial-gradient(900px circle at 88% 0%, rgba(167, 139, 250, 0.11), transparent 45%),
       hsl(var(--background));
   }
 
   .auth-card-banner {
-    background: linear-gradient(135deg, rgba(45, 152, 141, 0.22), rgba(45, 152, 141, 0.04));
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(167, 139, 250, 0.06));
   }
 }
 

@@ -16,7 +16,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/features/profile/useProfile";
-import { DailyFlowLogo } from "@/components/DailyFlowLogo";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -52,7 +51,16 @@ export function Sidebar() {
     <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
-        <DailyFlowLogo size={40} showTagline />
+        <div className="flex items-center gap-3">
+          <img src="/logo.svg" alt="dailyFlow" className="w-10 h-10" />
+          <div>
+            <h1 className="text-lg leading-none">
+              <span className="font-light text-sidebar-foreground">daily</span>
+              <span className="font-semibold text-sidebar-foreground">Flow</span>
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">Intelligent productivity</p>
+          </div>
+        </div>
       </div>
 
       {/* Navigation */}

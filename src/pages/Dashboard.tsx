@@ -40,6 +40,13 @@ function formatCurrency(amount: number) {
   });
 }
 
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 function getTodayWeekdayName(): string {
   const today = new Date();
   const jsDay = today.getDay();
@@ -187,13 +194,10 @@ export default function Dashboard() {
         <CardContent className="pt-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.2em] text-white/70">
-                DailyFlow
-              </p>
               <h2 className="text-2xl sm:text-3xl font-semibold font-display leading-tight">
-                Your day, simplified.
+                {getGreeting()}.
               </h2>
-              <p className="text-sm text-white/80 max-w-xl">
+              <p className="text-sm text-white/75 max-w-xl">
                 Keep tasks, events, and money in one calm space. Focus on what
                 matters most today.
               </p>
