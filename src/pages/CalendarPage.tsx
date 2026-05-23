@@ -348,17 +348,17 @@ export default function CalendarPage() {
     notes?: string;
   }) => {
     if (editingEvent) {
-      calendarService.update(editingEvent.id, payload);
+      await calendarService.update(editingEvent.id, payload);
     } else {
-      calendarService.create(payload);
+      await calendarService.create(payload);
     }
     queryClient.invalidateQueries({ queryKey: tabQueryKey });
     queryClient.invalidateQueries({ queryKey: monthQueryKey });
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteTarget) {
-      calendarService.remove(deleteTarget.id);
+      await calendarService.remove(deleteTarget.id);
       queryClient.invalidateQueries({ queryKey: tabQueryKey });
       queryClient.invalidateQueries({ queryKey: monthQueryKey });
       setDeleteTarget(null);
