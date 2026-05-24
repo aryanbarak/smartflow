@@ -1,95 +1,190 @@
 import { motion } from "framer-motion";
 import {
-  Moon,
-  Sun,
-  Download,
+  User,
+  Lock,
   Globe,
-  Shield,
-  Database,
-  Palette,
-  Key,
-  Loader2,
+  Brain,
+  Trash2,
   Eye,
   EyeOff,
-  AlertTriangle,
+  Loader2,
   LogOut,
+  Moon,
+  Sun,
+  Palette,
   Wallet,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Textarea } from "@/components/ui/textarea";
-import { useState, useEffect } from "react";
-import { usePreferences } from "@/hooks/usePreferences";
-import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/features/profile/useProfile";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useState, useEffect } from "react";
+import { usePreferences } from "@/hooks/usePreferences";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/features/profile/useProfile";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { safeGet, safeSet, storageKey } from "@/lib/storage";
+import type { LearnAIMode, LearnAILanguage } from "@/features/learn-ai/types";
+
+const AVATAR_COLORS = [
+  "#0EA5E9",
+  "#8B5CF6",
+  "#EC4899",
+  "#F59E0B",
+  "#10B981",
+  "#EF4444",
+  "#6366F1",
+  "#14B8A6",
+];
+
+type AiDefaults = { mode: LearnAIMode; language: LearnAILanguage };
+
+const CARD_BORDER = { border: "1px solid rgba(56,189,248,0.12)" };
+const DANGER_BORDER = { border: "1px solid rgba(239,68,68,0.3)" };
+
+function getInitials(name: string, email: string): string {
+  const trimmed = name.trim();
+  if (trimmed) {
+    const parts = trimmed.split(/\s+/);
+    return parts.length >= 2
+      ? (parts[0][0] + parts[1][0]).toUpperCase()
+      : parts[0].slice(0, 2).toUpperCase();
+  }
+  return email.slice(0, 2).toUpperCase();
+}
 
 export default function SettingsPage() {
-  const API_KEYS_ENABLED = false;
   const navigate = useNavigate();
-  const { preferences, setTheme, setLanguage, setCurrency } = usePreferences();
+  const { preferences, setTheme, setLanguage: setPrefLanguage, setCurrency } = usePreferences();
   const { user, isLoading: authLoading, signOut } = useAuth();
-  const { profile, isLoading: profileLoading, isSaving, error: profileError, refresh, save } = useProfile();
-  const { toast } = useToast();
+  const { profile, isLoading: profileLoading, isSaving, refresh, save } = useProfile();
 
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
+  // Profile
   const [displayName, setDisplayName] = useState("");
-  const [bio, setBio] = useState("");
+  const [avatarColor, setAvatarColor] = useState<string>(() =>
+    safeGet(storageKey("avatar-color"), "#0EA5E9"),
+  );
 
-  // Redirect if not authenticated
+  // Password
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+  const [isPwSaving, setIsPwSaving] = useState(false);
+
+  // Language preference
+  const [appLanguage, setAppLanguage] = useState<string>(() =>
+    safeGet(storageKey("language"), preferences.language ?? "en"),
+  );
+
+  // AI defaults
+  const [aiDefaults, setAiDefaults] = useState<AiDefaults>(() =>
+    safeGet<AiDefaults>(storageKey("ai-defaults"), { mode: "fiae_algorithms", language: "de" }),
+  );
+
+  // Danger zone
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteText, setDeleteText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/auth');
-    }
+    if (!authLoading && !user) navigate("/auth");
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
     setDisplayName(profile?.displayName ?? "");
-    setBio(profile?.bio ?? "");
   }, [profile]);
 
-  const handleSaveApiKey = async () => {
-    if (!API_KEYS_ENABLED) return;
+  const initials = getInitials(displayName, user?.email ?? "");
+
+  const handleSaveProfile = async () => {
+    safeSet(storageKey("avatar-color"), avatarColor);
+    const saved = await save({ displayName });
+    if (saved) toast.success("Profile updated");
   };
 
-  const handleTestConnection = async () => {
-    if (!API_KEYS_ENABLED) return;
+  const handleChangePassword = async () => {
+    setPwError(null);
+    if (newPw.length < 8) {
+      setPwError("New password must be at least 8 characters.");
+      return;
+    }
+    if (newPw !== confirmPw) {
+      setPwError("Passwords do not match.");
+      return;
+    }
+    if (!user?.email) return;
+
+    setIsPwSaving(true);
+    try {
+      const { error: verifyErr } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPw,
+      });
+      if (verifyErr) {
+        setPwError("Current password is incorrect.");
+        return;
+      }
+      const { error: updateErr } = await supabase.auth.updateUser({ password: newPw });
+      if (updateErr) throw updateErr;
+      setCurrentPw("");
+      setNewPw("");
+      setConfirmPw("");
+      toast.success("Password updated");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to update password.";
+      setPwError(msg);
+    } finally {
+      setIsPwSaving(false);
+    }
   };
 
-  const handleRevokeApiKey = async () => {
-    if (!API_KEYS_ENABLED) return;
+  const handleSaveLanguage = () => {
+    safeSet(storageKey("language"), appLanguage);
+    setPrefLanguage(appLanguage);
+    toast.success("Language preference saved");
+  };
+
+  const handleSaveAiDefaults = () => {
+    safeSet(storageKey("ai-defaults"), aiDefaults);
+    toast.success("AI defaults saved");
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteText !== "DELETE") return;
+    setIsDeleting(true);
+    try {
+      await supabase.rpc("delete_account");
+    } catch {
+      // fall through — sign out even if rpc fails
+    }
+    try {
+      await signOut();
+    } finally {
+      setIsDeleting(false);
+      navigate("/auth");
+    }
   };
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/auth');
-  };
-
-  const handleSaveProfile = async () => {
-    const saved = await save({ displayName, bio });
-    if (saved) {
-      toast({
-        title: "Profile updated",
-        description: "Your changes have been saved.",
-      });
-    }
+    navigate("/auth");
   };
 
   if (authLoading) {
@@ -102,173 +197,204 @@ export default function SettingsPage() {
 
   return (
     <div className="p-6 lg:p-8 max-w-3xl mx-auto">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
         <h1 className="text-2xl lg:text-3xl font-semibold mb-1">Settings</h1>
-        <p className="text-muted-foreground">Customize your experience</p>
+        <p className="text-muted-foreground">Manage your account and preferences</p>
       </motion.div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
         className="space-y-6"
       >
         {/* Profile */}
-        <Card>
+        <Card style={CARD_BORDER}>
           <CardHeader>
-            <CardTitle className="text-lg">Profile</CardTitle>
-            <CardDescription>Manage your public profile details</CardDescription>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <User className="w-5 h-5 text-primary" />
+              Profile
+            </CardTitle>
+            <CardDescription>Your name and avatar color</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {profileLoading ? (
-              <div className="text-sm text-muted-foreground">Loading profile...</div>
-            ) : (
-              <>
-                {profileError && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{profileError}</AlertDescription>
-                  </Alert>
-                )}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Display name</label>
-                  <Input
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Your name"
-                    disabled={profileLoading}
+            <div className="flex items-center gap-4">
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center text-white font-semibold text-lg flex-shrink-0 select-none"
+                style={{ backgroundColor: avatarColor }}
+              >
+                {initials}
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {AVATAR_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-label={`Select avatar color ${c}`}
+                    className={`w-7 h-7 rounded-full transition-transform hover:scale-110 focus:outline-none ${avatarColor === c ? "ring-2 ring-white ring-offset-1" : ""}`}
+                    style={{ backgroundColor: c }}
+                    onClick={() => setAvatarColor(c)}
                   />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Bio</label>
-                  <Textarea
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="A short note about you"
-                    rows={3}
-                    disabled={profileLoading}
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button onClick={handleSaveProfile} disabled={isSaving || profileLoading}>
-                    Save changes
-                  </Button>
-                  {profileError && (
-                    <Button variant="secondary" onClick={refresh} disabled={profileLoading}>
-                      Retry
-                    </Button>
-                  )}
-                </div>
-              </>
-            )}
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="displayName">Display name</Label>
+              <Input
+                id="displayName"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your name"
+                disabled={profileLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={user?.email ?? ""} readOnly disabled className="opacity-60" />
+            </div>
+
+            <Button onClick={handleSaveProfile} disabled={isSaving || profileLoading}>
+              {isSaving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Save profile
+            </Button>
           </CardContent>
         </Card>
 
-        {/* API Key Management */}
-        <Card>
+        {/* Password */}
+        <Card style={CARD_BORDER}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Key className="w-5 h-5 text-primary" />
-              API Key Management
+              <Lock className="w-5 h-5 text-primary" />
+              Change Password
             </CardTitle>
-            <CardDescription>
-              Securely manage your API keys. Keys are encrypted and stored server-side.
-            </CardDescription>
+            <CardDescription>Update your account password</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                API key management is temporarily disabled and will be enabled in a future update.
-              </AlertDescription>
-            </Alert>
-
-            {/* Status Display */}
-            <div className="p-4 rounded-lg bg-muted/50 text-sm text-muted-foreground">
-              API key management is currently unavailable.
-            </div>
-
-            {/* API Key Input */}
-            <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="currentPw">Current password</Label>
               <div className="relative">
                 <Input
-                  type={showApiKey ? "text" : "password"}
-                  placeholder="Enter your API key..."
-                  value={apiKeyInput}
-                  onChange={(e) => setApiKeyInput(e.target.value)}
-                  disabled={!API_KEYS_ENABLED}
+                  id="currentPw"
+                  type={showCurrentPw ? "text" : "password"}
+                  value={currentPw}
+                  onChange={(e) => setCurrentPw(e.target.value)}
                   className="pr-10"
+                  autoComplete="current-password"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  disabled={!API_KEYS_ENABLED}
+                  onClick={() => setShowCurrentPw((v) => !v)}
                 >
-                  {showApiKey ? (
+                  {showCurrentPw ? (
                     <EyeOff className="h-4 w-4 text-muted-foreground" />
                   ) : (
                     <Eye className="h-4 w-4 text-muted-foreground" />
                   )}
                 </Button>
               </div>
-              
-              <div className="flex flex-wrap gap-2">
-                <Button 
-                  onClick={handleSaveApiKey} 
-                  disabled
-                  className="gap-2"
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="newPw">New password</Label>
+              <div className="relative">
+                <Input
+                  id="newPw"
+                  type={showNewPw ? "text" : "password"}
+                  value={newPw}
+                  onChange={(e) => setNewPw(e.target.value)}
+                  className="pr-10"
+                  autoComplete="new-password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                  onClick={() => setShowNewPw((v) => !v)}
                 >
-                  Save API Key
+                  {showNewPw ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
                 </Button>
-                
-                <Button 
-                  variant="secondary"
-                  onClick={handleTestConnection} 
-                  disabled
-                  className="gap-2"
-                >
-                  Test Connection
-                </Button>
-                
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      variant="destructive"
-                      disabled
-                      className="gap-2"
-                    >
-                      Revoke Key
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Revoke API Key?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. The API key will be permanently deleted
-                        and any integrations using it will stop working.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleRevokeApiKey}>
-                        Revoke Key
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPw">Confirm new password</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPw"
+                  type={showConfirmPw ? "text" : "password"}
+                  value={confirmPw}
+                  onChange={(e) => setConfirmPw(e.target.value)}
+                  className="pr-10"
+                  autoComplete="new-password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                  onClick={() => setShowConfirmPw((v) => !v)}
+                >
+                  {showConfirmPw ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {pwError && <p className="text-sm text-destructive">{pwError}</p>}
+
+            <Button
+              onClick={handleChangePassword}
+              disabled={isPwSaving || !currentPw || !newPw || !confirmPw}
+            >
+              {isPwSaving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Change password
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Language */}
+        <Card style={CARD_BORDER}>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Globe className="w-5 h-5 text-primary" />
+              Language
+            </CardTitle>
+            <CardDescription>Interface and AI response language</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Select value={appLanguage} onValueChange={setAppLanguage}>
+              <SelectTrigger className="w-full sm:w-64">
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="de">Deutsch</SelectItem>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="fa">فارسی</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={handleSaveLanguage}>Save</Button>
           </CardContent>
         </Card>
 
         {/* Appearance */}
-        <Card>
+        <Card style={CARD_BORDER}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Palette className="w-5 h-5 text-primary" />
@@ -276,17 +402,24 @@ export default function SettingsPage() {
             </CardTitle>
             <CardDescription>Customize how the app looks</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {preferences.theme === "dark" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                {preferences.theme === "dark" ? (
+                  <Moon className="w-5 h-5" />
+                ) : (
+                  <Sun className="w-5 h-5" />
+                )}
                 <div>
                   <p className="text-sm font-medium">Theme</p>
                   <p className="text-xs text-muted-foreground">Light, dark, or system</p>
                 </div>
               </div>
-              <Select value={preferences.theme} onValueChange={(value) => setTheme(value as "light" | "dark" | "system")}>
-                <SelectTrigger className="w-[160px]">
+              <Select
+                value={preferences.theme}
+                onValueChange={(v) => setTheme(v as "light" | "dark" | "system")}
+              >
+                <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Theme" />
                 </SelectTrigger>
                 <SelectContent>
@@ -299,34 +432,8 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Language */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Globe className="w-5 h-5 text-primary" />
-              Language
-            </CardTitle>
-            <CardDescription>Choose your preferred language</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Select value={preferences.language ?? "en"} onValueChange={setLanguage}>
-              <SelectTrigger className="w-full sm:w-64">
-                <SelectValue placeholder="Select language" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="es">Español</SelectItem>
-                <SelectItem value="fr">Français</SelectItem>
-                <SelectItem value="de">Deutsch</SelectItem>
-                <SelectItem value="pt">Português</SelectItem>
-                <SelectItem value="fa">فارسی</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
         {/* Currency */}
-        <Card>
+        <Card style={CARD_BORDER}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Wallet className="w-5 h-5 text-primary" />
@@ -349,68 +456,75 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Data */}
-        <Card>
+        {/* Learn with AI Defaults */}
+        <Card style={CARD_BORDER}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Database className="w-5 h-5 text-primary" />
-              Data Management
+              <Brain className="w-5 h-5 text-primary" />
+              Learn with AI
             </CardTitle>
-            <CardDescription>Backup and export your data</CardDescription>
+            <CardDescription>Default mode and language for the AI tutor</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button variant="secondary" className="gap-2">
-                <Download className="w-4 h-4" />
-                Export Data
-              </Button>
-              <Button variant="secondary" className="gap-2">
-                <Download className="w-4 h-4" />
-                Backup to File
-              </Button>
+            <div className="space-y-2">
+              <Label htmlFor="aiMode">Default mode</Label>
+              <Select
+                value={aiDefaults.mode}
+                onValueChange={(v) =>
+                  setAiDefaults((prev) => ({ ...prev, mode: v as LearnAIMode }))
+                }
+              >
+                <SelectTrigger id="aiMode" className="w-full sm:w-64">
+                  <SelectValue placeholder="Select mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fiae_algorithms">FIAE Algorithms</SelectItem>
+                  <SelectItem value="wiso">WiSo</SelectItem>
+                  <SelectItem value="general_it">General IT</SelectItem>
+                  <SelectItem value="planner">Planner</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Export all your data as JSON or create a backup file
-            </p>
+            <div className="space-y-2">
+              <Label htmlFor="aiLanguage">Response language</Label>
+              <Select
+                value={aiDefaults.language}
+                onValueChange={(v) =>
+                  setAiDefaults((prev) => ({ ...prev, language: v as LearnAILanguage }))
+                }
+              >
+                <SelectTrigger id="aiLanguage" className="w-full sm:w-64">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="de">Deutsch</SelectItem>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="fa">فارسی</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleSaveAiDefaults}>Save defaults</Button>
           </CardContent>
         </Card>
 
-        {/* Privacy */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Shield className="w-5 h-5 text-primary" />
-              Privacy & Security
-            </CardTitle>
-            <CardDescription>Your data security matters</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-              <h4 className="text-sm font-medium mb-2">Secure by Design</h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• API keys are encrypted and stored server-side</li>
-                <li>• Frontend never has access to raw API keys</li>
-                <li>• All API requests go through secure backend proxy</li>
-                <li>• Preferences stored locally, sensitive data in secure storage</li>
-              </ul>
-            </div>
-            
-            {user && (
-              <div className="pt-2">
-                <p className="text-sm text-muted-foreground mb-3">
-                  Signed in as: {user.email}
-                </p>
-                <Button variant="outline" onClick={handleSignOut} className="gap-2">
-                  <LogOut className="w-4 h-4" />
-                  Sign Out
-                </Button>
+        {/* Sign Out */}
+        <Card style={CARD_BORDER}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Signed in as</p>
+                <p className="text-sm text-muted-foreground">{user?.email}</p>
               </div>
-            )}
+              <Button variant="outline" onClick={handleSignOut} className="gap-2">
+                <LogOut className="w-4 h-4" />
+                Sign out
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
         {/* About */}
-        <Card>
+        <Card style={CARD_BORDER}>
           <CardHeader>
             <CardTitle className="text-lg">About</CardTitle>
           </CardHeader>
@@ -422,7 +536,7 @@ export default function SettingsPage() {
             <Separator />
             <div className="text-center">
               <p className="text-sm text-muted-foreground">
-                DailyFlow - Your Personal Life Organizer
+                DailyFlow — Your Personal Life Organizer
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Barakzai.Cloud 2024 © All rights reserved.
@@ -430,7 +544,59 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Danger Zone */}
+        <Card style={DANGER_BORDER}>
+          <CardHeader>
+            <CardTitle className="text-lg text-destructive flex items-center gap-2">
+              <Trash2 className="w-5 h-5" />
+              Danger Zone
+            </CardTitle>
+            <CardDescription>Irreversible actions — proceed with caution.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+              Delete my account
+            </Button>
+          </CardContent>
+        </Card>
       </motion.div>
+
+      {/* Delete account dialog */}
+      <AlertDialog
+        open={showDeleteDialog}
+        onOpenChange={(open) => {
+          setShowDeleteDialog(open);
+          if (!open) setDeleteText("");
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete your account and all your data. This action cannot be
+              undone. Type <strong>DELETE</strong> to confirm.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            value={deleteText}
+            onChange={(e) => setDeleteText(e.target.value)}
+            placeholder="Type DELETE"
+            className="my-2"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={deleteText !== "DELETE" || isDeleting}
+            >
+              {isDeleting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Delete account
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
