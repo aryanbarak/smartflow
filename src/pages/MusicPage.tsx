@@ -29,30 +29,25 @@ interface InvidiousVideo {
   videoThumbnails: Array<{ quality: string; url: string }>;
 }
 
-const INVIDIOUS_INSTANCES = [
-  "https://inv.nadeko.net",
-  "https://invidious.nerdvpn.de",
-  "https://invidious.privacyredirect.com",
-];
+const SEARCH_API = "https://api.barakzai.cloud/search";
 
 async function searchInvidious(query: string): Promise<InvidiousVideo[]> {
-  for (const base of INVIDIOUS_INSTANCES) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      const res = await fetch(
-        `${base}/api/v1/search?q=${encodeURIComponent(query)}&type=video&page=1`,
-        { signal: controller.signal },
-      );
-      clearTimeout(timeoutId);
-      if (!res.ok) continue;
-      const data = (await res.json()) as InvidiousVideo[];
-      return data.filter((v) => v.type === "video");
-    } catch {
-      // try next instance
-    }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch(
+      `${SEARCH_API}?q=${encodeURIComponent(query)}`,
+      { signal: controller.signal },
+    );
+    clearTimeout(timeoutId);
+    if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+    const data = (await res.json()) as { results?: InvidiousVideo[]; error?: string };
+    if (data.error) throw new Error(data.error);
+    return data.results ?? [];
+  } catch {
+    clearTimeout(timeoutId);
+    throw new Error("Search unavailable");
   }
-  throw new Error("All Invidious instances unavailable");
 }
 
 function formatDuration(seconds: number): string {
@@ -116,7 +111,7 @@ interface VideoCardProps {
   onAdd: () => void;
 }
 
-function VideoCard({ video, isActive, isPlaying, onPlay, onAdd }: VideoCardProps) {
+function VideoCard({ video, isActive, isPlaying, onPlay, onAdd }: Readonly<VideoCardProps>) {
   return (
     <div
       className={cn(
@@ -201,7 +196,7 @@ function YouTubeTab() {
 
   const activeVideoId = currentTrack?.type === "youtube" ? currentTrack.videoId : null;
   const isLocalhost =
-    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    globalThis.location.hostname === "localhost" || globalThis.location.hostname === "127.0.0.1";
   const hasSearchQuery = searchQuery.trim().length > 0;
 
   // Debounced search — cancelled flag prevents stale state updates from slow requests
