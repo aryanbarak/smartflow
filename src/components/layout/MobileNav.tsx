@@ -8,6 +8,7 @@ import {
   Users,
   FileText,
   Music,
+  Image,
   Globe,
   Settings,
   Brain,
@@ -28,6 +29,7 @@ const mainNavItems = [
 const moreNavItems = [
   { icon: Users, label: "Family", path: "/family" },
   { icon: FileText, label: "Documents", path: "/documents" },
+  { icon: Image, label: "Photos", path: "/photos" },
   { icon: Music, label: "Music", path: "/music" },
   { icon: Globe, label: "Web Links", path: "/links" },
   { icon: Brain, label: "Learn with AI", path: "/learn-ai" },
@@ -61,7 +63,7 @@ export function MobileNav() {
         
         <Sheet>
           <SheetTrigger asChild>
-            <button className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-muted-foreground">
+            <button type="button" className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-muted-foreground">
               <Menu className="w-5 h-5" />
               <span className="text-xs">More</span>
             </button>

@@ -12,6 +12,7 @@ import FinancePage from "./pages/FinancePage";
 import FamilyPage from "./pages/FamilyPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import MusicPage from "./pages/MusicPage";
+import PhotosPage from "./pages/PhotosPage";
 import LinksPage from "./pages/LinksPage";
 import SettingsPage from "./pages/SettingsPage";
 import LearnAIPage from "./pages/LearnAIPage";
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="/family" element={<FamilyPage />} />
               <Route path="/documents" element={<DocumentsPage />} />
               <Route path="/music" element={<MusicPage />} />
+              <Route path="/photos" element={<PhotosPage />} />
               <Route path="/links" element={<LinksPage />} />
               <Route path="/learn-ai" element={<LearnAIPage />} />
               <Route
