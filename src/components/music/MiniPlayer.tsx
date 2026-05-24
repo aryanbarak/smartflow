@@ -1,9 +1,10 @@
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { SkipBack, SkipForward, Play, Pause, Volume2, X } from "lucide-react";
+import { SkipBack, SkipForward, Play, Pause, Volume2, X, Shuffle } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { useMusicPlayer } from "@/hooks/useMusicPlayer";
+import { usePlaylistPlayer } from "@/contexts/PlaylistPlayerContext";
 import { cn } from "@/lib/utils";
 
 function formatTime(s: number): string {
@@ -41,9 +42,12 @@ export function MiniPlayer() {
       ? `https://www.youtube.com/embed/${currentTrack.videoId}?autoplay=1&rel=0`
       : "";
 
+  const { playlistLabel, isShuffled, toggleShuffle } = usePlaylistPlayer();
+
   if (!currentTrack) return null;
 
-  const trackLabel = currentTrack.type === "youtube" ? currentTrack.title : currentTrack.name;
+  const baseLabel = currentTrack.type === "youtube" ? currentTrack.title : currentTrack.name;
+  const trackLabel = playlistLabel ? `${playlistLabel} • ${baseLabel}` : baseLabel;
 
   return (
     <>
@@ -67,7 +71,7 @@ export function MiniPlayer() {
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
           className="fixed bottom-0 left-0 right-0 lg:left-64 z-50 bg-slate-900 border-t border-cyan-400/20"
         >
-          {/* Seek row — local files only, uses Slider for full keyboard + click support */}
+          {/* Seek row — local files only */}
           {isLocal && duration > 0 && (
             <div className="flex items-center gap-2 px-4 pt-2">
               <span className="text-xs text-slate-500 w-10 text-right flex-shrink-0">
@@ -92,9 +96,27 @@ export function MiniPlayer() {
           <div className="flex items-center gap-3 px-4 py-2">
             {/* Track info */}
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              {isYouTube && <span className="text-base leading-none flex-shrink-0" aria-hidden="true">▶</span>}
+              {playlistLabel
+                ? <span className="text-xs text-cyan-400 flex-shrink-0" aria-hidden="true">📋</span>
+                : isYouTube && <span className="text-base leading-none flex-shrink-0" aria-hidden="true">▶</span>}
               <p className="text-sm font-medium text-white truncate">{trackLabel}</p>
             </div>
+
+            {/* Shuffle — shown only when a playlist is active */}
+            {playlistLabel && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-8 w-8 flex-shrink-0",
+                  isShuffled ? "text-cyan-400" : "text-slate-500 hover:text-white",
+                )}
+                onClick={toggleShuffle}
+                aria-label={isShuffled ? "Disable shuffle" : "Enable shuffle"}
+              >
+                <Shuffle className="h-4 w-4" />
+              </Button>
+            )}
 
             {/* Playback controls */}
             <div className="flex items-center gap-1 flex-shrink-0">
@@ -111,9 +133,7 @@ export function MiniPlayer() {
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn(
-                  "h-9 w-9 rounded-full text-cyan-400 bg-cyan-500/20 hover:bg-cyan-500/40",
-                )}
+                className="h-9 w-9 rounded-full text-cyan-400 bg-cyan-500/20 hover:bg-cyan-500/40"
                 onClick={isPlaying ? pause : resume}
                 aria-label={isPlaying ? "Pause" : "Play"}
               >
