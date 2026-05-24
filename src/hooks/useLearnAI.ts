@@ -95,7 +95,7 @@ export function useLearnAI() {
       let answer: string;
       let aiError: AIError | null = null;
       try {
-        const result = await askLearnAI({ message: trimmed, history });
+        const result = await askLearnAI({ message: trimmed, history, mode, language });
         answer = result.answer;
       } catch (err) {
         console.error("[LearnAI] Error getting AI response:", err);

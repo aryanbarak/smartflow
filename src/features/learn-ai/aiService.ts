@@ -8,6 +8,8 @@ type HistoryItem = { role: "user" | "assistant"; content: string };
 type AskInput = {
   message: string;
   history: HistoryItem[];
+  mode?: string;
+  language?: string;
 };
 
 export type AIResult = { answer: string };
@@ -30,7 +32,12 @@ export async function askLearnAI(input: AskInput): Promise<AIResult> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: controller.signal,
-      body: JSON.stringify({ message: input.message, history: input.history }),
+      body: JSON.stringify({
+        message: input.message,
+        history: input.history,
+        mode: input.mode,
+        language: input.language,
+      }),
     });
   } catch (err) {
     clearTimeout(timeoutId);
