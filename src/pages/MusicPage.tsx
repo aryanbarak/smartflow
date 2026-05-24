@@ -1,248 +1,432 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Plus, Play, Pause, SkipBack, SkipForward, Volume2, Music, MoreVertical, ListMusic } from "lucide-react";
+import { Search, Upload, Trash2, Music2, ChevronDown, ChevronUp, Play, Pause, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
-  createPlaylist,
-  getLibrary,
-  saveLibrary,
-  type Playlist,
-  type Track,
-} from "@/features/music/musicService";
+  useMusicPlayer,
+  parseVideoId,
+  loadHistory,
+  addToHistory,
+  PRESETS,
+  type HistoryEntry,
+} from "@/hooks/useMusicPlayer";
+import { PomodoroTimer } from "@/components/music/PomodoroTimer";
 
-const playlistColors = [
-  "from-amber-500 to-orange-600",
-  "from-blue-500 to-cyan-600",
-  "from-purple-500 to-pink-600",
-  "from-green-500 to-emerald-600",
-  "from-rose-500 to-red-600",
-  "from-indigo-500 to-violet-600",
-];
+// ─── YouTube helpers ──────────────────────────────────────────────────────────
 
-export default function MusicPage() {
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newPlaylistName, setNewPlaylistName] = useState("");
+async function fetchYouTubeInfo(videoId: string): Promise<{ title: string; embeddable: boolean }> {
+  try {
+    const url = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+    const res = await fetch(url);
+    if (!res.ok) return { title: `Video ${videoId}`, embeddable: false };
+    const data = (await res.json()) as { title?: string };
+    const title = typeof data.title === "string" && data.title ? data.title : `Video ${videoId}`;
+    return { title, embeddable: true };
+  } catch {
+    // Network error — let the iframe try; postMessage listener will catch errors
+    return { title: `Video ${videoId}`, embeddable: true };
+  }
+}
 
-  const playlistCountLabel = useMemo(() => {
-    return playlists.length === 1 ? "playlist" : "playlists";
-  }, [playlists.length]);
+function isYouTubeEmbedError(data: unknown): boolean {
+  if (data === null || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  if (d.event !== "onError") return false;
+  const code = d.info;
+  return code === 101 || code === 150 || code === 100;
+}
 
+// ─── YouTube tab ──────────────────────────────────────────────────────────────
+
+function YouTubeTab() {
+  const { currentTrack, isPlaying, playYouTube, pause, resume, stop } = useMusicPlayer();
+  const [input, setInput] = useState("");
+  const [history, setHistory] = useState<HistoryEntry[]>(() => loadHistory());
+  const [error, setError] = useState<string | null>(null);
+  const [embedError, setEmbedError] = useState(false);
+  const [isLoadingTitle, setIsLoadingTitle] = useState(false);
+
+  const activeVideoId = currentTrack?.type === "youtube" ? currentTrack.videoId : null;
+  const isLocalhost = typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+  // Listen for YouTube postMessage errors (embedding not allowed)
   useEffect(() => {
-    setPlaylists(getLibrary());
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== "https://www.youtube.com") return;
+      try {
+        const data =
+          typeof event.data === "string"
+            ? (JSON.parse(event.data) as unknown)
+            : event.data;
+        if (isYouTubeEmbedError(data)) setEmbedError(true);
+      } catch {
+        // ignore malformed messages
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
   }, []);
 
-  useEffect(() => {
-    if (!selectedPlaylist) return;
-    const refreshed = playlists.find((playlist) => playlist.id === selectedPlaylist.id);
-    if (!refreshed) {
-      setSelectedPlaylist(null);
+  const handlePlay = useCallback(
+    (videoId: string, title: string) => {
+      setError(null);
+      setEmbedError(false);
+      playYouTube(videoId, title);
+      setHistory((prev) => addToHistory({ videoId, title }, prev));
+      setInput("");
+    },
+    [playYouTube],
+  );
+
+  const handleSubmit = () => {
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    const vid = parseVideoId(trimmed);
+    if (!vid) {
+      setError("Could not find a YouTube video ID in that URL. Try pasting the full URL.");
       return;
     }
-    setSelectedPlaylist(refreshed);
-  }, [playlists, selectedPlaylist]);
-
-  const handlePlayPlaylist = (playlist: Playlist) => {
-    setSelectedPlaylist(playlist);
-    const firstTrack = playlist.tracks[0] ?? null;
-    setCurrentTrack(firstTrack);
-    setIsPlaying(!!firstTrack);
+    setIsLoadingTitle(true);
+    fetchYouTubeInfo(vid).then(({ title, embeddable }) => {
+      setIsLoadingTitle(false);
+      handlePlay(vid, title);
+      if (!embeddable) setEmbedError(true);
+    }).catch(() => { setIsLoadingTitle(false); });
   };
 
-  const handleCreatePlaylist = () => {
-    const trimmedName = newPlaylistName.trim();
-    if (!trimmedName) return;
-    const color = playlistColors[Math.floor(Math.random() * playlistColors.length)];
-    const created = createPlaylist({ name: trimmedName, color });
-    const updated = [created, ...playlists];
-    setPlaylists(updated);
-    saveLibrary(updated);
-    setNewPlaylistName("");
-    setIsDialogOpen(false);
-  };
+  const embedSrc = activeVideoId && !embedError
+    ? `https://www.youtube.com/embed/${activeVideoId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1`
+    : null;
 
   return (
-    <div className="p-6 lg:p-8 max-w-6xl mx-auto pb-32">
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-8"
-      >
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-semibold mb-1">Music</h1>
-          <p className="text-muted-foreground">
-            Your personal playlists · {playlists.length} {playlistCountLabel}
+    <div className="space-y-5">
+      {/* Localhost notice */}
+      {isLocalhost && (
+        <div className="flex items-start gap-3 rounded-lg border border-blue-500/30 bg-blue-500/10 p-4">
+          <span className="text-blue-400 flex-shrink-0 text-base leading-none mt-0.5" aria-hidden="true">ℹ</span>
+          <p className="text-sm text-blue-200">
+            YouTube playback works on <strong>barakzai.cloud</strong>. On localhost, use the{" "}
+            <strong>My Music</strong> tab to upload local files.
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 shadow-glow">
-              <Plus className="w-4 h-4" />
-              New Playlist
+      )}
+
+      {/* Input row */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+          <Input
+            value={input}
+            onChange={(e) => { setInput(e.target.value); setError(null); }}
+            onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
+            placeholder="Paste a YouTube URL or video ID…"
+            className="pl-9 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+            disabled={isLoadingTitle}
+          />
+        </div>
+        <Button onClick={handleSubmit} disabled={!input.trim() || isLoadingTitle}>
+          {isLoadingTitle ? "Loading…" : "Play"}
+        </Button>
+      </div>
+
+      <p className="text-xs text-slate-500">
+        Tip: Not all YouTube videos allow embedding. Use the presets above or try a different video.
+      </p>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      {/* Presets */}
+      <div>
+        <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Quick Presets</p>
+        <div className="flex flex-wrap gap-2">
+          {PRESETS.map((p) => (
+            <Button
+              key={p.videoId}
+              variant={activeVideoId === p.videoId ? "default" : "secondary"}
+              size="sm"
+              className={cn(
+                "gap-1.5",
+                activeVideoId === p.videoId && "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40",
+              )}
+              onClick={() => handlePlay(p.videoId, p.title)}
+            >
+              {activeVideoId === p.videoId && isPlaying ? (
+                <Pause className="h-3 w-3" />
+              ) : (
+                <Play className="h-3 w-3 ml-0.5" />
+              )}
+              {p.label}
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create Playlist</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>Playlist Name</Label>
-                <Input
-                  placeholder="My Playlist"
-                  value={newPlaylistName}
-                  onChange={(event) => setNewPlaylistName(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Add Music</Label>
-                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                  <Music className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Drop music files or paste URLs
-                  </p>
-                  <Button variant="secondary" size="sm">
-                    Browse Files
-                  </Button>
-                </div>
-              </div>
-              <Button
-                className="w-full"
-                onClick={handleCreatePlaylist}
-                disabled={!newPlaylistName.trim()}
+          ))}
+        </div>
+      </div>
+
+      {/* History chips */}
+      {history.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-slate-500 uppercase tracking-wider">Recent</p>
+            <button
+              type="button"
+              className="text-xs text-slate-500 hover:text-slate-300"
+              onClick={() => {
+                setHistory([]);
+                localStorage.removeItem("dailyflow:v1:youtube-history");
+              }}
+            >
+              Clear
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {history.map((h) => (
+              <button
+                key={h.videoId}
+                type="button"
+                onClick={() => handlePlay(h.videoId, h.title)}
+                className={cn(
+                  "px-3 py-1 rounded-full text-sm transition-colors",
+                  activeVideoId === h.videoId
+                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
+                    : "bg-slate-800 text-slate-300 border border-slate-700 hover:border-cyan-500/40 hover:text-white",
+                )}
               >
-                Create Playlist
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+                {h.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Embed error banner */}
+      {embedError && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+          <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-amber-200 font-medium">Video cannot be embedded</p>
+            <p className="text-xs text-amber-300/70 mt-0.5">
+              The video owner has disabled playback on external sites. Try a different URL or use a preset.
+            </p>
+            {activeVideoId && (
+              <a
+                href={`https://www.youtube.com/watch?v=${activeVideoId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-amber-400 hover:text-amber-200 underline mt-1 inline-block"
+              >
+                Watch on YouTube ↗
+              </a>
+            )}
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-amber-400 hover:text-amber-200 flex-shrink-0"
+            onClick={() => { stop(); setEmbedError(false); }}
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
+
+      {/* Visible YouTube embed */}
+      {embedSrc && (
+        <div className="rounded-xl overflow-hidden border border-slate-700 shadow-lg">
+          <div className="relative w-full aspect-video">
+            <iframe
+              key={activeVideoId}
+              src={embedSrc}
+              title="YouTube player"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+              className="absolute inset-0 w-full h-full"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Resume control when paused and no embed visible */}
+      {activeVideoId && currentTrack?.type === "youtube" && !embedSrc && !embedError && (
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={isPlaying ? pause : resume} className="gap-2">
+            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            {isPlaying ? "Pause" : "Resume"}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Local files tab ─────────────────────────────────────────────────────────
+
+function LocalTab() {
+  const { localTracks, currentTrack, isPlaying, playLocal, pause, resume, removeLocalTrack, addLocalTracks } =
+    useMusicPlayer();
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFiles = useCallback(
+    (files: FileList | null) => {
+      if (!files) return;
+      addLocalTracks(Array.from(files));
+    },
+    [addLocalTracks],
+  );
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      handleFiles(e.dataTransfer.files);
+    },
+    [handleFiles],
+  );
+
+  const activeId = currentTrack?.type === "local" ? currentTrack.id : null;
+
+  return (
+    <div className="space-y-4">
+      {/* Drop zone — <label> naturally opens the file dialog on click */}
+      <label
+        htmlFor="local-file-input"
+        className={cn(
+          "block border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors",
+          isDragging
+            ? "border-cyan-400 bg-cyan-500/10"
+            : "border-slate-700 hover:border-cyan-500/50 hover:bg-slate-800/40",
+        )}
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+      >
+        <Upload className="h-8 w-8 text-slate-400 mx-auto mb-3" />
+        <p className="text-sm text-slate-300 font-medium">
+          Drop audio files here or click to browse
+        </p>
+        <p className="text-xs text-slate-500 mt-1">MP3, WAV, OGG, M4A, FLAC</p>
+        <input
+          id="local-file-input"
+          ref={fileInputRef}
+          type="file"
+          accept=".mp3,.wav,.ogg,.m4a,.flac,audio/*"
+          multiple
+          className="sr-only"
+          onChange={(e) => handleFiles(e.target.files)}
+        />
+      </label>
+
+      {/* Playlist */}
+      {localTracks.length === 0 ? (
+        <p className="text-center text-sm text-slate-500 py-4">No tracks yet — upload some music above.</p>
+      ) : (
+        <div className="space-y-1">
+          {localTracks.map((track, idx) => {
+            const isActive = track.id === activeId;
+            return (
+              <div
+                key={track.id}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group",
+                  isActive ? "bg-cyan-500/10 border border-cyan-500/30" : "hover:bg-slate-800",
+                )}
+              >
+                <span className="text-xs text-slate-500 w-5 text-right flex-shrink-0">
+                  {isActive ? (
+                    <Music2 className={cn("h-3.5 w-3.5", isPlaying ? "text-cyan-400 animate-pulse" : "text-slate-400")} />
+                  ) : (
+                    idx + 1
+                  )}
+                </span>
+                <button
+                  type="button"
+                  className="flex-1 text-left min-w-0"
+                  onClick={() => {
+                    if (isActive) {
+                      if (isPlaying) { pause(); } else { resume(); }
+                    } else {
+                      playLocal(track);
+                    }
+                  }}
+                >
+                  <p className={cn("text-sm font-medium truncate", isActive ? "text-cyan-300" : "text-slate-200")}>
+                    {track.name}
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Remove ${track.name}`}
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-slate-500 hover:text-red-400 transition-all"
+                  onClick={() => removeLocalTrack(track.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Collapsible Pomodoro panel ───────────────────────────────────────────────
+
+function CollapsiblePomodoro() {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="w-full lg:w-72 flex-shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center justify-between w-full text-sm font-medium text-slate-300 hover:text-white mb-2 px-1"
+      >
+        <span>Pomodoro Timer</span>
+        {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+      </button>
+      {open && <PomodoroTimer />}
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function MusicPage() {
+  return (
+    <div className="p-6 lg:p-8 max-w-6xl mx-auto pb-28">
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+        <h1 className="text-2xl lg:text-3xl font-semibold mb-1">Music</h1>
+        <p className="text-muted-foreground">YouTube player &amp; your own audio files</p>
       </motion.div>
 
-      {/* Playlists Grid */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
-        className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+        className="flex flex-col lg:flex-row gap-6"
       >
-        {playlists.map((playlist) => (
-          <Card 
-            key={playlist.id} 
-            className="group cursor-pointer overflow-hidden hover:ring-2 hover:ring-primary/50 transition-all"
-            onClick={() => setSelectedPlaylist(playlist)}
-          >
-            <div className={cn("h-32 bg-gradient-to-br flex items-center justify-center relative", playlist.color)}>
-              <ListMusic className="w-12 h-12 text-white/80" />
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePlayPlaylist(playlist);
-                }}
-                className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0"
-              >
-                <Play className="w-5 h-5 text-foreground fill-foreground ml-0.5" />
-              </button>
-            </div>
-            <CardContent className="pt-4">
-              <h3 className="font-medium truncate">{playlist.name}</h3>
-              <p className="text-sm text-muted-foreground">
-                {playlist.trackCount ?? playlist.tracks.length} tracks
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        {/* Main area */}
+        <div className="flex-1 min-w-0">
+          <Tabs defaultValue="youtube">
+            <TabsList className="mb-5">
+              <TabsTrigger value="youtube">YouTube</TabsTrigger>
+              <TabsTrigger value="local">My Music</TabsTrigger>
+            </TabsList>
+            <TabsContent value="youtube">
+              <YouTubeTab />
+            </TabsContent>
+            <TabsContent value="local">
+              <LocalTab />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Pomodoro side panel */}
+        <CollapsiblePomodoro />
       </motion.div>
-
-      {/* Track List */}
-      {selectedPlaylist && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{selectedPlaylist.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {selectedPlaylist.tracks.map((track, i) => (
-                  <button
-                    key={track.id}
-                    onClick={() => {
-                      setCurrentTrack(track);
-                      setIsPlaying(true);
-                    }}
-                    className={cn(
-                      "w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left",
-                      currentTrack?.id === track.id && selectedPlaylist 
-                        ? "bg-primary/10 text-primary" 
-                        : "hover:bg-secondary"
-                    )}
-                  >
-                    <span className="text-sm text-muted-foreground w-6">{i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{track.title}</p>
-                      <p className="text-xs text-muted-foreground">{track.artist}</p>
-                    </div>
-                    <span className="text-sm text-muted-foreground">{track.duration}</span>
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
-      {/* Player Bar */}
-      {currentTrack && (
-        <motion.div
-          initial={{ opacity: 0, y: 100 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="fixed bottom-0 left-0 right-0 lg:left-64 bg-card border-t border-border p-4"
-        >
-          <div className="max-w-4xl mx-auto flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center">
-              <Music className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{currentTrack.title}</p>
-              <p className="text-xs text-muted-foreground">{currentTrack.artist}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon">
-                <SkipBack className="w-5 h-5" />
-              </Button>
-              <Button 
-                size="icon" 
-                className="w-10 h-10 rounded-full"
-                onClick={() => setIsPlaying(!isPlaying)}
-              >
-                {isPlaying ? (
-                  <Pause className="w-5 h-5" />
-                ) : (
-                  <Play className="w-5 h-5 ml-0.5" />
-                )}
-              </Button>
-              <Button variant="ghost" size="icon">
-                <SkipForward className="w-5 h-5" />
-              </Button>
-            </div>
-            <div className="hidden sm:flex items-center gap-2 w-32">
-              <Volume2 className="w-4 h-4 text-muted-foreground" />
-              <Slider defaultValue={[70]} max={100} className="w-full" />
-            </div>
-          </div>
-        </motion.div>
-      )}
     </div>
   );
 }

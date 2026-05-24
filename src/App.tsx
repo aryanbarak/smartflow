@@ -18,6 +18,7 @@ import LearnAIPage from "./pages/LearnAIPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
+import { MusicPlayerProvider } from "@/providers/MusicPlayerProvider";
 import { AppLoader } from "@/components/AppLoader";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const AuthRoute = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <MusicPlayerProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -88,6 +90,7 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
+      </MusicPlayerProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

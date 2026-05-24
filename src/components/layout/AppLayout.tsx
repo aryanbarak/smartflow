@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
 import { OfflineBadge } from "@/components/OfflineBadge";
+import { MiniPlayer } from "@/components/music/MiniPlayer";
 
 export function AppLayout() {
   return (
@@ -22,6 +23,9 @@ export function AppLayout() {
         </main>
         <MobileNav />
       </div>
+
+      {/* Global persistent mini player (fixed bottom bar) */}
+      <MiniPlayer />
     </div>
   );
 }
