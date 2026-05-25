@@ -13,6 +13,8 @@ import {
   Sun,
   Palette,
   Wallet,
+  Smartphone,
+  Download,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePreferences } from "@/hooks/usePreferences";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/features/profile/useProfile";
@@ -97,6 +99,32 @@ export default function SettingsPage() {
   const [aiDefaults, setAiDefaults] = useState<AiDefaults>(() =>
     safeGet<AiDefaults>(storageKey("ai-defaults"), { mode: "fiae_algorithms", language: "de" }),
   );
+
+  // PWA install
+  const installPromptRef = useRef<Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> } | null>(null);
+  const [canInstall, setCanInstall] = useState(false);
+  const isStandalone = typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches;
+  const isIos = typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      installPromptRef.current = e as typeof installPromptRef.current;
+      setCanInstall(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPromptRef.current) return;
+    await installPromptRef.current.prompt();
+    const { outcome } = await installPromptRef.current.userChoice;
+    if (outcome === "accepted") {
+      installPromptRef.current = null;
+      setCanInstall(false);
+    }
+  };
 
   // Danger zone
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -504,6 +532,36 @@ export default function SettingsPage() {
               </Select>
             </div>
             <Button onClick={handleSaveAiDefaults}>Save defaults</Button>
+          </CardContent>
+        </Card>
+
+        {/* Install App */}
+        <Card style={CARD_BORDER}>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Smartphone className="w-5 h-5 text-primary" />
+              Install App
+            </CardTitle>
+            <CardDescription>Add DailyFlow to your home screen for a native-like experience</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isStandalone ? (
+              <p className="text-sm text-emerald-400">DailyFlow is already installed on this device.</p>
+            ) : canInstall ? (
+              <Button onClick={handleInstall} className="gap-2">
+                <Download className="w-4 h-4" />
+                Install DailyFlow
+              </Button>
+            ) : isIos ? (
+              <p className="text-sm text-muted-foreground">
+                To install on iOS: tap the <strong>Share</strong> button in Safari, then select{" "}
+                <strong>Add to Home Screen</strong>.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Open this page in Chrome or Edge to install the app on your device.
+              </p>
+            )}
           </CardContent>
         </Card>
 

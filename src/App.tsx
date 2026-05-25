@@ -18,6 +18,7 @@ import SettingsPage from "./pages/SettingsPage";
 import LearnAIPage from "./pages/LearnAIPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
+import OfflinePage from "./pages/OfflinePage";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import { MusicPlayerProvider } from "@/providers/MusicPlayerProvider";
 import { PlaylistPlayerProvider } from "@/contexts/PlaylistPlayerContext";
@@ -90,6 +91,7 @@ const App = () => (
               />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
+            <Route path="/offline" element={<OfflinePage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

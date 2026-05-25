@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -21,7 +22,65 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
-    plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+    plugins: [
+      react(),
+      mode === "development" && componentTagger(),
+      VitePWA({
+        registerType: "autoUpdate",
+        includeAssets: ["favicon.svg", "pwa-192.png", "pwa-512.png"],
+        manifest: {
+          name: "DailyFlow — Intelligent Productivity",
+          short_name: "DailyFlow",
+          description: "Organize tasks, finances, calendar and family in one place.",
+          theme_color: "#0F172A",
+          background_color: "#0F172A",
+          display: "standalone",
+          scope: "/",
+          start_url: "/",
+          icons: [
+            { src: "/pwa-192.png", sizes: "192x192", type: "image/png" },
+            { src: "/pwa-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+          ],
+          shortcuts: [
+            { name: "Tasks", short_name: "Tasks", url: "/tasks", icons: [{ src: "/pwa-192.png", sizes: "192x192" }] },
+            { name: "Calendar", short_name: "Calendar", url: "/calendar", icons: [{ src: "/pwa-192.png", sizes: "192x192" }] },
+            { name: "Learn AI", short_name: "Learn AI", url: "/learn-ai", icons: [{ src: "/pwa-192.png", sizes: "192x192" }] },
+          ],
+        },
+        workbox: {
+          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+          runtimeCaching: [
+            {
+              urlPattern: ({ url }) => url.hostname.includes("supabase.co"),
+              handler: "NetworkFirst",
+              options: {
+                cacheName: "supabase-api",
+                networkTimeoutSeconds: 10,
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              urlPattern: ({ url }) => url.hostname === "api.barakzai.cloud",
+              handler: "NetworkFirst",
+              options: {
+                cacheName: "ai-api",
+                networkTimeoutSeconds: 15,
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              urlPattern: ({ url }) => url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com",
+              handler: "CacheFirst",
+              options: {
+                cacheName: "google-fonts",
+                expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+          ],
+        },
+      }),
+    ].filter(Boolean),
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
