@@ -28,4 +28,4 @@ https://barakzai.cloud
 
 ## Screenshot
 
-![DailyFlow Screenshot](./Screenshot.png)
+![DailyFlow Screenshot](./screenshot.png)
