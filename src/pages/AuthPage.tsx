@@ -10,6 +10,7 @@ import { Loader2, Mail, Lock, AlertTriangle, CheckCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { AppLoader } from "@/components/AppLoader";
+import { DailyFlowIcon } from "@/components/DailyFlowLogo";
 
 const authSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -100,9 +101,7 @@ export default function AuthPage() {
                   Organize with clarity.
                 </h2>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                <CheckCircle className="h-5 w-5 text-primary-foreground" />
-              </div>
+              <DailyFlowIcon size={40} />
             </div>
           </div>
           <CardHeader className="text-left space-y-2">
