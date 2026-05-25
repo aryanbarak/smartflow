@@ -16,8 +16,16 @@ export interface Photo {
   albumId: string | null;
   tags: string[];
   caption: string | null;
+  location: string | null;
   createdAt: string;
 }
+
+export type PhotoPatch = {
+  caption?: string | null;
+  tags?: string[];
+  albumId?: string | null;
+  location?: string | null;
+};
 
 export interface Album {
   id: string;
@@ -37,38 +45,43 @@ export function thumbUrl(photo: Photo) {
 }
 
 const PHOTO_COLS =
-  "id,user_id,r2_key,thumb_key,file_name,file_size,mime_type,width,height,taken_at,album_id,tags,caption,created_at";
+  "id,user_id,r2_key,thumb_key,file_name,file_size,mime_type,width,height,taken_at,album_id,tags,caption,location,created_at";
 const ALBUM_COLS = "id,user_id,name,description,cover_photo_id,created_at";
 
 type Row = Record<string, unknown>;
 
+function s(v: unknown): string { return v as string; }
+function sn(v: unknown): string | null { return v == null ? null : v as string; }
+function nn(v: unknown): number | null { return v == null ? null : v as number; }
+
 function mapPhoto(row: Row): Photo {
   return {
-    id: String(row.id),
-    userId: String(row.user_id),
-    r2Key: String(row.r2_key),
-    thumbKey: row.thumb_key != null ? String(row.thumb_key) : null,
-    fileName: String(row.file_name),
-    fileSize: row.file_size != null ? Number(row.file_size) : null,
-    mimeType: row.mime_type != null ? String(row.mime_type) : null,
-    width: row.width != null ? Number(row.width) : null,
-    height: row.height != null ? Number(row.height) : null,
-    takenAt: row.taken_at != null ? String(row.taken_at) : null,
-    albumId: row.album_id != null ? String(row.album_id) : null,
+    id: s(row.id),
+    userId: s(row.user_id),
+    r2Key: s(row.r2_key),
+    thumbKey: sn(row.thumb_key),
+    fileName: s(row.file_name),
+    fileSize: nn(row.file_size),
+    mimeType: sn(row.mime_type),
+    width: nn(row.width),
+    height: nn(row.height),
+    takenAt: sn(row.taken_at),
+    albumId: sn(row.album_id),
     tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
-    caption: row.caption != null ? String(row.caption) : null,
-    createdAt: String(row.created_at),
+    caption: sn(row.caption),
+    location: sn(row.location),
+    createdAt: s(row.created_at),
   };
 }
 
 function mapAlbum(row: Row): Album {
   return {
-    id: String(row.id),
-    userId: String(row.user_id),
-    name: String(row.name),
-    description: row.description != null ? String(row.description) : null,
-    coverPhotoId: row.cover_photo_id != null ? String(row.cover_photo_id) : null,
-    createdAt: String(row.created_at),
+    id: s(row.id),
+    userId: s(row.user_id),
+    name: s(row.name),
+    description: sn(row.description),
+    coverPhotoId: sn(row.cover_photo_id),
+    createdAt: s(row.created_at),
   };
 }
 
@@ -111,6 +124,7 @@ export const photosService = {
         album_id: input.albumId ?? null,
         tags: input.tags ?? [],
         caption: input.caption ?? null,
+        location: null,
       })
       .select(PHOTO_COLS)
       .single();
@@ -118,14 +132,12 @@ export const photosService = {
     return mapPhoto(data as Row);
   },
 
-  async updatePhoto(
-    id: string,
-    patch: { caption?: string | null; tags?: string[]; albumId?: string | null },
-  ): Promise<Photo> {
+  async updatePhoto(id: string, patch: PhotoPatch): Promise<Photo> {
     const updates: Row = {};
     if (patch.caption !== undefined) updates.caption = patch.caption;
     if (patch.tags !== undefined) updates.tags = patch.tags;
     if (patch.albumId !== undefined) updates.album_id = patch.albumId;
+    if (patch.location !== undefined) updates.location = patch.location;
     const { data, error } = await supabase
       .from("photos")
       .update(updates)

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
-import { photosService, type Photo } from "@/features/photos/photosService";
+import { photosService, type Photo, type PhotoPatch } from "@/features/photos/photosService";
 import { getErrorMessage } from "@/lib/errors";
 
 const PHOTOS_API = "https://api.barakzai.cloud";
@@ -89,6 +89,7 @@ export function usePhotos() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploadQueue, setUploadQueue] = useState<UploadProgress[]>([]);
+  const [aiTaggingIds, setAiTaggingIds] = useState<Set<string>>(new Set());;
 
   const refresh = useCallback(async () => {
     if (!user) {
@@ -111,6 +112,33 @@ export function usePhotos() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  const runAiTagging = useCallback(async (photo: Photo, token: string) => {
+    setAiTaggingIds((prev) => new Set(prev).add(photo.id));
+    try {
+      const res = await fetch(`${PHOTOS_API}/photos/analyze`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ key: photo.r2Key }),
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as { tags?: string[] };
+      const aiTags = data.tags ?? [];
+      if (aiTags.length > 0) {
+        const merged = [...new Set([...photo.tags, ...aiTags])];
+        const updated = await photosService.updatePhoto(photo.id, { tags: merged });
+        setPhotos((prev) => prev.map((p) => (p.id === photo.id ? updated : p)));
+      }
+    } catch {
+      // fire-and-forget, silently ignore
+    } finally {
+      setAiTaggingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(photo.id);
+        return next;
+      });
+    }
+  }, []);
 
   const upload = useCallback(
     async (files: File[], albumId?: string | null) => {
@@ -154,6 +182,7 @@ export function usePhotos() {
             });
             setPhotos((prev) => [photo, ...prev]);
             updateStatus("done");
+            void runAiTagging(photo, token);
           } catch (err) {
             updateStatus("error", getErrorMessage(err));
           }
@@ -162,7 +191,7 @@ export function usePhotos() {
 
       setTimeout(() => setUploadQueue([]), 3000);
     },
-    [user, session],
+    [user, session, runAiTagging],
   );
 
   const remove = useCallback(
@@ -183,17 +212,14 @@ export function usePhotos() {
     [session],
   );
 
-  const update = useCallback(
-    async (id: string, patch: { caption?: string | null; tags?: string[]; albumId?: string | null }) => {
-      try {
-        const updated = await photosService.updatePhoto(id, patch);
-        setPhotos((prev) => prev.map((p) => (p.id === id ? updated : p)));
-      } catch (err) {
-        toast.error(getErrorMessage(err));
-      }
-    },
-    [],
-  );
+  const update = useCallback(async (id: string, patch: PhotoPatch) => {
+    try {
+      const updated = await photosService.updatePhoto(id, patch);
+      setPhotos((prev) => prev.map((p) => (p.id === id ? updated : p)));
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  }, []);
 
-  return { photos, isLoading, error, uploadQueue, upload, remove, update, refresh };
+  return { photos, isLoading, error, uploadQueue, aiTaggingIds, upload, remove, update, refresh };
 }
