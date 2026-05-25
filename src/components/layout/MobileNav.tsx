@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Calendar,
@@ -41,6 +41,7 @@ const moreNavItems = [
 
 export function MobileNav() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   return (
@@ -79,10 +80,10 @@ export function MobileNav() {
                 {moreNavItems.map((item) => {
                   const isActive = location.pathname === item.path;
                   return (
-                    <NavLink
+                    <button
                       key={item.path}
-                      to={item.path}
-                      onClick={() => setOpen(false)}
+                      type="button"
+                      onClick={() => { setOpen(false); navigate(item.path); }}
                       className={cn(
                         "flex flex-col items-center gap-2 p-3 rounded-xl transition-colors",
                         isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary"
@@ -90,7 +91,7 @@ export function MobileNav() {
                     >
                       <item.icon className="w-6 h-6" />
                       <span className="text-xs">{item.label}</span>
-                    </NavLink>
+                    </button>
                   );
                 })}
               </div>
