@@ -29,8 +29,8 @@ export default defineConfig(({ mode }) => {
         registerType: "autoUpdate",
         includeAssets: ["favicon.svg", "pwa-192.png", "pwa-512.png"],
         manifest: {
-          name: "DailyFlow — Intelligent Productivity",
-          short_name: "DailyFlow",
+          name: "dailyFlow",
+          short_name: "dailyFlow",
           description: "Organize tasks, finances, calendar and family in one place.",
           theme_color: "#0F172A",
           background_color: "#0F172A",
