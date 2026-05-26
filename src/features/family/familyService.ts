@@ -18,12 +18,15 @@ export interface ChildEvent {
   calendarEventId?: string | null;
 }
 
+export type MemberRole = "child" | "teen" | "adult" | "parent";
+
 export interface Child {
   id: string;
   name: string;
   age?: number;
   color: string;
   initials: string;
+  role: MemberRole;
   schedule: ChildScheduleItem[];
   notes: string[];
   events: ChildEvent[];
@@ -36,6 +39,7 @@ export type ChildCreateInput = {
   age?: number;
   color: string;
   initials: string;
+  role?: MemberRole;
   schedule?: ChildScheduleItem[];
   notes?: string[];
   events?: ChildEvent[];
@@ -43,13 +47,24 @@ export type ChildCreateInput = {
 
 export type ChildUpdateInput = Partial<ChildCreateInput>;
 
+export function ageToRole(age?: number): MemberRole {
+  if (age === undefined) return "child";
+  if (age >= 18) return "adult";
+  if (age >= 12) return "teen";
+  return "child";
+}
+
 function mapRowToChild(row: FamilyChildRow): Child {
+  const age = row.age ?? undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const storedRole = (row as any).role as MemberRole | undefined;
   return {
     id: row.id,
     name: row.name,
-    age: row.age ?? undefined,
+    age,
     color: row.color,
     initials: row.initials,
+    role: storedRole ?? ageToRole(age),
     schedule: (row.schedule ?? []) as ChildScheduleItem[],
     notes: (row.notes ?? []) as string[],
     events: (row.events ?? []) as ChildEvent[],
@@ -71,16 +86,17 @@ export const familyService = {
   },
 
   async create(userId: string, input: ChildCreateInput): Promise<Child> {
-    const payload: FamilyChildInsert = {
+    const payload = {
       user_id: userId,
       name: input.name,
       age: input.age ?? null,
       color: input.color,
       initials: input.initials,
+      role: input.role ?? ageToRole(input.age),
       schedule: input.schedule ?? [],
       notes: input.notes ?? [],
       events: input.events ?? [],
-    };
+    } as FamilyChildInsert;
 
     const { data, error } = await supabase
       .from("family_children")
@@ -97,15 +113,16 @@ export const familyService = {
     id: string,
     patch: ChildUpdateInput
   ): Promise<Child> {
-    const payload: FamilyChildUpdate = {
+    const payload = {
       name: patch.name,
       age: patch.age ?? null,
       color: patch.color,
       initials: patch.initials,
+      role: patch.role,
       schedule: patch.schedule,
       notes: patch.notes,
       events: patch.events,
-    };
+    } as FamilyChildUpdate;
 
     const { data, error } = await supabase
       .from("family_children")
