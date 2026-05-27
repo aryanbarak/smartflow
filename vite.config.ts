@@ -49,9 +49,12 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
+          // Cloudflare _redirects handles SPA navigation (/* /index.html 200).
+          // Setting navigateFallback to null prevents Workbox from trying to
+          // serve index.html from precache (which it no longer holds), which
+          // was causing "non-precached-url" crashes on every page navigation.
+          navigateFallback: null,
           // Never precache HTML — index.html changes every build (new JS hashes).
-          // Caching it causes the SW to serve a stale shell after deployments,
-          // which references JS bundles that no longer exist on the CDN.
           globPatterns: ["**/*.{css,ico,png,svg,woff2}"],
           runtimeCaching: [
             {
