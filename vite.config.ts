@@ -49,25 +49,20 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
-          globPatterns: ["**/*.{css,html,ico,png,svg,woff2}"],
+          // Never precache HTML — index.html changes every build (new JS hashes).
+          // Caching it causes the SW to serve a stale shell after deployments,
+          // which references JS bundles that no longer exist on the CDN.
+          globPatterns: ["**/*.{css,ico,png,svg,woff2}"],
           runtimeCaching: [
             {
+              // Auth/API calls must NEVER be cached — always go to network.
+              // Caching status 0 (network error) was replaying failures as responses.
               urlPattern: ({ url }) => url.hostname.includes("supabase.co"),
-              handler: "NetworkFirst",
-              options: {
-                cacheName: "supabase-api",
-                networkTimeoutSeconds: 10,
-                cacheableResponse: { statuses: [0, 200] },
-              },
+              handler: "NetworkOnly",
             },
             {
               urlPattern: ({ url }) => url.hostname === "api.barakzai.cloud",
-              handler: "NetworkFirst",
-              options: {
-                cacheName: "ai-api",
-                networkTimeoutSeconds: 15,
-                cacheableResponse: { statuses: [0, 200] },
-              },
+              handler: "NetworkOnly",
             },
             {
               urlPattern: ({ url }) => url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com",
@@ -75,7 +70,7 @@ export default defineConfig(({ mode }) => {
               options: {
                 cacheName: "google-fonts",
                 expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-                cacheableResponse: { statuses: [0, 200] },
+                cacheableResponse: { statuses: [200] },
               },
             },
           ],
