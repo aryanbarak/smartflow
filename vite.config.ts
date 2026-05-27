@@ -48,7 +48,7 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
-          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+          globPatterns: ["**/*.{css,html,ico,png,svg,woff2}"],
           runtimeCaching: [
             {
               urlPattern: ({ url }) => url.hostname.includes("supabase.co"),
