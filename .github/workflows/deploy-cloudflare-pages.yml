@@ -34,6 +34,8 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_TUTOR_API_URL: ${{ secrets.VITE_TUTOR_API_URL }}
           VITE_TUTOR_API_TOKEN: ${{ secrets.VITE_TUTOR_API_TOKEN }}
+          VITE_AI_AGENT_URL: ${{ secrets.VITE_AI_AGENT_URL }}
+          VITE_APP_ENV: ${{ secrets.VITE_APP_ENV }}
         run: npm run build
 
       - name: Verify dist
