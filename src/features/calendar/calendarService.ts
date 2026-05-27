@@ -138,7 +138,15 @@ export const calendarService = {
         .order("date", { ascending: true })
         .order("start_time", { ascending: true, nullsFirst: true });
       if (error) throw error;
-      return (data as DbRow[]).map(dbRowToEvent);
+      const seen = new Set<string>();
+      return (data as DbRow[])
+        .map(dbRowToEvent)
+        .filter((e) => {
+          const key = `${e.title}|${e.dateTimeStart}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
     } catch {
       return readLocal();
     }
@@ -253,9 +261,11 @@ export async function migrateLocalStorageEvents(userId: string): Promise<void> {
     type: e.type || null,
     all_day: e.allDay ?? false,
   }));
+  // Mark migrated before insert so repeated Supabase failures can't create duplicates.
+  // If insert fails, the localStorage data is still intact and readable as fallback.
+  safeRemove(EVENTS_KEY);
   const { error } = await supabase.from("calendar_events").insert(rows);
   if (error) throw error;
-  safeRemove(EVENTS_KEY);
 }
 
 function parseLocalDate(date: string) {

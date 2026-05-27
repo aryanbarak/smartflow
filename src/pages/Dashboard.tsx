@@ -86,18 +86,23 @@ export default function Dashboard() {
 
   const today = useMemo(() => new Date(), []);
   const todayKey = useMemo(() => toDateOnly(today), [today]);
-  const todayEvents = useMemo(
-    () =>
-      events
-        .filter((event) => isSameDay(new Date(event.dateTimeStart), today))
-        .sort(
-          (a, b) =>
-            new Date(a.dateTimeStart).getTime() -
-            new Date(b.dateTimeStart).getTime()
-        )
-        .slice(0, 5),
-    [events, today]
-  );
+  const todayEvents = useMemo(() => {
+    const seen = new Set<string>();
+    return events
+      .filter((event) => isSameDay(new Date(event.dateTimeStart), today))
+      .filter((event) => {
+        const key = `${event.title}|${event.dateTimeStart}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort(
+        (a, b) =>
+          new Date(a.dateTimeStart).getTime() -
+          new Date(b.dateTimeStart).getTime()
+      )
+      .slice(0, 5);
+  }, [events, today]);
 
   const incompleteCount = useMemo(
     () => tasks.filter((task) => !task.completed).length,
