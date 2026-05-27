@@ -10,6 +10,7 @@ import CalendarPage from "./pages/CalendarPage";
 import TasksPage from "./pages/TasksPage";
 import FinancePage from "./pages/FinancePage";
 import FamilyPage from "./pages/FamilyPage";
+import FamilyHubPage from "./pages/FamilyHubPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import MusicPage from "./pages/MusicPage";
 import PhotosPage from "./pages/PhotosPage";
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="/tasks" element={<TasksPage />} />
               <Route path="/finance" element={<FinancePage />} />
               <Route path="/family" element={<FamilyPage />} />
+              <Route path="/family-hub" element={<FamilyHubPage />} />
               <Route path="/documents" element={<DocumentsPage />} />
               <Route path="/music" element={<MusicPage />} />
               <Route path="/photos" element={<PhotosPage />} />

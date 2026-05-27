@@ -7,6 +7,7 @@ import {
   Wallet,
   Menu,
   Users,
+  Home,
   FileText,
   Music,
   Image,
@@ -29,6 +30,7 @@ const mainNavItems = [
 
 const moreNavItems = [
   { icon: Users, label: "Family", path: "/family" },
+  { icon: Home, label: "Family Hub", path: "/family-hub" },
   { icon: FileText, label: "Documents", path: "/documents" },
   { icon: Image, label: "Photos", path: "/photos" },
   { icon: Music, label: "Music", path: "/music" },
