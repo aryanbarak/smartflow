@@ -1,4 +1,5 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
+import { useAppearance, ACCENT_COLORS } from "@/features/settings/appearanceStore";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,6 +29,15 @@ import { MusicPlayerProvider } from "@/providers/MusicPlayerProvider";
 import { PlaylistPlayerProvider } from "@/contexts/PlaylistPlayerContext";
 import { AppLoader } from "@/components/AppLoader";
 
+function AccentColorInit() {
+  const { accentColor } = useAppearance();
+  useEffect(() => {
+    const { hsl } = ACCENT_COLORS[accentColor];
+    document.documentElement.style.setProperty('--primary', hsl);
+  }, [accentColor]);
+  return null;
+}
+
 const queryClient = new QueryClient();
 const TutorPage = lazy(() => import("./pages/TutorPage"));
 const TutorAppPage = lazy(() => import("./pages/TutorAppPage"));
@@ -53,6 +63,7 @@ const App = () => (
       <MusicPlayerProvider>
       <PlaylistPlayerProvider>
       <TooltipProvider>
+        <AccentColorInit />
         <Toaster />
         <Sonner />
         <BrowserRouter>

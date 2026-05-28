@@ -1,61 +1,91 @@
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
-  User,
-  Lock,
-  Globe,
-  Brain,
-  Trash2,
-  Eye,
-  EyeOff,
-  Loader2,
-  LogOut,
-  Moon,
-  Sun,
-  Palette,
-  Wallet,
-  Smartphone,
-  Download,
-} from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useState, useEffect, useRef } from "react";
-import { usePreferences } from "@/hooks/usePreferences";
-import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/features/profile/useProfile";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { safeGet, safeSet, storageKey } from "@/lib/storage";
-import type { LearnAIMode, LearnAILanguage } from "@/features/learn-ai/types";
+  User, Shield, Palette, Bell, Database,
+  Eye, EyeOff, Check, AlertTriangle, Download,
+  Trash2, LogOut, Moon, Sun, Monitor, Smartphone,
+  Brain, Globe, Wallet, Loader2,
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
+import { useTheme } from 'next-themes';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/features/profile/useProfile';
+import { usePreferences } from '@/hooks/usePreferences';
+import { useAppearance, ACCENT_COLORS, DENSITY_OPTIONS } from '@/features/settings/appearanceStore';
+import { useNotificationPrefs } from '@/features/settings/notificationSettings';
+import { dataExportService } from '@/features/settings/dataExportService';
+import { supabase } from '@/integrations/supabase/client';
+import { safeGet, safeSet, storageKey } from '@/lib/storage';
+import type { LearnAIMode, LearnAILanguage } from '@/features/learn-ai/types';
 
-const AVATAR_COLORS = [
-  "#0EA5E9",
-  "#8B5CF6",
-  "#EC4899",
-  "#F59E0B",
-  "#10B981",
-  "#EF4444",
-  "#6366F1",
-  "#14B8A6",
+// ── Types ──────────────────────────────────────────────────────────────────
+
+type Tab = 'profile' | 'security' | 'appearance' | 'notifications' | 'data';
+
+const TABS: { id: Tab; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
+  { id: 'profile',       label: 'Profile',       icon: User      },
+  { id: 'security',      label: 'Security',       icon: Shield    },
+  { id: 'appearance',    label: 'Appearance',     icon: Palette   },
+  { id: 'notifications', label: 'Notifications',  icon: Bell      },
+  { id: 'data',          label: 'Data',           icon: Database  },
 ];
 
 type AiDefaults = { mode: LearnAIMode; language: LearnAILanguage };
 
-const CARD_BORDER = { border: "1px solid rgba(56,189,248,0.12)" };
-const DANGER_BORDER = { border: "1px solid rgba(239,68,68,0.3)" };
+const AVATAR_COLORS = [
+  '#0EA5E9', '#8B5CF6', '#EC4899', '#F59E0B',
+  '#10B981', '#EF4444', '#6366F1', '#14B8A6',
+];
+
+// ── Shared building blocks ─────────────────────────────────────────────────
+
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-border bg-muted/30">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{title}</h3>
+      </div>
+      <div className="px-5">{children}</div>
+    </div>
+  );
+}
+
+function SettingRow({ label, desc, children }: {
+  label: string; desc?: string; children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between py-3.5 border-b border-border last:border-0">
+      <div className="flex-1 min-w-0 pr-4">
+        <p className="text-sm font-medium">{label}</p>
+        {desc && <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>}
+      </div>
+      <div className="flex-shrink-0">{children}</div>
+    </div>
+  );
+}
+
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      role="switch"
+      aria-checked={checked ? 'true' : 'false'}
+      onClick={() => onChange(!checked)}
+      className="relative w-10 h-6 rounded-full transition-colors flex-shrink-0"
+      style={{ background: checked ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground) / 0.3)' }}
+    >
+      <motion.div
+        animate={{ x: checked ? 16 : 2 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        className="absolute top-1 w-4 h-4 bg-white rounded-full shadow"
+      />
+    </button>
+  );
+}
 
 function getInitials(name: string, email: string): string {
   const trimmed = name.trim();
@@ -68,43 +98,540 @@ function getInitials(name: string, email: string): string {
   return email.slice(0, 2).toUpperCase();
 }
 
-export default function SettingsPage() {
-  const navigate = useNavigate();
-  const { preferences, setTheme, setLanguage: setPrefLanguage, setCurrency } = usePreferences();
-  const { user, isLoading: authLoading, signOut } = useAuth();
-  const { profile, isLoading: profileLoading, isSaving, refresh, save } = useProfile();
+// ── Tab: Profile ───────────────────────────────────────────────────────────
 
-  // Profile
-  const [displayName, setDisplayName] = useState("");
+function ProfileTab() {
+  const { user } = useAuth();
+  const { profile, isLoading, isSaving, save } = useProfile();
+  const [displayName, setDisplayName] = useState('');
   const [avatarColor, setAvatarColor] = useState<string>(() =>
-    safeGet(storageKey("avatar-color"), "#0EA5E9"),
+    safeGet(storageKey('avatar-color'), '#0EA5E9'),
   );
 
-  // Password
-  const [currentPw, setCurrentPw] = useState("");
-  const [newPw, setNewPw] = useState("");
-  const [confirmPw, setConfirmPw] = useState("");
-  const [showCurrentPw, setShowCurrentPw] = useState(false);
-  const [showNewPw, setShowNewPw] = useState(false);
-  const [showConfirmPw, setShowConfirmPw] = useState(false);
-  const [pwError, setPwError] = useState<string | null>(null);
-  const [isPwSaving, setIsPwSaving] = useState(false);
+  useEffect(() => {
+    setDisplayName(profile?.displayName ?? '');
+  }, [profile]);
 
-  // Language preference
-  const [appLanguage, setAppLanguage] = useState<string>(() =>
-    safeGet(storageKey("language"), preferences.language ?? "en"),
+  const initials = getInitials(displayName, user?.email ?? '');
+
+  async function handleSave() {
+    safeSet(storageKey('avatar-color'), avatarColor);
+    const ok = await save({ displayName });
+    if (ok) toast.success('Profile updated');
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col items-center gap-4 py-6">
+        <div
+          className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl border-4 border-background shadow-lg"
+          style={{ backgroundColor: avatarColor }}
+        >
+          {initials}
+        </div>
+        <div className="flex gap-2 flex-wrap justify-center">
+          {AVATAR_COLORS.map(c => (
+            <button
+              key={c}
+              type="button"
+              aria-label={`Select color ${c}`}
+              onClick={() => setAvatarColor(c)}
+              className="w-7 h-7 rounded-full transition-transform hover:scale-110"
+              style={{
+                backgroundColor: c,
+                outline: avatarColor === c ? `3px solid ${c}` : 'none',
+                outlineOffset: '2px',
+              }}
+            />
+          ))}
+        </div>
+        <p className="text-sm text-muted-foreground">{user?.email}</p>
+      </div>
+
+      <SectionCard title="Account info">
+        <div className="py-4 space-y-3">
+          <div className="space-y-1.5">
+            <label htmlFor="displayName" className="text-xs text-muted-foreground">Display name</label>
+            <input
+              id="displayName"
+              value={displayName}
+              onChange={e => setDisplayName(e.target.value)}
+              placeholder="Your name"
+              disabled={isLoading}
+              className="w-full bg-muted rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="settings-email" className="text-xs text-muted-foreground">Email</label>
+            <input
+              id="settings-email"
+              value={user?.email ?? ''}
+              readOnly
+              aria-label="Email address"
+              className="w-full bg-muted rounded-xl px-4 py-2.5 text-sm outline-none opacity-60 cursor-not-allowed"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving || isLoading}
+            className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 hover:opacity-90 transition-opacity"
+          >
+            {isSaving ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" /> Saving…</span> : 'Save profile'}
+          </button>
+        </div>
+      </SectionCard>
+    </div>
   );
+}
 
-  // AI defaults
+// ── Tab: Security ──────────────────────────────────────────────────────────
+
+function SecurityTab() {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw]         = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [showPw, setShowPw]       = useState(false);
+  const [pwError, setPwError]     = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
+  const [strength, setStrength]   = useState(0);
+
+  function calcStrength(pw: string) {
+    let s = 0;
+    if (pw.length >= 8)           s++;
+    if (pw.length >= 12)          s++;
+    if (/[A-Z]/.test(pw))         s++;
+    if (/[0-9]/.test(pw))         s++;
+    if (/[^A-Za-z0-9]/.test(pw))  s++;
+    setStrength(s);
+  }
+
+  const strengthColors = ['#ef4444', '#f97316', '#f59e0b', '#3b82f6', '#10b981'];
+  const strengthLabels = ['Very weak', 'Weak', 'Fair', 'Strong', 'Very strong'];
+
+  async function handleChangePassword() {
+    setPwError(null);
+    if (newPw.length < 8)       { setPwError('New password must be at least 8 characters.'); return; }
+    if (newPw !== confirmPw)     { setPwError('Passwords do not match.'); return; }
+    if (!user?.email)            return;
+    setIsPending(true);
+    try {
+      const { error: authErr } = await supabase.auth.signInWithPassword({ email: user.email, password: currentPw });
+      if (authErr) { setPwError('Current password is incorrect.'); return; }
+      const { error: updateErr } = await supabase.auth.updateUser({ password: newPw });
+      if (updateErr) throw updateErr;
+      setCurrentPw(''); setNewPw(''); setConfirmPw('');
+      toast.success('Password updated');
+    } catch (err) {
+      setPwError(err instanceof Error ? err.message : 'Failed to update password.');
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  async function handleSignOut() {
+    await signOut();
+    navigate('/auth');
+  }
+
+  const canSubmit = !!currentPw && newPw.length >= 8 && newPw === confirmPw && !isPending;
+
+  return (
+    <div className="space-y-4">
+      <SectionCard title="Change password">
+        <div className="py-4 space-y-3">
+          <div className="space-y-1.5">
+            <label htmlFor="curPw" className="text-xs text-muted-foreground">Current password</label>
+            <div className="relative">
+              <input
+                id="curPw"
+                type={showPw ? 'text' : 'password'}
+                value={currentPw}
+                onChange={e => setCurrentPw(e.target.value)}
+                autoComplete="current-password"
+                className="w-full bg-muted rounded-xl px-4 py-2.5 pr-10 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                aria-label={showPw ? 'Hide password' : 'Show password'}
+                onClick={() => setShowPw(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              >
+                {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="newPw" className="text-xs text-muted-foreground">New password</label>
+            <input
+              id="newPw"
+              type={showPw ? 'text' : 'password'}
+              value={newPw}
+              onChange={e => { setNewPw(e.target.value); calcStrength(e.target.value); }}
+              autoComplete="new-password"
+              className="w-full bg-muted rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+              placeholder="Minimum 8 characters"
+            />
+            {newPw && (
+              <div className="space-y-1 mt-1">
+                <div className="flex gap-1">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <div
+                      key={i}
+                      className="flex-1 h-1 rounded-full transition-colors"
+                      style={{ background: i < strength ? strengthColors[strength - 1] : 'hsl(var(--muted))' }}
+                    />
+                  ))}
+                </div>
+                {strength > 0 && (
+                  <p className="text-xs" style={{ color: strengthColors[strength - 1] }}>
+                    {strengthLabels[strength - 1]}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="confirmPw" className="text-xs text-muted-foreground">Confirm new password</label>
+            <input
+              id="confirmPw"
+              type={showPw ? 'text' : 'password'}
+              value={confirmPw}
+              onChange={e => setConfirmPw(e.target.value)}
+              autoComplete="new-password"
+              className="w-full bg-muted rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+              placeholder="••••••••"
+            />
+            {confirmPw && newPw !== confirmPw && (
+              <p className="text-xs text-destructive">Passwords do not match</p>
+            )}
+          </div>
+
+          {pwError && <p className="text-xs text-destructive">{pwError}</p>}
+
+          <button
+            type="button"
+            onClick={handleChangePassword}
+            disabled={!canSubmit}
+            className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40 hover:opacity-90 transition-opacity"
+          >
+            {isPending ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" /> Updating…</span> : 'Change password'}
+          </button>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Session">
+        <SettingRow label="Signed in as" desc={user?.email}>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors"
+          >
+            <LogOut size={13} />
+            Sign out
+          </button>
+        </SettingRow>
+      </SectionCard>
+    </div>
+  );
+}
+
+// ── Tab: Appearance ────────────────────────────────────────────────────────
+
+function AppearanceTab() {
+  const { theme, setTheme } = useTheme();
+  const { density, accentColor, reducedMotion, setDensity, setAccentColor, setReducedMotion } = useAppearance();
+  const { preferences, setTheme: setPrefTheme, setLanguage, setCurrency } = usePreferences();
+
   const [aiDefaults, setAiDefaults] = useState<AiDefaults>(() =>
-    safeGet<AiDefaults>(storageKey("ai-defaults"), { mode: "fiae_algorithms", language: "de" }),
+    safeGet<AiDefaults>(storageKey('ai-defaults'), { mode: 'fiae_algorithms', language: 'de' }),
   );
 
-  // PWA install
-  const installPromptRef = useRef<Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> } | null>(null);
+  const themes = [
+    { id: 'dark',   label: 'Dark',   icon: Moon    },
+    { id: 'light',  label: 'Light',  icon: Sun     },
+    { id: 'system', label: 'System', icon: Monitor },
+  ] as const;
+
+  function handleTheme(t: string) {
+    setTheme(t);
+    setPrefTheme(t as 'light' | 'dark' | 'system');
+  }
+
+  function saveAiDefaults() {
+    safeSet(storageKey('ai-defaults'), aiDefaults);
+    toast.success('AI defaults saved');
+  }
+
+  return (
+    <div className="space-y-4">
+      <SectionCard title="Theme">
+        <div className="py-4 grid grid-cols-3 gap-2">
+          {themes.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => handleTheme(id)}
+              className="flex flex-col items-center gap-2 py-3 rounded-xl border-2 transition-all"
+              style={{
+                borderColor: theme === id ? 'hsl(var(--primary))' : 'hsl(var(--border))',
+                background:  theme === id ? 'hsl(var(--primary) / 0.08)' : 'transparent',
+              }}
+            >
+              <Icon size={20} style={{ color: theme === id ? 'hsl(var(--primary))' : undefined }} />
+              <span className="text-xs font-medium">{label}</span>
+            </button>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Accent color">
+        <div className="py-4 flex gap-3 flex-wrap">
+          {(Object.entries(ACCENT_COLORS) as [typeof accentColor, { label: string; hex: string }][]).map(([key, cfg]) => (
+            <button
+              key={key}
+              type="button"
+              aria-label={`Set accent color to ${cfg.label}`}
+              onClick={() => setAccentColor(key)}
+              className="w-10 h-10 rounded-full transition-all hover:scale-110 flex items-center justify-center"
+              style={{
+                backgroundColor: cfg.hex,
+                outline: accentColor === key ? `3px solid ${cfg.hex}` : 'none',
+                outlineOffset: '2px',
+                transform: accentColor === key ? 'scale(1.15)' : undefined,
+              }}
+            >
+              {accentColor === key && <Check size={16} className="text-white" />}
+            </button>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Layout density">
+        <div className="py-2 space-y-1">
+          {DENSITY_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setDensity(opt.value)}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors hover:bg-muted"
+              style={{ background: density === opt.value ? 'hsl(var(--primary) / 0.08)' : undefined }}
+            >
+              <div>
+                <p className="text-sm font-medium text-left">{opt.label}</p>
+                <p className="text-xs text-muted-foreground">{opt.desc}</p>
+              </div>
+              {density === opt.value && <Check size={15} className="text-primary flex-shrink-0" />}
+            </button>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Language & currency">
+        <SettingRow label="Interface language">
+          <Select value={preferences.language ?? 'en'} onValueChange={v => setLanguage(v)}>
+            <SelectTrigger className="w-32 h-8 text-xs" aria-label="Select language">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="de">Deutsch</SelectItem>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="fa">فارسی</SelectItem>
+            </SelectContent>
+          </Select>
+        </SettingRow>
+        <SettingRow label="Currency">
+          <Select value={preferences.currency ?? 'EUR'} onValueChange={setCurrency}>
+            <SelectTrigger className="w-24 h-8 text-xs" aria-label="Select currency">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="EUR">EUR €</SelectItem>
+              <SelectItem value="USD">USD $</SelectItem>
+              <SelectItem value="GBP">GBP £</SelectItem>
+              <SelectItem value="IRR">IRR ﷼</SelectItem>
+            </SelectContent>
+          </Select>
+        </SettingRow>
+      </SectionCard>
+
+      <SectionCard title="Learn with AI defaults">
+        <SettingRow label="Default mode">
+          <Select
+            value={aiDefaults.mode}
+            onValueChange={v => setAiDefaults(p => ({ ...p, mode: v as LearnAIMode }))}
+          >
+            <SelectTrigger className="w-40 h-8 text-xs" aria-label="Select AI mode">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="fiae_algorithms">FIAE Algorithms</SelectItem>
+              <SelectItem value="wiso">WiSo</SelectItem>
+              <SelectItem value="general_it">General IT</SelectItem>
+              <SelectItem value="planner">Planner</SelectItem>
+            </SelectContent>
+          </Select>
+        </SettingRow>
+        <SettingRow label="Response language">
+          <Select
+            value={aiDefaults.language}
+            onValueChange={v => setAiDefaults(p => ({ ...p, language: v as LearnAILanguage }))}
+          >
+            <SelectTrigger className="w-28 h-8 text-xs" aria-label="Select AI language">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="de">Deutsch</SelectItem>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="fa">فارسی</SelectItem>
+            </SelectContent>
+          </Select>
+        </SettingRow>
+        <div className="py-3">
+          <button
+            type="button"
+            onClick={saveAiDefaults}
+            className="text-xs px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+          >
+            Save AI defaults
+          </button>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Accessibility">
+        <SettingRow label="Reduce motion" desc="Disable animations for motion-sensitive users">
+          <Toggle checked={reducedMotion} onChange={setReducedMotion} label="Toggle reduced motion" />
+        </SettingRow>
+      </SectionCard>
+    </div>
+  );
+}
+
+// ── Tab: Notifications ─────────────────────────────────────────────────────
+
+function NotificationsTab() {
+  const prefs = useNotificationPrefs();
+  const [permState, setPermState] = useState<NotificationPermission>(
+    typeof Notification !== 'undefined' ? Notification.permission : 'denied',
+  );
+
+  async function requestPermission() {
+    const result = await Notification.requestPermission();
+    setPermState(result);
+    if (result === 'granted') toast.success('Notifications enabled');
+    else toast.error('Permission denied');
+  }
+
+  return (
+    <div className="space-y-4">
+      {permState !== 'granted' && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
+          <AlertTriangle size={16} className="text-amber-500 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">Browser notifications disabled</p>
+            <p className="text-xs text-muted-foreground">Grant permission to receive reminders</p>
+          </div>
+          <button
+            type="button"
+            onClick={requestPermission}
+            className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 text-white hover:opacity-90 transition-opacity flex-shrink-0"
+          >
+            Enable
+          </button>
+        </div>
+      )}
+
+      <SectionCard title="Tasks">
+        <SettingRow label="Task reminders" desc="Notify before due tasks">
+          <Toggle checked={prefs.taskReminders} onChange={prefs.setTaskReminders} label="Toggle task reminders" />
+        </SettingRow>
+        {prefs.taskReminders && (
+          <SettingRow label="Reminder time">
+            <input
+              type="time"
+              value={prefs.taskReminderTime}
+              onChange={e => prefs.setTaskReminderTime(e.target.value)}
+              className="bg-muted rounded-lg px-3 py-1.5 text-sm outline-none"
+              aria-label="Task reminder time"
+            />
+          </SettingRow>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Habits">
+        <SettingRow label="Daily habit reminder" desc="Nudge to check in on habits">
+          <Toggle checked={prefs.habitReminder} onChange={prefs.setHabitReminder} label="Toggle habit reminder" />
+        </SettingRow>
+        {prefs.habitReminder && (
+          <SettingRow label="Reminder time">
+            <input
+              type="time"
+              value={prefs.habitReminderTime}
+              onChange={e => prefs.setHabitReminderTime(e.target.value)}
+              className="bg-muted rounded-lg px-3 py-1.5 text-sm outline-none"
+              aria-label="Habit reminder time"
+            />
+          </SettingRow>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Calendar">
+        <SettingRow label="Event reminders">
+          <Toggle checked={prefs.calendarReminders} onChange={prefs.setCalendarReminders} label="Toggle calendar reminders" />
+        </SettingRow>
+        {prefs.calendarReminders && (
+          <SettingRow label="Minutes before event">
+            <select
+              value={prefs.calendarReminderMinutes}
+              onChange={e => prefs.setCalendarReminderMinutes(Number(e.target.value))}
+              aria-label="Minutes before event"
+              className="bg-muted rounded-lg px-3 py-1.5 text-sm outline-none"
+            >
+              {[5, 10, 15, 30, 60].map(m => (
+                <option key={m} value={m}>{m} min</option>
+              ))}
+            </select>
+          </SettingRow>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Daily summary">
+        <SettingRow label="Morning briefing" desc="Tasks and events for the day">
+          <Toggle checked={prefs.dailySummary} onChange={prefs.setDailySummary} label="Toggle daily summary" />
+        </SettingRow>
+        {prefs.dailySummary && (
+          <SettingRow label="Delivery time">
+            <input
+              type="time"
+              value={prefs.dailySummaryTime}
+              onChange={e => prefs.setDailySummaryTime(e.target.value)}
+              className="bg-muted rounded-lg px-3 py-1.5 text-sm outline-none"
+              aria-label="Daily summary time"
+            />
+          </SettingRow>
+        )}
+      </SectionCard>
+    </div>
+  );
+}
+
+// ── Tab: Data ──────────────────────────────────────────────────────────────
+
+function DataTab() {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const installPromptRef = useRef<(Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }) | null>(null);
   const [canInstall, setCanInstall] = useState(false);
-  const isStandalone = typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches;
-  const isIos = typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches;
+  const isIos = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteInput, setDeleteInput] = useState('');
+  const stats = dataExportService.getStorageStats();
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -112,110 +639,194 @@ export default function SettingsPage() {
       installPromptRef.current = e as typeof installPromptRef.current;
       setCanInstall(true);
     };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  const handleInstall = async () => {
+  async function handleInstall() {
     if (!installPromptRef.current) return;
     await installPromptRef.current.prompt();
     const { outcome } = await installPromptRef.current.userChoice;
-    if (outcome === "accepted") {
-      installPromptRef.current = null;
-      setCanInstall(false);
-    }
-  };
+    if (outcome === 'accepted') { installPromptRef.current = null; setCanInstall(false); }
+  }
 
-  // Danger zone
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deleteText, setDeleteText] = useState("");
-  const [isDeleting, setIsDeleting] = useState(false);
+  const { mutate: exportData, isPending: exporting } = useMutation({
+    mutationFn: dataExportService.exportAll,
+    onSuccess: () => toast.success('Data exported successfully'),
+    onError:   () => toast.error('Export failed'),
+  });
 
-  useEffect(() => {
-    if (!authLoading && !user) navigate("/auth");
-  }, [user, authLoading, navigate]);
-
-  useEffect(() => {
-    setDisplayName(profile?.displayName ?? "");
-  }, [profile]);
-
-  const initials = getInitials(displayName, user?.email ?? "");
-
-  const handleSaveProfile = async () => {
-    safeSet(storageKey("avatar-color"), avatarColor);
-    const saved = await save({ displayName });
-    if (saved) toast.success("Profile updated");
-  };
-
-  const handleChangePassword = async () => {
-    setPwError(null);
-    if (newPw.length < 8) {
-      setPwError("New password must be at least 8 characters.");
-      return;
-    }
-    if (newPw !== confirmPw) {
-      setPwError("Passwords do not match.");
-      return;
-    }
-    if (!user?.email) return;
-
-    setIsPwSaving(true);
-    try {
-      const { error: verifyErr } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: currentPw,
-      });
-      if (verifyErr) {
-        setPwError("Current password is incorrect.");
-        return;
-      }
-      const { error: updateErr } = await supabase.auth.updateUser({ password: newPw });
-      if (updateErr) throw updateErr;
-      setCurrentPw("");
-      setNewPw("");
-      setConfirmPw("");
-      toast.success("Password updated");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to update password.";
-      setPwError(msg);
-    } finally {
-      setIsPwSaving(false);
-    }
-  };
-
-  const handleSaveLanguage = () => {
-    safeSet(storageKey("language"), appLanguage);
-    setPrefLanguage(appLanguage);
-    toast.success("Language preference saved");
-  };
-
-  const handleSaveAiDefaults = () => {
-    safeSet(storageKey("ai-defaults"), aiDefaults);
-    toast.success("AI defaults saved");
-  };
-
-  const handleDeleteAccount = async () => {
-    if (deleteText !== "DELETE") return;
-    setIsDeleting(true);
-    try {
-      await supabase.rpc("delete_account");
-    } catch {
-      // fall through — sign out even if rpc fails
-    }
-    try {
+  const { mutate: deleteAll, isPending: deleting } = useMutation({
+    mutationFn: dataExportService.deleteAllUserData,
+    onSuccess: async () => {
+      dataExportService.clearLocalStorage();
+      toast.success('All data deleted');
       await signOut();
-    } finally {
-      setIsDeleting(false);
-      navigate("/auth");
-    }
-  };
+      navigate('/auth');
+    },
+    onError: () => toast.error('Failed to delete data'),
+  });
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/auth");
-  };
+  function handleClearCache() {
+    dataExportService.clearLocalStorage();
+    toast.success('Local cache cleared');
+  }
 
-  if (authLoading) {
+  return (
+    <div className="space-y-4">
+      <SectionCard title="Install app">
+        <div className="py-4">
+          {isStandalone ? (
+            <p className="text-sm text-emerald-400">DailyFlow is already installed on this device.</p>
+          ) : canInstall ? (
+            <button
+              type="button"
+              onClick={handleInstall}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              <Smartphone size={15} />
+              Install DailyFlow
+            </button>
+          ) : isIos ? (
+            <p className="text-sm text-muted-foreground">
+              Tap <strong>Share</strong> in Safari, then <strong>Add to Home Screen</strong>.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Open in Chrome or Edge to install the app on your device.
+            </p>
+          )}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Export">
+        <SettingRow label="Download all data" desc="Tasks, events, finance, journal, links — as JSON">
+          <button
+            type="button"
+            onClick={() => exportData()}
+            disabled={exporting}
+            className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+          >
+            <Download size={13} />
+            {exporting ? 'Exporting…' : 'Download JSON'}
+          </button>
+        </SettingRow>
+      </SectionCard>
+
+      <SectionCard title="Local storage">
+        <SettingRow label="Browser cache" desc={`${stats.keyCount} keys · ${stats.used}`}>
+          <button
+            type="button"
+            onClick={handleClearCache}
+            className="text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors"
+          >
+            Clear cache
+          </button>
+        </SettingRow>
+      </SectionCard>
+
+      <SectionCard title="About">
+        <SettingRow label="Version" desc="dailyFlow — Personal Life Organizer">
+          <span className="text-xs text-muted-foreground">1.0.0</span>
+        </SettingRow>
+        <SettingRow label="Built by">
+          <span className="text-xs text-muted-foreground">Barakzai.Cloud © 2024</span>
+        </SettingRow>
+      </SectionCard>
+
+      <div className="bg-destructive/5 border border-destructive/20 rounded-2xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-destructive/20 bg-destructive/10">
+          <h3 className="text-xs font-semibold text-destructive uppercase tracking-wider flex items-center gap-1.5">
+            <AlertTriangle size={12} />
+            Danger zone
+          </h3>
+        </div>
+        <div className="px-5">
+          <SettingRow label="Delete all data" desc="Permanently removes all tasks, events, files, and history. Irreversible.">
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-destructive/40 text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <Trash2 size={13} />
+              Delete all
+            </button>
+          </SettingRow>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm space-y-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle size={20} className="text-destructive" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Are you sure?</h3>
+                  <p className="text-xs text-muted-foreground">This action cannot be undone</p>
+                </div>
+              </div>
+
+              <p className="text-sm text-muted-foreground">
+                Type <span className="font-mono text-destructive font-semibold">DELETE</span> to confirm:
+              </p>
+
+              <input
+                value={deleteInput}
+                onChange={e => setDeleteInput(e.target.value)}
+                placeholder="DELETE"
+                className="w-full bg-muted rounded-xl px-4 py-2.5 text-sm outline-none font-mono focus:ring-2 focus:ring-destructive/40"
+              />
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowDeleteConfirm(false); setDeleteInput(''); }}
+                  className="flex-1 py-2.5 rounded-xl border border-border text-sm hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteAll()}
+                  disabled={deleteInput !== 'DELETE' || deleting}
+                  className="flex-1 py-2.5 rounded-xl bg-destructive text-white text-sm font-medium disabled:opacity-40 hover:opacity-90 transition-opacity"
+                >
+                  {deleting ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" /> Deleting…</span> : 'Delete everything'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── Main ───────────────────────────────────────────────────────────────────
+
+export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState<Tab>('profile');
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && !user) navigate('/auth');
+  }, [user, isLoading, navigate]);
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -223,438 +834,51 @@ export default function SettingsPage() {
     );
   }
 
+  const TAB_CONTENT: Record<Tab, React.ReactNode> = {
+    profile:       <ProfileTab />,
+    security:      <SecurityTab />,
+    appearance:    <AppearanceTab />,
+    notifications: <NotificationsTab />,
+    data:          <DataTab />,
+  };
+
   return (
-    <div className="p-6 lg:p-8 max-w-3xl mx-auto">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <h1 className="text-2xl lg:text-3xl font-semibold mb-1">Settings</h1>
-        <p className="text-muted-foreground">Manage your account and preferences</p>
-      </motion.div>
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
+      <div>
+        <h1 className="text-xl font-bold flex items-center gap-2">Settings</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Manage your account and preferences</p>
+      </div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="space-y-6"
-      >
-        {/* Profile */}
-        <Card style={CARD_BORDER}>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" />
-              Profile
-            </CardTitle>
-            <CardDescription>Your name and avatar color</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center text-white font-semibold text-lg flex-shrink-0 select-none"
-                style={{ backgroundColor: avatarColor }}
-              >
-                {initials}
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                {AVATAR_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    aria-label={`Select avatar color ${c}`}
-                    className={`w-7 h-7 rounded-full transition-transform hover:scale-110 focus:outline-none ${avatarColor === c ? "ring-2 ring-white ring-offset-1" : ""}`}
-                    style={{ backgroundColor: c }}
-                    onClick={() => setAvatarColor(c)}
-                  />
-                ))}
-              </div>
-            </div>
+      <div className="flex gap-1 bg-muted rounded-xl p-1 overflow-x-auto scrollbar-hide">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setActiveTab(id)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex-shrink-0"
+            style={{
+              background:  activeTab === id ? 'hsl(var(--card))' : 'transparent',
+              color:       activeTab === id ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
+              boxShadow:   activeTab === id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+            }}
+          >
+            <Icon size={13} />
+            {label}
+          </button>
+        ))}
+      </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="displayName">Display name</Label>
-              <Input
-                id="displayName"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Your name"
-                disabled={profileLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input value={user?.email ?? ""} readOnly disabled className="opacity-60" />
-            </div>
-
-            <Button onClick={handleSaveProfile} disabled={isSaving || profileLoading}>
-              {isSaving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Save profile
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Password */}
-        <Card style={CARD_BORDER}>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Lock className="w-5 h-5 text-primary" />
-              Change Password
-            </CardTitle>
-            <CardDescription>Update your account password</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="currentPw">Current password</Label>
-              <div className="relative">
-                <Input
-                  id="currentPw"
-                  type={showCurrentPw ? "text" : "password"}
-                  value={currentPw}
-                  onChange={(e) => setCurrentPw(e.target.value)}
-                  className="pr-10"
-                  autoComplete="current-password"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => setShowCurrentPw((v) => !v)}
-                >
-                  {showCurrentPw ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="newPw">New password</Label>
-              <div className="relative">
-                <Input
-                  id="newPw"
-                  type={showNewPw ? "text" : "password"}
-                  value={newPw}
-                  onChange={(e) => setNewPw(e.target.value)}
-                  className="pr-10"
-                  autoComplete="new-password"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => setShowNewPw((v) => !v)}
-                >
-                  {showNewPw ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPw">Confirm new password</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPw"
-                  type={showConfirmPw ? "text" : "password"}
-                  value={confirmPw}
-                  onChange={(e) => setConfirmPw(e.target.value)}
-                  className="pr-10"
-                  autoComplete="new-password"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => setShowConfirmPw((v) => !v)}
-                >
-                  {showConfirmPw ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {pwError && <p className="text-sm text-destructive">{pwError}</p>}
-
-            <Button
-              onClick={handleChangePassword}
-              disabled={isPwSaving || !currentPw || !newPw || !confirmPw}
-            >
-              {isPwSaving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Change password
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Language */}
-        <Card style={CARD_BORDER}>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Globe className="w-5 h-5 text-primary" />
-              Language
-            </CardTitle>
-            <CardDescription>Interface and AI response language</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Select value={appLanguage} onValueChange={setAppLanguage}>
-              <SelectTrigger className="w-full sm:w-64">
-                <SelectValue placeholder="Select language" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="de">Deutsch</SelectItem>
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="fa">فارسی</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={handleSaveLanguage}>Save</Button>
-          </CardContent>
-        </Card>
-
-        {/* Appearance */}
-        <Card style={CARD_BORDER}>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Palette className="w-5 h-5 text-primary" />
-              Appearance
-            </CardTitle>
-            <CardDescription>Customize how the app looks</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {preferences.theme === "dark" ? (
-                  <Moon className="w-5 h-5" />
-                ) : (
-                  <Sun className="w-5 h-5" />
-                )}
-                <div>
-                  <p className="text-sm font-medium">Theme</p>
-                  <p className="text-xs text-muted-foreground">Light, dark, or system</p>
-                </div>
-              </div>
-              <Select
-                value={preferences.theme}
-                onValueChange={(v) => setTheme(v as "light" | "dark" | "system")}
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Theme" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="system">System</SelectItem>
-                  <SelectItem value="light">Light</SelectItem>
-                  <SelectItem value="dark">Dark</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Currency */}
-        <Card style={CARD_BORDER}>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Wallet className="w-5 h-5 text-primary" />
-              Currency
-            </CardTitle>
-            <CardDescription>Default currency for totals</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Select value={preferences.currency ?? "USD"} onValueChange={setCurrency}>
-              <SelectTrigger className="w-full sm:w-64">
-                <SelectValue placeholder="Select currency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="USD">USD</SelectItem>
-                <SelectItem value="EUR">EUR</SelectItem>
-                <SelectItem value="GBP">GBP</SelectItem>
-                <SelectItem value="IRR">IRR</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        {/* Learn with AI Defaults */}
-        <Card style={CARD_BORDER}>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Brain className="w-5 h-5 text-primary" />
-              Learn with AI
-            </CardTitle>
-            <CardDescription>Default mode and language for the AI tutor</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="aiMode">Default mode</Label>
-              <Select
-                value={aiDefaults.mode}
-                onValueChange={(v) =>
-                  setAiDefaults((prev) => ({ ...prev, mode: v as LearnAIMode }))
-                }
-              >
-                <SelectTrigger id="aiMode" className="w-full sm:w-64">
-                  <SelectValue placeholder="Select mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fiae_algorithms">FIAE Algorithms</SelectItem>
-                  <SelectItem value="wiso">WiSo</SelectItem>
-                  <SelectItem value="general_it">General IT</SelectItem>
-                  <SelectItem value="planner">Planner</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="aiLanguage">Response language</Label>
-              <Select
-                value={aiDefaults.language}
-                onValueChange={(v) =>
-                  setAiDefaults((prev) => ({ ...prev, language: v as LearnAILanguage }))
-                }
-              >
-                <SelectTrigger id="aiLanguage" className="w-full sm:w-64">
-                  <SelectValue placeholder="Select language" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="de">Deutsch</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="fa">فارسی</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button onClick={handleSaveAiDefaults}>Save defaults</Button>
-          </CardContent>
-        </Card>
-
-        {/* Install App */}
-        <Card style={CARD_BORDER}>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Smartphone className="w-5 h-5 text-primary" />
-              Install App
-            </CardTitle>
-            <CardDescription>Add DailyFlow to your home screen for a native-like experience</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isStandalone ? (
-              <p className="text-sm text-emerald-400">DailyFlow is already installed on this device.</p>
-            ) : canInstall ? (
-              <Button onClick={handleInstall} className="gap-2">
-                <Download className="w-4 h-4" />
-                Install DailyFlow
-              </Button>
-            ) : isIos ? (
-              <p className="text-sm text-muted-foreground">
-                To install on iOS: tap the <strong>Share</strong> button in Safari, then select{" "}
-                <strong>Add to Home Screen</strong>.
-              </p>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Open this page in Chrome or Edge to install the app on your device.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Sign Out */}
-        <Card style={CARD_BORDER}>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Signed in as</p>
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
-              </div>
-              <Button variant="outline" onClick={handleSignOut} className="gap-2">
-                <LogOut className="w-4 h-4" />
-                Sign out
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* About */}
-        <Card style={CARD_BORDER}>
-          <CardHeader>
-            <CardTitle className="text-lg">About</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Version</span>
-              <span className="text-sm">1.0.0</span>
-            </div>
-            <Separator />
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">
-                DailyFlow — Your Personal Life Organizer
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Barakzai.Cloud 2024 © All rights reserved.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Danger Zone */}
-        <Card style={DANGER_BORDER}>
-          <CardHeader>
-            <CardTitle className="text-lg text-destructive flex items-center gap-2">
-              <Trash2 className="w-5 h-5" />
-              Danger Zone
-            </CardTitle>
-            <CardDescription>Irreversible actions — proceed with caution.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-              Delete my account
-            </Button>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Delete account dialog */}
-      <AlertDialog
-        open={showDeleteDialog}
-        onOpenChange={(open) => {
-          setShowDeleteDialog(open);
-          if (!open) setDeleteText("");
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete your account?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete your account and all your data. This action cannot be
-              undone. Type <strong>DELETE</strong> to confirm.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <Input
-            value={deleteText}
-            onChange={(e) => setDeleteText(e.target.value)}
-            placeholder="Type DELETE"
-            className="my-2"
-          />
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteAccount}
-              disabled={deleteText !== "DELETE" || isDeleting}
-            >
-              {isDeleting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Delete account
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.15 }}
+        >
+          {TAB_CONTENT[activeTab]}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
