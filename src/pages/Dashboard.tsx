@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { Calendar, CheckSquare, Users, Wallet, Sparkles } from "lucide-react";
+import { MoodWidget } from "@/features/mood/MoodWidget";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -468,6 +469,9 @@ export default function Dashboard() {
             </Button>
           </CardContent>
         </Card>
+        <div className="md:col-span-2 lg:col-span-3">
+          <MoodWidget />
+        </div>
       </div>
     </div>
   );

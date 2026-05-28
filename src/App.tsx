@@ -19,6 +19,7 @@ import SettingsPage from "./pages/SettingsPage";
 import LearnAIPage from "./pages/LearnAIPage";
 import HabitsPage from "./pages/HabitsPage";
 import JournalPage from "./pages/JournalPage";
+import FlashcardsPage from "./pages/FlashcardsPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import OfflinePage from "./pages/OfflinePage";
@@ -95,6 +96,7 @@ const App = () => (
               />
               <Route path="/habits" element={<HabitsPage />} />
               <Route path="/journal" element={<JournalPage />} />
+              <Route path="/flashcards" element={<FlashcardsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
             <Route path="/offline" element={<OfflinePage />} />

@@ -16,6 +16,7 @@ import {
   Bot,
   Flame,
   BookOpen,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +29,7 @@ const navItems = [
   { icon: CheckSquare, label: "Tasks", path: "/tasks" },
   { icon: Flame, label: "Habits", path: "/habits" },
   { icon: BookOpen, label: "Journal", path: "/journal" },
+  { icon: Layers, label: "Flashcards", path: "/flashcards" },
   { icon: Wallet, label: "Finance", path: "/finance" },
   { icon: Users, label: "Family", path: "/family" },
   { icon: Home, label: "Family Hub", path: "/family-hub" },

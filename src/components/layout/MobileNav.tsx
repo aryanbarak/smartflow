@@ -18,6 +18,7 @@ import {
   Bot,
   Flame,
   BookOpen,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -33,6 +34,7 @@ const mainNavItems = [
 const moreNavItems = [
   { icon: Flame, label: "Habits", path: "/habits" },
   { icon: BookOpen, label: "Journal", path: "/journal" },
+  { icon: Layers, label: "Flashcards", path: "/flashcards" },
   { icon: Users, label: "Family", path: "/family" },
   { icon: Home, label: "Family Hub", path: "/family-hub" },
   { icon: FileText, label: "Documents", path: "/documents" },

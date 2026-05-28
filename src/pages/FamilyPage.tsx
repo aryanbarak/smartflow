@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Calendar, FileText, Edit2, Trash2 } from "lucide-react";
+import { Plus, Calendar, FileText, Edit2, Trash2, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -33,6 +33,7 @@ import {
   ChildScheduleItem,
   ChildEvent,
 } from "@/features/family/familyService";
+import { ShoppingList } from "@/features/shopping/ShoppingList";
 import {
   createCalendarEventFromFamily,
   deleteCalendarEventById,
@@ -538,6 +539,10 @@ export default function FamilyPage() {
                     <Calendar className="w-3 h-3" />
                     Events
                   </TabsTrigger>
+                  <TabsTrigger value="shopping" className="flex items-center gap-1">
+                    <ShoppingCart className="w-3 h-3" />
+                    Shopping
+                  </TabsTrigger>
                 </TabsList>
 
                 <Card className="mt-4 mb-4">
@@ -822,6 +827,14 @@ export default function FamilyPage() {
                           </Button>
                         </div>
                       </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                {/* Shopping */}
+                <TabsContent value="shopping">
+                  <Card>
+                    <CardContent className="pt-5">
+                      <ShoppingList />
                     </CardContent>
                   </Card>
                 </TabsContent>
