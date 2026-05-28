@@ -37,7 +37,7 @@ export const tasksService = {
   },
   async createTask(
     userId: string,
-    input: { title: string; notes?: string; dueDate?: string | null },
+    input: { title: string; notes?: string; dueDate?: string | null; recurrenceRule?: string; recurrenceEndDate?: string },
   ) {
     const { data, error } = await supabase
       .from("tasks")
@@ -47,6 +47,8 @@ export const tasksService = {
         notes: input.notes?.trim() || null,
         due_date: input.dueDate ?? null,
         completed: false,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(input.recurrenceRule ? { recurrence_rule: input.recurrenceRule, recurrence_end_date: input.recurrenceEndDate ?? null } as any : {}),
       })
       .select("id,user_id,title,notes,due_date,completed,created_at,updated_at")
       .single();

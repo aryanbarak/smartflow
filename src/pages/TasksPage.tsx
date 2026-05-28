@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useTasks } from "@/hooks/useTasks";
 import { Task } from "@/features/tasks/tasksService";
+import { RecurrencePicker } from "@/components/RecurrencePicker";
+import type { RecurrenceRule } from "@/lib/recurrence";
 import { formatDateLabel, isBeforeDay, isSameDay } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +44,8 @@ export default function TasksPage() {
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule | ''>('');
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
   const today = new Date();
@@ -76,6 +80,8 @@ export default function TasksPage() {
     setTitle("");
     setNotes("");
     setDueDate("");
+    setRecurrenceRule('');
+    setRecurrenceEndDate('');
     setFormError(null);
     setIsDialogOpen(true);
   };
@@ -85,6 +91,8 @@ export default function TasksPage() {
     setTitle(task.title);
     setNotes(task.notes ?? "");
     setDueDate(task.dueDate ?? "");
+    setRecurrenceRule('');
+    setRecurrenceEndDate('');
     setFormError(null);
     setIsDialogOpen(true);
   };
@@ -98,7 +106,7 @@ export default function TasksPage() {
     if (editingTask) {
       await updateTask(editingTask.id, { title: trimmed, notes, dueDate: dueDate || null });
     } else {
-      await addTask({ title: trimmed, notes, dueDate: dueDate || null });
+      await addTask({ title: trimmed, notes, dueDate: dueDate || null, recurrenceRule: recurrenceRule || undefined, recurrenceEndDate: recurrenceEndDate || undefined });
     }
     setIsDialogOpen(false);
   };
@@ -166,6 +174,12 @@ export default function TasksPage() {
                 <Label>Due Date</Label>
                 <Input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
               </div>
+              <RecurrencePicker
+                value={recurrenceRule}
+                onChange={setRecurrenceRule}
+                endDate={recurrenceEndDate}
+                onEndDateChange={setRecurrenceEndDate}
+              />
               <Button className="w-full" onClick={handleSave}>
                 {editingTask ? "Save Changes" : "Create Task"}
               </Button>

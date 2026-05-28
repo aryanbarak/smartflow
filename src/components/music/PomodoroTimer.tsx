@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Play, Pause, RotateCcw } from "lucide-react";
+import { Play, Pause, RotateCcw, Link } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useMusicPlayer, PRESETS } from "@/hooks/useMusicPlayer";
+import { usePomodoroStore } from "@/features/music/pomodoroStore";
+import { useTasks } from "@/hooks/useTasks";
 
 type Phase = "focus" | "break" | "long-break";
 
@@ -54,6 +56,10 @@ export function PomodoroTimer() {
   const [running, setRunning] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { playYouTube, currentTrack } = useMusicPlayer();
+  const { linkedTaskId, linkedTaskTitle, setLinkedTask } = usePomodoroStore();
+  const [showTaskPicker, setShowTaskPicker] = useState(false);
+  const { tasks } = useTasks();
+  const openTasks = tasks.filter(t => !t.completed);
 
   const total = PHASE_DURATIONS[phase];
   const strokeDashoffset = CIRCUMFERENCE * (1 - secondsLeft / total);
@@ -172,7 +178,41 @@ export function PomodoroTimer() {
           >
             {running ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
           </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn("h-9 w-9", linkedTaskId ? "text-cyan-400" : "text-slate-400 hover:text-white")}
+            onClick={() => setShowTaskPicker((v) => !v)}
+            title={linkedTaskId ? `Linked: ${linkedTaskTitle}` : "Link a task"}
+          >
+            <Link className="h-4 w-4" />
+          </Button>
         </div>
+
+        {/* Task picker */}
+        {showTaskPicker && (
+          <div className="w-full space-y-1">
+            <p className="text-xs text-slate-400 text-center">Link task to this session</p>
+            <select
+              aria-label="Link task to pomodoro session"
+              className="w-full rounded-md bg-slate-800 border border-slate-700 text-slate-200 text-xs px-2 py-1.5 focus:outline-none"
+              value={linkedTaskId ?? ''}
+              onChange={e => {
+                const task = openTasks.find(t => t.id === e.target.value);
+                setLinkedTask(task?.id ?? null, task?.title ?? null);
+                setShowTaskPicker(false);
+              }}
+            >
+              <option value="">— بدون وظیفه —</option>
+              {openTasks.map(t => (
+                <option key={t.id} value={t.id}>{t.title}</option>
+              ))}
+            </select>
+            {linkedTaskTitle && (
+              <p className="text-xs text-cyan-400 text-center truncate">✓ {linkedTaskTitle}</p>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

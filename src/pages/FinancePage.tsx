@@ -54,6 +54,7 @@ import {
   TransactionType,
 } from "@/features/finance/financeService";
 import { BudgetGoalsWidget } from "@/features/finance/components/BudgetGoalsWidget";
+import { CsvImportExport } from "@/features/finance/components/CsvImportExport";
 import { cn } from "@/lib/utils";
 
 const categories = ["Food", "Transport", "Rent", "Health", "Other"];
@@ -512,6 +513,14 @@ export default function FinancePage() {
             <Download className="w-4 h-4" />
             Export PDF
           </Button>
+          <CsvImportExport
+            transactions={transactions}
+            onImport={async (rows) => {
+              for (const row of rows) {
+                await addTransaction(row);
+              }
+            }}
+          />
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2 shadow-glow" onClick={openNew}>

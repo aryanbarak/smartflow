@@ -1,244 +1,256 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Plus, Globe, ExternalLink, Grid, List, MoreVertical, Edit2, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { useState } from 'react';
+import { Plus, Globe, ExternalLink, Grid, List, Star, Trash2, Search, Tag, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { useLinks, useCreateLink, useDeleteLink, useToggleFavorite } from '@/features/links/useLinks';
 
-interface WebLink {
-  id: number;
-  name: string;
-  url: string;
-  category: string;
-  note?: string;
-  favicon?: string;
+function LinkFavicon({ url, title }: Readonly<{ url: string; title: string }>) {
+  try {
+    const hostname = new URL(url).hostname;
+    return (
+      <img
+        src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`}
+        alt={title}
+        className="w-8 h-8 rounded object-contain"
+        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+      />
+    );
+  } catch {
+    return <Globe className="w-6 h-6 text-muted-foreground" />;
+  }
 }
 
-const links: WebLink[] = [
-  { id: 1, name: "Google Drive", url: "https://drive.google.com", category: "Work", note: "Personal documents" },
-  { id: 2, name: "Netflix", url: "https://netflix.com", category: "Entertainment" },
-  { id: 3, name: "GitHub", url: "https://github.com", category: "Work", note: "Code repositories" },
-  { id: 4, name: "Spotify", url: "https://spotify.com", category: "Entertainment" },
-  { id: 5, name: "Gmail", url: "https://gmail.com", category: "Work" },
-  { id: 6, name: "Amazon", url: "https://amazon.com", category: "Shopping" },
-  { id: 7, name: "YouTube", url: "https://youtube.com", category: "Entertainment" },
-  { id: 8, name: "Bank Account", url: "https://bank.com", category: "Finance", note: "Monthly statements" },
-];
+function AddLinkModal({ onClose }: Readonly<{ onClose: () => void }>) {
+  const { mutate: create, isPending } = useCreateLink();
+  const [url, setUrl] = useState('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [tagInput, setTagInput] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [error, setError] = useState('');
 
-const categories = ["All", "Work", "Entertainment", "Shopping", "Finance"];
+  const removeTag = (tag: string) => setTags(prev => prev.filter(t => t !== tag));
 
-export default function LinksPage() {
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  function addTag() {
+    const t = tagInput.trim().toLowerCase();
+    if (t && !tags.includes(t)) setTags(prev => [...prev, t]);
+    setTagInput('');
+  }
 
-  const filteredLinks = selectedCategory === "All" 
-    ? links 
-    : links.filter(l => l.category === selectedCategory);
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "Work": return "bg-info/20 text-info";
-      case "Entertainment": return "bg-purple-500/20 text-purple-400";
-      case "Shopping": return "bg-warning/20 text-warning";
-      case "Finance": return "bg-success/20 text-success";
-      default: return "bg-secondary text-muted-foreground";
-    }
-  };
+  function handleSave() {
+    if (!url.trim()) { setError('URL is required'); return; }
+    try { new URL(url.trim()); } catch { setError('Invalid URL'); return; }
+    if (!title.trim()) { setError('Title is required'); return; }
+    create({ url: url.trim(), title: title.trim(), description, tags, is_favorite: false }, {
+      onSuccess: () => onClose(),
+      onError: () => setError('Failed to save'),
+    });
+  }
 
   return (
-    <div className="p-6 lg:p-8 max-w-6xl mx-auto">
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-8"
-      >
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-semibold mb-1">Web Links</h1>
-          <p className="text-muted-foreground">Quick access to your websites</p>
+    <div className="space-y-4 pt-2">
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      <div className="space-y-2">
+        <Label>URL</Label>
+        <Input placeholder="https://example.com" value={url} onChange={e => setUrl(e.target.value)} />
+      </div>
+      <div className="space-y-2">
+        <Label>Title</Label>
+        <Input placeholder="Website name" value={title} onChange={e => setTitle(e.target.value)} />
+      </div>
+      <div className="space-y-2">
+        <Label>Description</Label>
+        <Input placeholder="Optional note" value={description} onChange={e => setDescription(e.target.value)} />
+      </div>
+      <div className="space-y-2">
+        <Label>Tags</Label>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Add tag…"
+            value={tagInput}
+            onChange={e => setTagInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+          />
+          <Button type="button" variant="outline" size="sm" onClick={addTag}>
+            <Tag size={14} />
+          </Button>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {tags.map(t => (
+              <Badge key={t} variant="secondary" className="gap-1 text-xs">
+                {t}
+                <button type="button" aria-label={`Remove tag ${t}`} onClick={() => removeTag(t)}>
+                  <X size={10} />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+      <Button className="w-full" onClick={handleSave} disabled={isPending}>
+        {isPending ? 'Saving…' : 'Save Link'}
+      </Button>
+    </div>
+  );
+}
+
+export default function LinksPage() {
+  const { data: links = [], isLoading } = useLinks();
+  const { mutate: deleteLink } = useDeleteLink();
+  const { mutate: toggleFav } = useToggleFavorite();
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [search, setSearch] = useState('');
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+
+  const allTags = Array.from(new Set(links.flatMap(l => l.tags))).sort((a, b) => a.localeCompare(b));
+
+  const filtered = links.filter(l => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || l.title.toLowerCase().includes(q) || l.url.toLowerCase().includes(q) || l.description.toLowerCase().includes(q);
+    const matchTag = !activeTag || l.tags.includes(activeTag);
+    return matchSearch && matchTag;
+  });
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <Globe className="text-blue-400" size={22} />
+            Web Links
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5">{links.length} saved links</p>
+        </div>
+        <Dialog open={showAdd} onOpenChange={setShowAdd}>
           <DialogTrigger asChild>
-            <Button className="gap-2 shadow-glow">
-              <Plus className="w-4 h-4" />
+            <Button size="sm" className="gap-1.5">
+              <Plus size={16} />
               Add Link
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add Website</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>Name</Label>
-                <Input placeholder="Website name" />
-              </div>
-              <div className="space-y-2">
-                <Label>URL</Label>
-                <Input placeholder="https://example.com" />
-              </div>
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="work">Work</SelectItem>
-                    <SelectItem value="entertainment">Entertainment</SelectItem>
-                    <SelectItem value="shopping">Shopping</SelectItem>
-                    <SelectItem value="finance">Finance</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Note (optional)</Label>
-                <Textarea placeholder="Add a note..." />
-              </div>
-              <Button className="w-full" onClick={() => setIsDialogOpen(false)}>
-                Save Link
-              </Button>
-            </div>
+            <DialogHeader><DialogTitle>Add Link</DialogTitle></DialogHeader>
+            <AddLinkModal onClose={() => setShowAdd(false)} />
           </DialogContent>
         </Dialog>
-      </motion.div>
+      </div>
 
-      {/* Filters */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="flex items-center justify-between mb-6"
-      >
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          {categories.map((cat) => (
+      {/* Search + view toggle */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search links…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-8 h-9"
+          />
+        </div>
+        <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9" onClick={() => setViewMode('grid')}>
+          <Grid size={16} />
+        </Button>
+        <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9" onClick={() => setViewMode('list')}>
+          <List size={16} />
+        </Button>
+      </div>
+
+      {/* Tag filter */}
+      {allTags.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTag(null)}
+            className={cn('px-3 py-1 rounded-full text-xs transition-colors', activeTag ? 'bg-muted text-muted-foreground hover:text-foreground' : 'bg-primary text-primary-foreground')}
+          >
+            All
+          </button>
+          {allTags.map(tag => (
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={cn(
-                "px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap",
-                selectedCategory === cat 
-                  ? "bg-primary text-primary-foreground" 
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
-              )}
+              key={tag}
+              type="button"
+              onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+              className={cn('px-3 py-1 rounded-full text-xs transition-colors', activeTag === tag ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground')}
             >
-              {cat}
+              #{tag}
             </button>
           ))}
         </div>
-        <div className="flex gap-1">
-          <Button 
-            variant={viewMode === "grid" ? "secondary" : "ghost"} 
-            size="icon"
-            onClick={() => setViewMode("grid")}
-          >
-            <Grid className="w-4 h-4" />
-          </Button>
-          <Button 
-            variant={viewMode === "list" ? "secondary" : "ghost"} 
-            size="icon"
-            onClick={() => setViewMode("list")}
-          >
-            <List className="w-4 h-4" />
-          </Button>
+      )}
+
+      {/* Links grid/list */}
+      {isLoading && (
+        <div className="text-center text-muted-foreground py-12 text-sm">در حال بارگذاری...</div>
+      )}
+      {!isLoading && filtered.length === 0 && (
+        <div className="text-center text-muted-foreground py-16">
+          <Globe size={40} className="mx-auto mb-3 opacity-20" />
+          <p className="text-sm">لینکی پیدا نشد</p>
         </div>
-      </motion.div>
-
-      {/* Links */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className={cn(
-          viewMode === "grid" 
-            ? "grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" 
-            : "space-y-3"
-        )}
-      >
-        {filteredLinks.map((link) => (
-          <Card 
-            key={link.id} 
-            className={cn(
-              "group cursor-pointer hover:bg-card-hover transition-all",
-              viewMode === "list" && "flex items-center"
-            )}
-          >
-            <CardContent className={cn(
-              "pt-6",
-              viewMode === "list" && "flex items-center gap-4 py-4 w-full"
-            )}>
-              <div className={cn(
-                "flex items-start gap-3",
-                viewMode === "grid" && "flex-col"
-              )}>
-                <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-                  <Globe className="w-6 h-6 text-muted-foreground" />
-                </div>
-                <div className={cn("flex-1 min-w-0", viewMode === "grid" && "w-full")}>
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-medium text-sm truncate">{link.name}</h3>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 shrink-0"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <ExternalLink className="w-4 h-4 mr-2" />
-                          Open
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit2 className="w-4 h-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <p className="text-xs text-muted-foreground truncate mb-2">{link.url}</p>
-                  <Badge variant="secondary" className={cn("text-xs", getCategoryColor(link.category))}>
-                    {link.category}
-                  </Badge>
-                </div>
-              </div>
-              {link.note && viewMode === "grid" && (
-                <p className="text-xs text-muted-foreground mt-3 truncate">{link.note}</p>
+      )}
+      {!isLoading && filtered.length > 0 && (
+        <div className={cn(viewMode === 'grid' ? 'grid sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-2')}>
+          {filtered.map(link => (
+            <div
+              key={link.id}
+              className={cn(
+                'group bg-card border border-border rounded-xl p-4 flex gap-3 hover:bg-muted/30 transition-colors',
+                viewMode === 'list' && 'items-center'
               )}
-            </CardContent>
-          </Card>
-        ))}
-
-        {/* Add New Card */}
-        {viewMode === "grid" && (
-          <Card 
-            className="border-dashed hover:bg-card-hover transition-colors cursor-pointer" 
-            onClick={() => setIsDialogOpen(true)}
-          >
-            <CardContent className="pt-6 flex flex-col items-center justify-center h-full min-h-[140px]">
-              <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center mb-3">
-                <Plus className="w-6 h-6 text-muted-foreground" />
+            >
+              <div className="w-8 h-8 flex items-center justify-center shrink-0 mt-0.5">
+                <LinkFavicon url={link.url} title={link.title} />
               </div>
-              <p className="text-sm text-muted-foreground">Add Website</p>
-            </CardContent>
-          </Card>
-        )}
-      </motion.div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start gap-1">
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium hover:text-primary truncate flex-1"
+                  >
+                    {link.title}
+                  </a>
+                  <ExternalLink size={12} className="shrink-0 mt-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                {link.description && (
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">{link.description}</p>
+                )}
+                {link.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {link.tags.map(t => (
+                      <Badge key={t} variant="secondary" className="text-[10px] px-1.5 py-0">#{t}</Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  type="button"
+                  aria-label={link.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+                  onClick={() => toggleFav({ id: link.id, current: link.is_favorite })}
+                  className={cn('p-1 rounded hover:bg-muted transition-colors', link.is_favorite ? 'text-yellow-400' : 'text-muted-foreground')}
+                >
+                  <Star size={14} fill={link.is_favorite ? 'currentColor' : 'none'} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Delete link"
+                  onClick={() => deleteLink(link.id)}
+                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

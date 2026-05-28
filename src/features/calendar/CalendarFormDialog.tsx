@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CalendarEvent } from "@/features/calendar/calendarService";
+import { RecurrencePicker } from "@/components/RecurrencePicker";
+import type { RecurrenceRule } from "@/lib/recurrence";
 
 type CalendarFormMode = "create" | "edit";
 
@@ -25,6 +27,8 @@ interface CalendarFormDialogProps {
     dateTimeEnd?: string;
     location?: string;
     notes?: string;
+    recurrenceRule?: RecurrenceRule;
+    recurrenceEndDate?: string;
   }) => Promise<void> | void;
   isSaving?: boolean;
 }
@@ -100,6 +104,8 @@ export function CalendarFormDialog({
   const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
+  const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule | ''>('');
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -121,6 +127,8 @@ export function CalendarFormDialog({
       setEndTime(end ? formatInputTime(end) : "");
       setLocation(initialEvent.location ?? "");
       setNotes(initialEvent.notes ?? "");
+      setRecurrenceRule('');
+      setRecurrenceEndDate('');
       setError(null);
       return;
     }
@@ -131,6 +139,8 @@ export function CalendarFormDialog({
     setEndTime("");
     setLocation("");
     setNotes("");
+    setRecurrenceRule('');
+    setRecurrenceEndDate('');
     setError(null);
   }, [initialEvent, mode, open]);
 
@@ -174,6 +184,8 @@ export function CalendarFormDialog({
         dateTimeEnd: end,
         location,
         notes,
+        recurrenceRule: recurrenceRule || undefined,
+        recurrenceEndDate: recurrenceEndDate || undefined,
       });
       onOpenChange(false);
     } finally {
@@ -219,6 +231,12 @@ export function CalendarFormDialog({
             <Label>Notes</Label>
             <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} />
           </div>
+          <RecurrencePicker
+            value={recurrenceRule}
+            onChange={setRecurrenceRule}
+            endDate={recurrenceEndDate}
+            onEndDateChange={setRecurrenceEndDate}
+          />
           <Button className="w-full" onClick={handleSubmit} disabled={isBusy}>
             {mode === "edit" ? "Save Changes" : "Create Event"}
           </Button>

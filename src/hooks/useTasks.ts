@@ -41,7 +41,7 @@ export function useTasks() {
   }, [refresh, user]);
 
   const addTask = useCallback(
-    async (payload: { title: string; notes?: string; dueDate?: string | null }) => {
+    async (payload: { title: string; notes?: string; dueDate?: string | null; recurrenceRule?: string; recurrenceEndDate?: string }) => {
       if (!user) {
         toast({ variant: "destructive", title: "You must be signed in" });
         return null;
