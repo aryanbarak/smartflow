@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { flashcardService } from './flashcardService';
 import { toast } from 'sonner';
 import type { Flashcard, Rating } from './types';
+import { useT } from '@/i18n';
 
 export function useDecks() {
   return useQuery({
@@ -12,24 +13,26 @@ export function useDecks() {
 
 export function useCreateDeck() {
   const qc = useQueryClient();
+  const { t } = useT();
   return useMutation({
     mutationFn: ({ name, description }: { name: string; description?: string }) =>
       flashcardService.createDeck(name, description),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['flashcard-decks'] });
-      toast.success('Deck created');
+      toast.success(t('flashcards_deck_added'));
     },
-    onError: () => toast.error('Failed to create deck'),
+    onError: () => toast.error(t('error_save')),
   });
 }
 
 export function useDeleteDeck() {
   const qc = useQueryClient();
+  const { t } = useT();
   return useMutation({
     mutationFn: (id: string) => flashcardService.deleteDeck(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['flashcard-decks'] });
-      toast.success('Deck deleted');
+      toast.success(t('flashcards_deck_deleted'));
     },
   });
 }
@@ -52,15 +55,16 @@ export function useDueCards(deckId: string) {
 
 export function useAddCard(deckId: string) {
   const qc = useQueryClient();
+  const { t } = useT();
   return useMutation({
     mutationFn: ({ front, back }: { front: string; back: string }) =>
       flashcardService.addCard(deckId, front, back),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['flashcards', deckId] });
       qc.invalidateQueries({ queryKey: ['flashcards-due', deckId] });
-      toast.success('Card added');
+      toast.success(t('flashcards_card_added'));
     },
-    onError: () => toast.error('Failed to add card'),
+    onError: () => toast.error(t('error_save')),
   });
 }
 

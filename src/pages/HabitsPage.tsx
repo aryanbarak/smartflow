@@ -5,6 +5,7 @@ import { useHabits, useToggleHabit, useDeleteHabit } from '@/features/habits/use
 import { HabitCard } from '@/features/habits/components/HabitCard';
 import { AddHabitModal } from '@/features/habits/components/AddHabitModal';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useT } from '@/i18n';
 
 export default function HabitsPage() {
   const [showAdd, setShowAdd] = useState(false);
@@ -12,6 +13,7 @@ export default function HabitsPage() {
   const { mutate: toggle } = useToggleHabit();
   const { mutate: remove } = useDeleteHabit();
   const { permission, isSupported, request: requestNotifications } = useNotifications();
+  const { t } = useT();
 
   const todayDone = habits.filter(h => h.completedToday).length;
   const totalStreak = habits.reduce((sum, h) => sum + h.currentStreak, 0);
@@ -19,15 +21,15 @@ export default function HabitsPage() {
 
   function renderBody() {
     if (isLoading) {
-      return <div className="text-center text-muted-foreground py-12 text-sm">Loading...</div>;
+      return <div className="text-center text-muted-foreground py-12 text-sm">{t('loading')}</div>;
     }
     if (habits.length === 0) {
       return (
         <div className="text-center text-muted-foreground py-16">
           <Flame size={40} className="mx-auto mb-3 opacity-20" />
-          <p className="text-sm">No habits yet</p>
+          <p className="text-sm">{t('habits_no_habits')}</p>
           <button type="button" onClick={() => setShowAdd(true)} className="mt-3 text-primary text-sm hover:underline">
-            Create your first habit
+            {t('habits_add')}
           </button>
         </div>
       );
@@ -52,10 +54,10 @@ export default function HabitsPage() {
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
             <Flame className="text-orange-400" size={22} />
-            Habit Tracker
+            {t('habits_title')}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {todayDone}/{habits.length} done today · {totalStreak} day streak total
+            {todayDone}/{habits.length} · {t('habits_days', { count: totalStreak })}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -75,7 +77,7 @@ export default function HabitsPage() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
           >
             <Plus size={16} />
-            New Habit
+            {t('habits_add')}
           </button>
         </div>
       </div>
@@ -83,7 +85,7 @@ export default function HabitsPage() {
       {habits.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-4">
           <div className="flex justify-between text-xs text-muted-foreground mb-2">
-            <span>Today's progress</span>
+            <span>{t('today')}</span>
             <span>{progressPct}%</span>
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">

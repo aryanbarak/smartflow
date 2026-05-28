@@ -22,31 +22,34 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/features/profile/useProfile";
 import { DailyFlowIcon } from "@/components/DailyFlowLogo";
+import { useT } from "@/i18n";
+import type { TranslationKey } from "@/i18n";
 
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Calendar, label: "Calendar", path: "/calendar" },
-  { icon: CheckSquare, label: "Tasks", path: "/tasks" },
-  { icon: Flame, label: "Habits", path: "/habits" },
-  { icon: BookOpen, label: "Journal", path: "/journal" },
-  { icon: Layers, label: "Flashcards", path: "/flashcards" },
-  { icon: Wallet, label: "Finance", path: "/finance" },
-  { icon: Users, label: "Family", path: "/family" },
-  { icon: Home, label: "Family Hub", path: "/family-hub" },
-  { icon: FileText, label: "Documents", path: "/documents" },
-  { icon: Image, label: "Photos", path: "/photos" },
-  { icon: Music, label: "Music", path: "/music" },
-  { icon: Globe, label: "Web Links", path: "/links" },
-  { icon: Brain, label: "Learn with AI", path: "/learn-ai" },
-  { icon: GraduationCap, label: "Tutor Bank", path: "/tutor" },
-  { icon: Bot, label: "Tutor App", path: "/tutor/app" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+const navItems: { icon: React.ElementType; key: TranslationKey; path: string }[] = [
+  { icon: LayoutDashboard, key: 'nav_dashboard', path: "/" },
+  { icon: Calendar, key: 'nav_calendar', path: "/calendar" },
+  { icon: CheckSquare, key: 'nav_tasks', path: "/tasks" },
+  { icon: Flame, key: 'nav_habits', path: "/habits" },
+  { icon: BookOpen, key: 'nav_journal', path: "/journal" },
+  { icon: Layers, key: 'nav_flashcards', path: "/flashcards" },
+  { icon: Wallet, key: 'nav_finance', path: "/finance" },
+  { icon: Users, key: 'nav_family', path: "/family" },
+  { icon: Home, key: 'nav_family_hub', path: "/family-hub" },
+  { icon: FileText, key: 'nav_documents', path: "/documents" },
+  { icon: Image, key: 'nav_photos', path: "/photos" },
+  { icon: Music, key: 'nav_music', path: "/music" },
+  { icon: Globe, key: 'nav_links', path: "/links" },
+  { icon: Brain, key: 'nav_learn_ai', path: "/learn-ai" },
+  { icon: GraduationCap, key: 'nav_tutor', path: "/tutor" },
+  { icon: Bot, key: 'nav_tutor_app', path: "/tutor/app" },
+  { icon: Settings, key: 'nav_settings', path: "/settings" },
 ];
 
 export function Sidebar() {
   const location = useLocation();
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { t } = useT();
 
   const displayName = profile?.displayName?.trim()
     || user?.email?.split("@")[0]
@@ -88,7 +91,7 @@ export function Sidebar() {
               )}
             >
               <item.icon className="w-5 h-5" />
-              <span className="text-sm">{item.label}</span>
+              <span className="text-sm">{t(item.key)}</span>
             </NavLink>
           );
         })}

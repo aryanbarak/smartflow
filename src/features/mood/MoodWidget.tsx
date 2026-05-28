@@ -3,6 +3,7 @@ import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Smile } from 'lucide-react';
 import { useTodayMood, useMoodHistory, useLogMood } from './useMood';
 import { MOOD_CONFIG, type MoodScore } from './types';
+import { useT } from '@/i18n';
 
 const SCORES: MoodScore[] = [1, 2, 3, 4, 5];
 
@@ -23,6 +24,7 @@ export function MoodWidget() {
   const { data: history = [] } = useMoodHistory();
   const { mutate: logMood, isPending } = useLogMood();
   const [hovered, setHovered] = useState<MoodScore | null>(null);
+  const { t } = useT();
 
   const chartData = history.map(log => ({
     date: log.date.slice(5),
@@ -38,7 +40,7 @@ export function MoodWidget() {
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-sm flex items-center gap-2">
           <Smile size={16} className="text-primary" />
-          Mood Tracker
+          {t('mood_title')}
         </h3>
         {displayCfg && (
           <span className="text-xs text-muted-foreground">
@@ -55,7 +57,7 @@ export function MoodWidget() {
             <button
               key={score}
               type="button"
-              aria-label={`Log mood: ${cfg.label}`}
+              aria-label={`${t('mood_how_feeling')} ${cfg.label}`}
               disabled={isPending}
               onClick={() => logMood({ mood: score })}
               onMouseEnter={() => setHovered(score)}
@@ -98,7 +100,7 @@ export function MoodWidget() {
 
       {chartData.length === 0 && !today && (
         <p className="text-xs text-muted-foreground text-center py-2">
-          How are you feeling today?
+          {t('mood_how_feeling')}
         </p>
       )}
     </div>

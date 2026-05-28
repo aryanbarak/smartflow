@@ -9,9 +9,11 @@ import {
   useClearChecked,
 } from './useShoppingList';
 import { SHOPPING_CATEGORIES } from './shoppingService';
+import { useT } from '@/i18n';
 
 function AddItemForm({ onClose }: { onClose: () => void }) {
   const { mutate: add, isPending } = useAddShoppingItem();
+  const { t } = useT();
   const [name, setName] = useState('');
   const [category, setCategory] = useState<string>('Other');
   const [quantity, setQuantity] = useState('');
@@ -34,14 +36,14 @@ function AddItemForm({ onClose }: { onClose: () => void }) {
   return (
     <div className="bg-muted/40 border border-border rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium">Add Item</span>
-        <button type="button" aria-label="Close" onClick={onClose}><X size={14} /></button>
+        <span className="text-xs font-medium">{t('shopping_add_item')}</span>
+        <button type="button" aria-label={t('close')} onClick={onClose}><X size={14} /></button>
       </div>
       <input
         value={name}
         onChange={e => setName(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
-        placeholder="Item name"
+        placeholder={t('shopping_item_name')}
         autoFocus
         className="w-full bg-muted rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
       />
@@ -50,20 +52,20 @@ function AddItemForm({ onClose }: { onClose: () => void }) {
           type="number"
           value={quantity}
           onChange={e => setQuantity(e.target.value)}
-          placeholder="Qty"
+          placeholder={t('shopping_quantity')}
           className="bg-muted rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
         />
         <input
           value={unit}
           onChange={e => setUnit(e.target.value)}
-          placeholder="Unit (kg, pcs…)"
+          placeholder={t('shopping_unit')}
           className="bg-muted rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
         />
       </div>
       <select
         value={category}
         onChange={e => setCategory(e.target.value)}
-        aria-label="Category"
+        aria-label={t('category')}
         className="w-full bg-muted rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
       >
         {SHOPPING_CATEGORIES.map(c => (
@@ -76,7 +78,7 @@ function AddItemForm({ onClose }: { onClose: () => void }) {
         onClick={handleAdd}
         className="w-full py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
       >
-        {isPending ? 'Adding...' : 'Add'}
+        {isPending ? t('loading') : t('add')}
       </button>
     </div>
   );
@@ -88,6 +90,7 @@ export function ShoppingList() {
   const { mutate: remove } = useDeleteShoppingItem();
   const { mutate: clearChecked, isPending: clearing } = useClearChecked();
   const [showAdd, setShowAdd] = useState(false);
+  const { t } = useT();
 
   const unchecked = items.filter(i => !i.checked);
   const checked = items.filter(i => i.checked);
@@ -100,7 +103,7 @@ export function ShoppingList() {
   }, {});
 
   if (isLoading) {
-    return <div className="text-center text-sm text-muted-foreground py-8">Loading...</div>;
+    return <div className="text-center text-sm text-muted-foreground py-8">{t('loading')}</div>;
   }
 
   return (
@@ -108,8 +111,8 @@ export function ShoppingList() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShoppingCart size={16} className="text-primary" />
-          <span className="text-sm font-semibold">Shopping List</span>
-          <span className="text-xs text-muted-foreground">({unchecked.length} remaining)</span>
+          <span className="text-sm font-semibold">{t('shopping_title')}</span>
+          <span className="text-xs text-muted-foreground">({unchecked.length})</span>
         </div>
         <div className="flex items-center gap-2">
           {checked.length > 0 && (
@@ -120,17 +123,17 @@ export function ShoppingList() {
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
             >
               <CheckCheck size={12} />
-              Clear done
+              {t('shopping_clear_done')}
             </button>
           )}
           <button
             type="button"
             onClick={() => setShowAdd(v => !v)}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Add item"
+            aria-label={t('shopping_add_item')}
           >
             <Plus size={13} />
-            Add
+            {t('add')}
           </button>
         </div>
       </div>
@@ -140,7 +143,7 @@ export function ShoppingList() {
       {items.length === 0 && !showAdd && (
         <div className="text-center text-muted-foreground py-8">
           <ShoppingCart size={32} className="mx-auto mb-2 opacity-20" />
-          <p className="text-sm">List is empty</p>
+          <p className="text-sm">{t('shopping_no_items')}</p>
         </div>
       )}
 
@@ -151,7 +154,7 @@ export function ShoppingList() {
             <div key={item.id} className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted/40 transition-colors">
               <button
                 type="button"
-                aria-label={item.checked ? 'Uncheck item' : 'Check item'}
+                aria-label={item.checked ? t('done') : t('shopping_add_item')}
                 onClick={() => toggle({ id: item.id, checked: !item.checked })}
                 className={cn(
                   'w-4 h-4 rounded border flex-shrink-0 transition-colors',
@@ -168,7 +171,7 @@ export function ShoppingList() {
               </span>
               <button
                 type="button"
-                aria-label="Delete item"
+                aria-label={t('delete')}
                 onClick={() => remove(item.id)}
                 className="opacity-0 group-hover:opacity-100 p-1 rounded hover:text-destructive text-muted-foreground transition-all"
               >
@@ -181,19 +184,19 @@ export function ShoppingList() {
 
       {checked.length > 0 && (
         <div className="space-y-1 opacity-60">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Done</p>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('shopping_done_section')}</p>
           {checked.map(item => (
             <div key={item.id} className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted/40 transition-colors">
               <button
                 type="button"
-                aria-label="Uncheck item"
+                aria-label={t('done')}
                 onClick={() => toggle({ id: item.id, checked: false })}
                 className="w-4 h-4 rounded border flex-shrink-0 bg-primary border-primary transition-colors"
               />
               <span className="flex-1 text-sm line-through text-muted-foreground">{item.name}</span>
               <button
                 type="button"
-                aria-label="Delete item"
+                aria-label={t('delete')}
                 onClick={() => remove(item.id)}
                 className="opacity-0 group-hover:opacity-100 p-1 rounded hover:text-destructive text-muted-foreground transition-all"
               >

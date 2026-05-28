@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { shoppingService } from './shoppingService';
 import type { ShoppingItem } from './shoppingService';
 import { toast } from 'sonner';
+import { useT } from '@/i18n';
 
 const KEY = ['shopping-items'];
 
@@ -11,11 +12,12 @@ export function useShoppingList() {
 
 export function useAddShoppingItem() {
   const qc = useQueryClient();
+  const { t } = useT();
   return useMutation({
     mutationFn: (item: Omit<ShoppingItem, 'id' | 'user_id' | 'created_at'>) =>
       shoppingService.add(item),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
-    onError: () => toast.error('Failed to add item'),
+    onError: () => toast.error(t('error_save')),
   });
 }
 
@@ -38,11 +40,12 @@ export function useDeleteShoppingItem() {
 
 export function useClearChecked() {
   const qc = useQueryClient();
+  const { t } = useT();
   return useMutation({
     mutationFn: shoppingService.clearChecked,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY });
-      toast.success('Cleared checked items');
+      toast.success(t('shopping_clear_done'));
     },
   });
 }

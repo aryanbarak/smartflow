@@ -23,34 +23,37 @@ import {
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DailyFlowLogo } from "@/components/DailyFlowLogo";
+import { useT } from "@/i18n";
+import type { TranslationKey } from "@/i18n";
 
-const mainNavItems = [
-  { icon: LayoutDashboard, label: "Home", path: "/" },
-  { icon: Calendar, label: "Calendar", path: "/calendar" },
-  { icon: CheckSquare, label: "Tasks", path: "/tasks" },
-  { icon: Wallet, label: "Finance", path: "/finance" },
+const mainNavItems: { icon: React.ElementType; key: TranslationKey; path: string }[] = [
+  { icon: LayoutDashboard, key: 'nav_dashboard', path: "/" },
+  { icon: Calendar, key: 'nav_calendar', path: "/calendar" },
+  { icon: CheckSquare, key: 'nav_tasks', path: "/tasks" },
+  { icon: Wallet, key: 'nav_finance', path: "/finance" },
 ];
 
-const moreNavItems = [
-  { icon: Flame, label: "Habits", path: "/habits" },
-  { icon: BookOpen, label: "Journal", path: "/journal" },
-  { icon: Layers, label: "Flashcards", path: "/flashcards" },
-  { icon: Users, label: "Family", path: "/family" },
-  { icon: Home, label: "Family Hub", path: "/family-hub" },
-  { icon: FileText, label: "Documents", path: "/documents" },
-  { icon: Image, label: "Photos", path: "/photos" },
-  { icon: Music, label: "Music", path: "/music" },
-  { icon: Globe, label: "Web Links", path: "/links" },
-  { icon: Brain, label: "Learn with AI", path: "/learn-ai" },
-  { icon: GraduationCap, label: "Tutor Bank", path: "/tutor" },
-  { icon: Bot, label: "Tutor App", path: "/tutor/app" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+const moreNavItems: { icon: React.ElementType; key: TranslationKey; path: string }[] = [
+  { icon: Flame, key: 'nav_habits', path: "/habits" },
+  { icon: BookOpen, key: 'nav_journal', path: "/journal" },
+  { icon: Layers, key: 'nav_flashcards', path: "/flashcards" },
+  { icon: Users, key: 'nav_family', path: "/family" },
+  { icon: Home, key: 'nav_family_hub', path: "/family-hub" },
+  { icon: FileText, key: 'nav_documents', path: "/documents" },
+  { icon: Image, key: 'nav_photos', path: "/photos" },
+  { icon: Music, key: 'nav_music', path: "/music" },
+  { icon: Globe, key: 'nav_links', path: "/links" },
+  { icon: Brain, key: 'nav_learn_ai', path: "/learn-ai" },
+  { icon: GraduationCap, key: 'nav_tutor', path: "/tutor" },
+  { icon: Bot, key: 'nav_tutor_app', path: "/tutor/app" },
+  { icon: Settings, key: 'nav_settings', path: "/settings" },
 ];
 
 export function MobileNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const { t } = useT();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
@@ -67,7 +70,7 @@ export function MobileNav() {
               )}
             >
               <item.icon className="w-5 h-5" />
-              <span className="text-xs">{item.label}</span>
+              <span className="text-xs">{t(item.key)}</span>
             </NavLink>
           );
         })}
@@ -76,7 +79,7 @@ export function MobileNav() {
           <SheetTrigger asChild>
             <button type="button" className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-muted-foreground">
               <Menu className="w-5 h-5" />
-              <span className="text-xs">More</span>
+              <span className="text-xs">{t('nav_more')}</span>
             </button>
           </SheetTrigger>
           <SheetContent side="bottom" className="h-auto rounded-t-2xl">
@@ -98,7 +101,7 @@ export function MobileNav() {
                       )}
                     >
                       <item.icon className="w-6 h-6" />
-                      <span className="text-xs">{item.label}</span>
+                      <span className="text-xs">{t(item.key)}</span>
                     </button>
                   );
                 })}

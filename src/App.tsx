@@ -28,6 +28,7 @@ import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import { MusicPlayerProvider } from "@/providers/MusicPlayerProvider";
 import { PlaylistPlayerProvider } from "@/contexts/PlaylistPlayerContext";
 import { AppLoader } from "@/components/AppLoader";
+import { LanguageProvider } from "@/components/LanguageProvider";
 
 function AccentColorInit() {
   const { accentColor } = useAppearance();
@@ -63,6 +64,7 @@ const App = () => (
       <MusicPlayerProvider>
       <PlaylistPlayerProvider>
       <TooltipProvider>
+        <LanguageProvider>
         <AccentColorInit />
         <Toaster />
         <Sonner />
@@ -114,6 +116,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+      </LanguageProvider>
       </TooltipProvider>
       </PlaylistPlayerProvider>
       </MusicPlayerProvider>

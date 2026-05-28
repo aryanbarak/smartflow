@@ -3,14 +3,17 @@ import { persist } from 'zustand/middleware';
 
 export type Density = 'compact' | 'normal' | 'comfortable';
 export type AccentColor = 'indigo' | 'violet' | 'rose' | 'amber' | 'emerald' | 'sky';
+export type Language = 'en' | 'de' | 'fa';
 
 interface AppearanceState {
   density: Density;
   accentColor: AccentColor;
   reducedMotion: boolean;
+  language: Language;
   setDensity: (d: Density) => void;
   setAccentColor: (c: AccentColor) => void;
   setReducedMotion: (v: boolean) => void;
+  setLanguage: (l: Language) => void;
 }
 
 export const ACCENT_COLORS: Record<AccentColor, { label: string; hex: string; hsl: string }> = {
@@ -34,6 +37,7 @@ export const useAppearance = create<AppearanceState>()(
       density: 'normal',
       accentColor: 'indigo',
       reducedMotion: false,
+      language: 'en',
       setDensity: density => set({ density }),
       setAccentColor: accentColor => {
         const { hsl } = ACCENT_COLORS[accentColor];
@@ -41,6 +45,7 @@ export const useAppearance = create<AppearanceState>()(
         set({ accentColor });
       },
       setReducedMotion: reducedMotion => set({ reducedMotion }),
+      setLanguage: language => set({ language }),
     }),
     { name: 'dailyflow:appearance' },
   ),

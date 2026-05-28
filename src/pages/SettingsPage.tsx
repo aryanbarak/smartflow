@@ -345,8 +345,8 @@ function SecurityTab() {
 
 function AppearanceTab() {
   const { theme, setTheme } = useTheme();
-  const { density, accentColor, reducedMotion, setDensity, setAccentColor, setReducedMotion } = useAppearance();
-  const { preferences, setTheme: setPrefTheme, setLanguage, setCurrency } = usePreferences();
+  const { density, accentColor, reducedMotion, language, setDensity, setAccentColor, setReducedMotion, setLanguage } = useAppearance();
+  const { preferences, setTheme: setPrefTheme, setCurrency } = usePreferences();
 
   const [aiDefaults, setAiDefaults] = useState<AiDefaults>(() =>
     safeGet<AiDefaults>(storageKey('ai-defaults'), { mode: 'fiae_algorithms', language: 'de' }),
@@ -434,7 +434,7 @@ function AppearanceTab() {
 
       <SectionCard title="Language & currency">
         <SettingRow label="Interface language">
-          <Select value={preferences.language ?? 'en'} onValueChange={v => setLanguage(v)}>
+          <Select value={language} onValueChange={v => setLanguage(v as import('@/features/settings/appearanceStore').Language)}>
             <SelectTrigger className="w-32 h-8 text-xs" aria-label="Select language">
               <SelectValue />
             </SelectTrigger>
