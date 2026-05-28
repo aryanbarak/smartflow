@@ -1,4 +1,4 @@
-﻿name: Deploy DailyFlow to Cloudflare Pages
+name: Deploy DailyFlow to Cloudflare Pages
 
 on:
   push:
@@ -28,20 +28,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check env vars
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-        run: |
-          echo "SUPABASE_URL set: ${{ secrets.VITE_SUPABASE_URL != '' }}"
-          echo "SUPABASE_URL prefix: ${VITE_SUPABASE_URL:0:30}"
-          echo "ANON_KEY set: ${{ secrets.VITE_SUPABASE_ANON_KEY != '' }}"
-          echo "ANON_KEY prefix: ${VITE_SUPABASE_ANON_KEY:0:10}"
-
       - name: Build
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_TUTOR_API_URL: ${{ secrets.VITE_TUTOR_API_URL }}
           VITE_TUTOR_API_TOKEN: ${{ secrets.VITE_TUTOR_API_TOKEN }}
           VITE_AI_AGENT_URL: ${{ secrets.VITE_AI_AGENT_URL }}
