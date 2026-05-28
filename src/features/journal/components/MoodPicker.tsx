@@ -1,16 +1,16 @@
 import type { Mood } from '../types';
 
 const MOODS: { value: Mood; emoji: string; label: string }[] = [
-  { value: 'great',    emoji: '😄', label: 'عالی' },
-  { value: 'good',     emoji: '🙂', label: 'خوب' },
-  { value: 'okay',     emoji: '😐', label: 'معمولی' },
-  { value: 'bad',      emoji: '😕', label: 'بد' },
-  { value: 'terrible', emoji: '😞', label: 'خیلی بد' },
+  { value: 'great',    emoji: '😄', label: 'Great' },
+  { value: 'good',     emoji: '🙂', label: 'Good' },
+  { value: 'okay',     emoji: '😐', label: 'Okay' },
+  { value: 'bad',      emoji: '😕', label: 'Bad' },
+  { value: 'terrible', emoji: '😞', label: 'Terrible' },
 ];
 
 interface Props {
-  value: Mood | null;
-  onChange: (mood: Mood) => void;
+  readonly value: Mood | null;
+  readonly onChange: (mood: Mood) => void;
 }
 
 export function MoodPicker({ value, onChange }: Props) {

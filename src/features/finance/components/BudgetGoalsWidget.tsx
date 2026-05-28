@@ -26,6 +26,8 @@ function GoalBar({ goal, onDelete }: { goal: BudgetGoalWithSpend; onDelete: (id:
             {goal.spent.toFixed(0)} / {goal.monthly_limit.toFixed(0)} €
           </span>
           <button
+            type="button"
+            aria-label="Delete goal"
             onClick={() => onDelete(goal.id)}
             className="text-muted-foreground hover:text-destructive transition-colors"
           >
@@ -43,11 +45,11 @@ function GoalBar({ goal, onDelete }: { goal: BudgetGoalWithSpend; onDelete: (id:
         />
       </div>
       <div className="flex justify-between text-xs text-muted-foreground">
-        <span>{goal.percentage}% مصرف‌شده</span>
+        <span>{goal.percentage}% used</span>
         <span style={{ color }}>
           {goal.status === 'over'
-            ? `${Math.abs(goal.remaining).toFixed(0)} € اضافه`
-            : `${goal.remaining.toFixed(0)} € باقی‌مانده`}
+            ? `${Math.abs(goal.remaining).toFixed(0)} € over`
+            : `${goal.remaining.toFixed(0)} € left`}
         </span>
       </div>
     </div>
@@ -64,22 +66,22 @@ function AddGoalForm({ onClose }: { onClose: () => void }) {
     mutationFn: budgetGoalsService.upsert,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['budget-goals'] });
-      toast.success('Budget goal اضافه شد');
+      toast.success('Budget goal added');
       onClose();
     },
-    onError: () => toast.error('خطا در ذخیره'),
+    onError: () => toast.error('Failed to save goal'),
   });
 
   return (
     <div className="border border-border rounded-xl p-4 space-y-3 bg-muted/30">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium">Budget Goal جدید</span>
-        <button onClick={onClose}><X size={14} /></button>
+        <span className="text-xs font-medium">New Budget Goal</span>
+        <button type="button" aria-label="Close" onClick={onClose}><X size={14} /></button>
       </div>
       <input
         value={category}
         onChange={e => setCategory(e.target.value)}
-        placeholder="دسته‌بندی (مثلاً Food)"
+        placeholder="Category (e.g. Food)"
         className="w-full bg-muted rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
         autoFocus
       />
@@ -87,13 +89,15 @@ function AddGoalForm({ onClose }: { onClose: () => void }) {
         type="number"
         value={limit}
         onChange={e => setLimit(e.target.value)}
-        placeholder="سقف ماهانه (€)"
+        placeholder="Monthly limit (€)"
         className="w-full bg-muted rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
       />
       <div className="flex gap-2">
         {GOAL_COLORS.map(c => (
           <button
             key={c}
+            type="button"
+            aria-label={`Select color ${c}`}
             onClick={() => setColor(c)}
             className="w-6 h-6 rounded-full transition-transform hover:scale-110"
             style={{ backgroundColor: c, outline: color === c ? `2px solid ${c}` : 'none', outlineOffset: '2px' }}
@@ -101,11 +105,12 @@ function AddGoalForm({ onClose }: { onClose: () => void }) {
         ))}
       </div>
       <button
+        type="button"
         disabled={!category.trim() || !limit || isPending}
         onClick={() => mutate({ category: category.trim(), monthly_limit: Number(limit), period: 'monthly', color })}
         className="w-full py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 transition-opacity"
       >
-        {isPending ? 'در حال ذخیره...' : 'اضافه کردن'}
+        {isPending ? 'Saving...' : 'Add Goal'}
       </button>
     </div>
   );
@@ -124,7 +129,7 @@ export function BudgetGoalsWidget() {
     mutationFn: budgetGoalsService.delete,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['budget-goals'] });
-      toast.success('Goal حذف شد');
+      toast.success('Goal deleted');
     },
   });
 
@@ -135,15 +140,16 @@ export function BudgetGoalsWidget() {
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-sm flex items-center gap-2">
           <TrendingUp size={16} className="text-primary" />
-          Budget Goals این ماه
+          Budget Goals this month
         </h3>
         <div className="flex items-center gap-2">
           {overCount > 0 && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/10 text-destructive font-medium">
-              {overCount} بیش از بودجه
+              {overCount} over budget
             </span>
           )}
           <button
+            type="button"
             onClick={() => setShowAdd(v => !v)}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
@@ -157,7 +163,7 @@ export function BudgetGoalsWidget() {
 
       {goals.length === 0 && !showAdd ? (
         <p className="text-xs text-muted-foreground text-center py-4">
-          هنوز budget goal تعریف نشده
+          No budget goals defined yet
         </p>
       ) : (
         <div className="space-y-4">

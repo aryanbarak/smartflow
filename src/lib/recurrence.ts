@@ -32,8 +32,8 @@ export function expandRecurrences(
 }
 
 export const RECURRENCE_LABELS: Record<RecurrenceRule, string> = {
-  daily: 'روزانه',
-  weekdays: 'روزهای کاری',
-  weekly: 'هفتگی',
-  monthly: 'ماهانه',
+  daily: 'Daily',
+  weekdays: 'Weekdays',
+  weekly: 'Weekly',
+  monthly: 'Monthly',
 };

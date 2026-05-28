@@ -19,15 +19,15 @@ export default function HabitsPage() {
 
   function renderBody() {
     if (isLoading) {
-      return <div className="text-center text-muted-foreground py-12 text-sm">در حال بارگذاری...</div>;
+      return <div className="text-center text-muted-foreground py-12 text-sm">Loading...</div>;
     }
     if (habits.length === 0) {
       return (
         <div className="text-center text-muted-foreground py-16">
           <Flame size={40} className="mx-auto mb-3 opacity-20" />
-          <p className="text-sm">هنوز عادتی اضافه نکردی</p>
+          <p className="text-sm">No habits yet</p>
           <button type="button" onClick={() => setShowAdd(true)} className="mt-3 text-primary text-sm hover:underline">
-            اولین عادتت رو بساز
+            Create your first habit
           </button>
         </div>
       );
@@ -55,7 +55,7 @@ export default function HabitsPage() {
             Habit Tracker
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {todayDone}/{habits.length} امروز انجام شده · {totalStreak} روز streak کل
+            {todayDone}/{habits.length} done today · {totalStreak} day streak total
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -63,7 +63,7 @@ export default function HabitsPage() {
             <button
               type="button"
               onClick={requestNotifications}
-              title="فعال‌کردن یادآور روزانه"
+              title="Enable daily reminder"
               className="p-2 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             >
               <Bell size={15} />
@@ -75,7 +75,7 @@ export default function HabitsPage() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
           >
             <Plus size={16} />
-            عادت جدید
+            New Habit
           </button>
         </div>
       </div>
@@ -83,7 +83,7 @@ export default function HabitsPage() {
       {habits.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-4">
           <div className="flex justify-between text-xs text-muted-foreground mb-2">
-            <span>پیشرفت امروز</span>
+            <span>Today's progress</span>
             <span>{progressPct}%</span>
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">

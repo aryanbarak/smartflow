@@ -18,7 +18,7 @@ export function useToggleHabit() {
     mutationFn: ({ habitId, date }: { habitId: string; date?: string }) =>
       habitsService.toggle(habitId, date),
     onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
-    onError: () => toast.error('خطا در ثبت عادت'),
+    onError: () => toast.error('Failed to update habit'),
   });
 }
 
@@ -29,9 +29,9 @@ export function useCreateHabit() {
       habitsService.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEY });
-      toast.success('عادت جدید اضافه شد');
+      toast.success('Habit created');
     },
-    onError: () => toast.error('خطا در ایجاد عادت'),
+    onError: () => toast.error('Failed to create habit'),
   });
 }
 
@@ -41,7 +41,7 @@ export function useDeleteHabit() {
     mutationFn: (id: string) => habitsService.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEY });
-      toast.success('عادت حذف شد');
+      toast.success('Habit deleted');
     },
   });
 }

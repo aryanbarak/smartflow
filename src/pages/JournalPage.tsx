@@ -20,7 +20,7 @@ export default function JournalPage() {
         <BookOpen className="text-violet-400" size={22} />
         <div>
           <h1 className="text-xl font-bold">Journal</h1>
-          <p className="text-xs text-muted-foreground">یادداشت روزانه</p>
+          <p className="text-xs text-muted-foreground">Daily notes</p>
         </div>
       </div>
 

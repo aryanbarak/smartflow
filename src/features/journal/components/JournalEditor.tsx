@@ -5,10 +5,10 @@ import type { Mood } from '../types';
 import { useDebounce } from '@/hooks/useDebounce';
 
 interface Props {
-  date: string;
+  readonly date: string;
 }
 
-const PLACEHOLDER = 'امروز چه اتفاقی افتاد؟ احساست چه بود؟';
+const PLACEHOLDER = 'What happened today? How did you feel?';
 
 export function JournalEditor({ date }: Props) {
   const { data: entry, isLoading } = useJournalEntry(date);
@@ -40,14 +40,14 @@ export function JournalEditor({ date }: Props) {
     });
   }, [debouncedContent, debouncedMood]);
 
-  if (isLoading) return <div className="text-sm text-muted-foreground py-4">در حال بارگذاری...</div>;
+  if (isLoading) return <div className="text-sm text-muted-foreground py-4">Loading...</div>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <MoodPicker value={mood} onChange={(m) => { setMood(m); initialized.current = true; }} />
         <span className={`text-xs transition-opacity ${saved ? 'opacity-100 text-green-500' : 'opacity-0'}`}>
-          ذخیره شد ✓
+          Saved ✓
         </span>
       </div>
       <textarea
@@ -56,6 +56,7 @@ export function JournalEditor({ date }: Props) {
         value={content}
         onChange={e => { setContent(e.target.value); initialized.current = true; }}
         dir="auto"
+        aria-label="Journal entry"
       />
     </div>
   );

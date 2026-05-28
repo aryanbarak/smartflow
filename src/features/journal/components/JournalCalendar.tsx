@@ -5,8 +5,8 @@ import { moodEmoji } from './MoodPicker';
 import type { Mood } from '../types';
 
 interface Props {
-  selectedDate: string;
-  onSelect: (date: string) => void;
+  readonly selectedDate: string;
+  readonly onSelect: (date: string) => void;
 }
 
 function toKey(date: Date) {
@@ -39,17 +39,17 @@ export function JournalCalendar({ selectedDate, onSelect }: Props) {
     else setViewMonth(m => m + 1);
   }
 
-  const monthLabel = firstDay.toLocaleDateString('fa-IR', { year: 'numeric', month: 'long' });
+  const monthLabel = firstDay.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
 
   return (
     <div className="bg-card border border-border rounded-xl p-4 select-none">
       <div className="flex items-center justify-between mb-3">
-        <button type="button" onClick={prev} className="p-1 rounded hover:bg-muted"><ChevronRight size={16} /></button>
+        <button type="button" aria-label="Previous month" onClick={prev} className="p-1 rounded hover:bg-muted"><ChevronLeft size={16} /></button>
         <span className="text-sm font-medium">{monthLabel}</span>
-        <button type="button" onClick={next} className="p-1 rounded hover:bg-muted"><ChevronLeft size={16} /></button>
+        <button type="button" aria-label="Next month" onClick={next} className="p-1 rounded hover:bg-muted"><ChevronRight size={16} /></button>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center">
-        {['ی', 'د', 'س', 'چ', 'پ', 'ج', 'ش'].map(d => (
+        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
           <div key={d} className="text-xs text-muted-foreground py-1">{d}</div>
         ))}
         {days.map((day, idx) => {
@@ -62,6 +62,7 @@ export function JournalCalendar({ selectedDate, onSelect }: Props) {
             <button
               key={key}
               type="button"
+              aria-label={`Select ${key}`}
               onClick={() => onSelect(key)}
               className={`relative flex flex-col items-center justify-center rounded-lg py-1.5 text-xs transition-colors ${
                 isSelected ? 'bg-primary text-primary-foreground' :

@@ -3,9 +3,9 @@ import { Flame, Trophy, Check, Trash2 } from 'lucide-react';
 import type { HabitWithStats } from '../types';
 
 interface Props {
-  habit: HabitWithStats;
-  onToggle: (id: string) => void;
-  onDelete: (id: string) => void;
+  readonly habit: HabitWithStats;
+  readonly onToggle: (id: string) => void;
+  readonly onDelete: (id: string) => void;
 }
 
 export function HabitCard({ habit, onToggle, onDelete }: Props) {
@@ -38,6 +38,8 @@ export function HabitCard({ habit, onToggle, onDelete }: Props) {
         </div>
         <div className="flex gap-1 flex-shrink-0">
           <button
+            type="button"
+            aria-label={habit.completedToday ? 'Mark incomplete' : 'Mark complete'}
             onClick={() => onToggle(habit.id)}
             className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
             style={{
@@ -49,6 +51,8 @@ export function HabitCard({ habit, onToggle, onDelete }: Props) {
             <Check size={14} />
           </button>
           <button
+            type="button"
+            aria-label="Delete habit"
             onClick={() => onDelete(habit.id)}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors border border-transparent hover:border-destructive/20"
           >
@@ -80,13 +84,13 @@ export function HabitCard({ habit, onToggle, onDelete }: Props) {
       <div className="flex gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <Flame size={12} style={{ color: habit.color }} />
-          <span>{habit.currentStreak} روز streak</span>
+          <span>{habit.currentStreak} day streak</span>
         </span>
         <span className="flex items-center gap-1">
           <Trophy size={12} style={{ color: habit.color }} />
-          <span>بهترین: {habit.longestStreak}</span>
+          <span>Best: {habit.longestStreak}</span>
         </span>
-        <span className="ml-auto">{habit.completionRate}% ماه</span>
+        <span className="ml-auto">{habit.completionRate}% this month</span>
       </div>
     </motion.div>
   );

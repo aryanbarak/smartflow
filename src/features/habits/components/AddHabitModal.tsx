@@ -6,7 +6,7 @@ const ICONS = ['⭐', '💪', '📚', '🏃', '🧘', '🧠', '🎯', '🌱', '�
 const COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444', '#14b8a6'];
 
 interface Props {
-  onClose: () => void;
+  readonly onClose: () => void;
 }
 
 export function AddHabitModal({ onClose }: Props) {
@@ -28,41 +28,43 @@ export function AddHabitModal({ onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-semibold text-base">عادت جدید</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+          <h2 className="font-semibold text-base">New Habit</h2>
+          <button type="button" aria-label="Close" onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
             <X size={16} />
           </button>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">عنوان *</label>
+            <label className="text-xs text-muted-foreground mb-1.5 block">Title *</label>
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-              placeholder="مثلاً: ۳۰ دقیقه ورزش"
+              placeholder="e.g. 30 min exercise"
               className="w-full bg-muted rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"
               autoFocus
             />
           </div>
 
           <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">توضیح (اختیاری)</label>
+            <label className="text-xs text-muted-foreground mb-1.5 block">Description (optional)</label>
             <input
               value={description}
               onChange={e => setDescription(e.target.value)}
-              placeholder="جزئیات بیشتر..."
+              placeholder="More details..."
               className="w-full bg-muted rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
 
           <div>
-            <label className="text-xs text-muted-foreground mb-2 block">آیکون</label>
+            <label className="text-xs text-muted-foreground mb-2 block">Icon</label>
             <div className="flex gap-2 flex-wrap">
               {ICONS.map(i => (
                 <button
                   key={i}
+                  type="button"
+                  aria-label={`Select icon ${i}`}
                   onClick={() => setIcon(i)}
                   className="w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-all"
                   style={{
@@ -77,11 +79,13 @@ export function AddHabitModal({ onClose }: Props) {
           </div>
 
           <div>
-            <label className="text-xs text-muted-foreground mb-2 block">رنگ</label>
+            <label className="text-xs text-muted-foreground mb-2 block">Color</label>
             <div className="flex gap-2">
               {COLORS.map(c => (
                 <button
                   key={c}
+                  type="button"
+                  aria-label={`Select color ${c}`}
                   onClick={() => setColor(c)}
                   className="w-8 h-8 rounded-full transition-transform hover:scale-110"
                   style={{
@@ -97,18 +101,20 @@ export function AddHabitModal({ onClose }: Props) {
 
         <div className="flex gap-2 mt-6">
           <button
+            type="button"
             onClick={onClose}
             className="flex-1 py-2.5 rounded-xl border border-border text-sm hover:bg-muted transition-colors"
           >
-            لغو
+            Cancel
           </button>
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={!title.trim() || isPending}
             className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white transition-all disabled:opacity-50"
             style={{ backgroundColor: color }}
           >
-            {isPending ? 'در حال ذخیره...' : 'ایجاد عادت'}
+            {isPending ? 'Saving...' : 'Create Habit'}
           </button>
         </div>
       </div>

@@ -185,12 +185,12 @@ export default function LinksPage() {
 
       {/* Links grid/list */}
       {isLoading && (
-        <div className="text-center text-muted-foreground py-12 text-sm">در حال بارگذاری...</div>
+        <div className="text-center text-muted-foreground py-12 text-sm">Loading...</div>
       )}
       {!isLoading && filtered.length === 0 && (
         <div className="text-center text-muted-foreground py-16">
           <Globe size={40} className="mx-auto mb-3 opacity-20" />
-          <p className="text-sm">لینکی پیدا نشد</p>
+          <p className="text-sm">No links found</p>
         </div>
       )}
       {!isLoading && filtered.length > 0 && (
