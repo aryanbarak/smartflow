@@ -49,11 +49,12 @@ export function GlobalSearch() {
   return (
     <>
       <button
+        type="button"
         onClick={openSearch}
         className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground text-sm hover:bg-muted/80 transition-colors"
       >
         <Search size={14} />
-        <span className="hidden sm:inline">جستجو...</span>
+        <span className="hidden sm:inline">Search...</span>
         <kbd className="hidden sm:inline text-xs bg-background border border-border rounded px-1 py-0.5 leading-none">⌘K</kbd>
       </button>
 
@@ -72,11 +73,12 @@ export function GlobalSearch() {
                 ref={inputRef}
                 value={query}
                 onChange={e => setQuery(e.target.value)}
-                placeholder="جستجو در همه چیز..."
+                placeholder="Search everything..."
                 className="flex-1 bg-transparent text-sm outline-none"
+                aria-label="Global search"
               />
               {query && (
-                <button onClick={() => setQuery('')} className="p-1 hover:bg-muted rounded transition-colors">
+                <button type="button" aria-label="Clear search" onClick={() => setQuery('')} className="p-1 hover:bg-muted rounded transition-colors">
                   <X size={14} />
                 </button>
               )}
@@ -84,14 +86,15 @@ export function GlobalSearch() {
 
             <div className="max-h-80 overflow-y-auto">
               {loading && (
-                <div className="text-center text-xs text-muted-foreground py-6">در حال جستجو...</div>
+                <div className="text-center text-xs text-muted-foreground py-6">Searching...</div>
               )}
               {!loading && query && results.length === 0 && (
-                <div className="text-center text-xs text-muted-foreground py-6">نتیجه‌ای یافت نشد</div>
+                <div className="text-center text-xs text-muted-foreground py-6">No results found</div>
               )}
               {!loading && results.map(r => (
                 <button
                   key={`${r.type}-${r.id}`}
+                  type="button"
                   onClick={() => go(r)}
                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors text-left"
                 >
@@ -105,7 +108,7 @@ export function GlobalSearch() {
               ))}
               {!query && (
                 <div className="text-center text-xs text-muted-foreground py-8">
-                  تایپ کن تا جستجو شروع بشه
+                  Start typing to search
                 </div>
               )}
             </div>
