@@ -16,6 +16,7 @@ import {
   Brain,
   GraduationCap,
   Bot,
+  Flame,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -29,6 +30,7 @@ const mainNavItems = [
 ];
 
 const moreNavItems = [
+  { icon: Flame, label: "Habits", path: "/habits" },
   { icon: Users, label: "Family", path: "/family" },
   { icon: Home, label: "Family Hub", path: "/family-hub" },
   { icon: FileText, label: "Documents", path: "/documents" },

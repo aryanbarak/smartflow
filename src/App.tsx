@@ -17,6 +17,7 @@ import PhotosPage from "./pages/PhotosPage";
 import LinksPage from "./pages/LinksPage";
 import SettingsPage from "./pages/SettingsPage";
 import LearnAIPage from "./pages/LearnAIPage";
+import HabitsPage from "./pages/HabitsPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import OfflinePage from "./pages/OfflinePage";
@@ -91,6 +92,7 @@ const App = () => (
                   </Suspense>
                 }
               />
+              <Route path="/habits" element={<HabitsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
             <Route path="/offline" element={<OfflinePage />} />

@@ -14,6 +14,7 @@ import {
   Brain,
   GraduationCap,
   Bot,
+  Flame,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,6 +25,7 @@ const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: Calendar, label: "Calendar", path: "/calendar" },
   { icon: CheckSquare, label: "Tasks", path: "/tasks" },
+  { icon: Flame, label: "Habits", path: "/habits" },
   { icon: Wallet, label: "Finance", path: "/finance" },
   { icon: Users, label: "Family", path: "/family" },
   { icon: Home, label: "Family Hub", path: "/family-hub" },

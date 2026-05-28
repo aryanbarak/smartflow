@@ -53,6 +53,7 @@ import {
   Transaction,
   TransactionType,
 } from "@/features/finance/financeService";
+import { BudgetGoalsWidget } from "@/features/finance/components/BudgetGoalsWidget";
 import { cn } from "@/lib/utils";
 
 const categories = ["Food", "Transport", "Rent", "Health", "Other"];
@@ -1023,6 +1024,11 @@ export default function FinancePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Budget Goals */}
+      <div className="mt-6">
+        <BudgetGoalsWidget />
+      </div>
     </div>
   );
 }
