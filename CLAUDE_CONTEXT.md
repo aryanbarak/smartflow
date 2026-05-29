@@ -1,12 +1,12 @@
 # CLAUDE_CONTEXT.md — dailyFlow
 
-*Last updated: 2026-05-28. Read this file at the start of every new session.*
+*Last updated: 2026-05-28 (evening). Read this file at the start of every new session.*
 
 ---
 
 ## 1. Project Overview
 
-**dailyFlow** is a personal productivity web app (React SPA) for one user (`barakzahi@web.de`). It provides a unified workspace for tasks, calendar, finances, family scheduling, documents, music, and AI-powered learning — all behind a Supabase authentication layer.
+**dailyFlow** is a personal productivity web app (React SPA) for one user (`barakzahi@web.de`). It provides a unified workspace for tasks, calendar, finances, family scheduling, documents, music, AI-powered learning, habits, journaling, flashcards, and more — all behind a Supabase authentication layer.
 
 | | |
 |---|---|
@@ -31,6 +31,7 @@
 | Animation | Framer Motion |
 | Forms | React Hook Form + Zod |
 | Server state | TanStack React Query 5 |
+| Global state | Zustand 5 |
 | Routing | React Router DOM 6 |
 | Toasts | Sonner |
 | PDF | react-pdf + pdfjs-dist + pdf-lib |
@@ -41,7 +42,7 @@
 ### Backend / Cloud
 | Service | Role |
 |---------|------|
-| Supabase (PostgreSQL) | Primary database (6 tables) + Auth + Storage |
+| Supabase (PostgreSQL) | Primary database (13 tables) + Auth + Storage |
 | Cloudflare Pages | Static frontend hosting |
 | Cloudflare Worker (`dailyflow-ai-worker`) | AI proxy → Google Gemini 2.5 Flash |
 
@@ -71,25 +72,32 @@
 | Feature | Route | Status | Notes |
 |---------|-------|--------|-------|
 | Authentication | `/auth` | ✅ Working | Supabase Auth, email+password |
-| Dashboard | `/` | ✅ Working | Aggregated overview, today's events, greeting |
-| Tasks | `/tasks` | ✅ Working | CRUD, due dates, overdue filter, Supabase-backed |
-| Calendar | `/calendar` | ✅ Working | Supabase-backed with localStorage offline fallback |
-| Finance | `/finance` | ✅ Working | Income/expense CRUD, charts, PDF export |
-| Family Hub | `/family` | ✅ Working | Members, roles, schedule, notes, calendar sync |
+| Dashboard | `/` | ✅ Working | Aggregated overview, today's events, greeting, Mood widget |
+| Tasks | `/tasks` | ✅ Working | CRUD, due dates, overdue filter, recurrence rule, Supabase-backed |
+| Calendar | `/calendar` | ✅ Working | Supabase-backed with localStorage offline fallback, recurrence rule |
+| Finance | `/finance` | ✅ Working | Income/expense CRUD, charts, PDF export, CSV import/export |
+| Habits | `/habits` | ✅ Working | Daily habit tracking, streaks, progress bar |
+| Journal | `/journal` | ✅ Working | Daily notes, mood picker, calendar heatmap, auto-save |
+| Flashcards | `/flashcards` | ✅ Working | Decks, SM-2 spaced repetition, Again/Hard/Good/Easy ratings |
+| Mood Tracker | Dashboard widget | ✅ Working | 5-level mood log, 14-day recharts chart |
+| Family Hub | `/family` | ✅ Working | Members, schedule, notes, events, calendar sync, Shopping List tab |
+| Shopping List | FamilyPage tab | ✅ Working | Grouped by category, check-off, clear done |
 | Documents | `/documents` | ✅ Working | PDF upload, Supabase Storage, signed URLs |
 | Learn with AI | `/learn-ai` | ✅ Working | Gemini 2.5 Flash, 4 modes, 3 languages (de/fa/en), chat history |
 | Photos | `/photos` | ✅ Working | Masonry grid, lightbox, tags, search, AI tagging, R2 storage |
-| Music | `/music` | ✅ Working | YouTube search + player, playlists, local files, Pomodoro timer |
+| Music | `/music` | ✅ Working | YouTube search + player, playlists, local files, Pomodoro + task link |
+| Web Links | `/links` | ✅ Working | Supabase-backed, tags, favorites, favicon, grid/list toggle, search |
+| Global Search | Header | ✅ Working | Ctrl+K, searches all major entities |
 | PWA | all | ✅ Working | Installable, service worker, offline badge |
 | Tutor (Algorithms) | `/tutor` | 🔧 Partial | Static exam bank works; Python adapter optional |
 | Tutor (WISO) | `/tutor/wiso` | 🔧 Partial | Same as above |
-| Links | `/links` | 🔧 Partial | Basic list, no tagging/search |
-| Settings | `/settings` | 🔧 Partial | Minimal; no full profile/password editing |
+| Settings | `/settings` | ✅ Working | 5 tabs: Profile, Security, Appearance, Notifications, Data |
+| i18n | all | ✅ Working | English (default), German, Farsi — toggled in Settings → Appearance |
 | Dark mode | all | ✅ Working | Default dark, `next-themes` |
-| RTL/Farsi | Learn AI | ✅ Working | Vazirmatn font, per-message RTL |
+| RTL/Farsi | all (when lang=fa) | ✅ Working | Vazirmatn font, `html[dir=rtl]`, set via language selector |
 | Mobile nav | all | ✅ Working | Bottom nav, auto-closes on navigation |
-| Error boundaries | all | ✅ Working | Wraps all feature areas |
-| Offline badge | all | ✅ Working | Network status indicator |
+
+**All UI text must be in English by default** — never hardcode Persian/Farsi strings in components. All translated text goes through `useT()` from `src/i18n/index.ts`.
 
 ---
 
@@ -98,7 +106,7 @@
 All tables use `user_id` FK → `auth.users` with RLS enforced.
 
 ### `tasks`
-`id, user_id, title, notes, due_date (YYYY-MM-DD), completed, created_at, updated_at`
+`id, user_id, title, notes, due_date (YYYY-MM-DD), completed, recurrence_rule TEXT, recurrence_end_date DATE, created_at, updated_at`
 
 ### `finance_transactions`
 `id, user_id, type ('income'|'expense'), amount, category, date (YYYY-MM-DD), notes, created_at, updated_at`
@@ -113,7 +121,39 @@ All tables use `user_id` FK → `auth.users` with RLS enforced.
 `id, user_id, mode ('fiae_algorithms'|'general_it'|'wiso'|'planner'), language ('de'|'fa'|'en'), role ('user'|'assistant'), content, created_at`
 
 ### `calendar_events`
-`id, user_id, title, date (YYYY-MM-DD), start_time (HH:MM|null), end_time (HH:MM|null), location, description, color, type, all_day, created_at, updated_at`
+`id, user_id, title, date (YYYY-MM-DD), start_time (HH:MM|null), end_time (HH:MM|null), location, description, color, type, all_day, recurrence_rule TEXT, recurrence_end_date DATE, created_at, updated_at`
+
+### `journal_entries`
+`id, user_id, date DATE, mood SMALLINT (1–5), content TEXT, created_at, updated_at`
+— `UNIQUE(user_id, date)` — uses `.maybeSingle()` on read
+
+### `links`
+`id, user_id, url TEXT, title TEXT, description TEXT, tags TEXT[], is_favorite BOOLEAN, favicon_url TEXT, created_at`
+— GIN index on `tags` column
+
+### `mood_logs`
+`id, user_id, date DATE, mood SMALLINT (1–5), note TEXT, created_at`
+— `UNIQUE(user_id, date)` — uses `.maybeSingle()` on read
+
+### `flashcard_decks`
+`id, user_id, name TEXT, description TEXT, created_at`
+
+### `flashcards`
+
+`id, deck_id, user_id, front TEXT, back TEXT, ease_factor REAL (default 2.5), interval_days INT (default 1), next_review DATE, review_count INT, last_rating SMALLINT, created_at`
+
+### `shopping_items`
+
+`id, user_id, name TEXT, category TEXT (default 'Other'), quantity NUMERIC, unit TEXT, checked BOOLEAN, created_at`
+
+### Pending migrations (must be run manually in Supabase Dashboard → SQL Editor)
+
+- `supabase/migrations/20260528000003_journal.sql`
+- `supabase/migrations/20260528000004_recurring.sql`
+- `supabase/migrations/20260528000005_links_enhanced.sql`
+- `supabase/migrations/20260528000006_mood_tracker.sql`
+- `supabase/migrations/20260528000007_flashcards.sql`
+- `supabase/migrations/20260528000008_shopping_list.sql`
 
 ### Storage Buckets
 - `documents` — user PDFs at `{userId}/{fileName}`
@@ -129,13 +169,30 @@ All tables use `user_id` FK → `auth.users` with RLS enforced.
 
 | File | Purpose |
 |------|---------|
-| `src/integrations/supabase/client.ts` | Supabase client — hardcoded URL+key as primary values |
+| `src/integrations/supabase/client.ts` | Supabase client — hardcoded URL+key, no env vars |
 | `src/integrations/supabase/types.ts` | Generated DB types |
+| `src/i18n/index.ts` | Full translation dictionaries (en/de/fa, ~200 keys) + `useT()` hook |
+| `src/components/LanguageProvider.tsx` | Sets `html[lang]`, `html[dir]`, Vazirmatn class on language change |
+| `src/features/settings/appearanceStore.ts` | Zustand persist: `density`, `accentColor`, `reducedMotion`, `language` |
+| `src/features/settings/notificationSettings.ts` | Zustand persist: task/habit/calendar/daily-summary reminder prefs |
+| `src/features/settings/dataExportService.ts` | JSON export (8 tables), delete all data (10 tables + storage), localStorage stats |
 | `src/features/calendar/calendarService.ts` | Calendar CRUD (Supabase + localStorage fallback) |
 | `src/features/tasks/tasksService.ts` | Tasks CRUD |
 | `src/features/finance/financeService.ts` | Finance CRUD |
+| `src/features/finance/csvService.ts` | CSV export/import for finance transactions |
 | `src/features/family/familyService.ts` | Family CRUD |
 | `src/features/learn-ai/aiService.ts` | Fetch → api.barakzai.cloud/analyze |
+| `src/features/journal/journalService.ts` | Journal CRUD (upsert by date, `.maybeSingle()`) |
+| `src/features/mood/moodService.ts` | Mood log CRUD (upsert by date, `.maybeSingle()`) |
+| `src/features/mood/MoodWidget.tsx` | Dashboard mood widget (picker + recharts chart) |
+| `src/features/flashcards/spacedRepetition.ts` | SM-2 algorithm implementation |
+| `src/features/flashcards/flashcardService.ts` | Deck + card CRUD, review scheduling |
+| `src/features/shopping/shoppingService.ts` | Shopping list CRUD |
+| `src/features/links/linksService.ts` | Links CRUD (Supabase-backed) |
+| `src/features/search/GlobalSearch.tsx` | Ctrl+K global search overlay |
+| `src/features/music/pomodoroStore.ts` | Zustand store for Pomodoro + linked task |
+| `src/lib/recurrence.ts` | RecurrenceRule type + expandRecurrences() helper |
+| `src/components/RecurrencePicker.tsx` | Recurrence selector for tasks + calendar |
 | `src/hooks/useAuth.ts` | Session/user state |
 | `src/lib/storage.ts` | Safe localStorage wrappers |
 | `vite.config.ts` | Proxy, chunk splitting, PWA config |
@@ -147,18 +204,19 @@ All tables use `user_id` FK → `auth.users` with RLS enforced.
 
 | Commit | Change |
 |--------|--------|
-| `254c327` | **fix(supabase):** hardcoded URL/key is primary; env var only overrides if valid (includes `supabase.co`) — prevents broken GitHub secrets from breaking auth |
-| `46d58d2` | **fix(pwa):** set `navigateFallback: null` to fix SW "non-precached-url" crash on page navigation |
-| `50227fc` | **fix(pwa):** stop caching index.html and Supabase API calls in service worker |
-| `e9cd71d` | **fix(supabase):** hardcode public URL and anon key as fallbacks |
-| `2fc852c` | **fix(dashboard):** deduplicate today's events from repeated localStorage migration |
+| `e9e6b96` | **feat(i18n):** full English/German/Farsi i18n — `useT()` hook, `LanguageProvider`, nav/pages/hooks translated |
+| `373efce` | **feat:** full Settings page — 5 tabs (Profile, Security, Appearance, Notifications, Data), accent color store, notification prefs, data export/delete |
+| `7fcfa04` | **feat:** add Mood Tracker (Dashboard widget), Flashcards (SM-2), Shopping List (FamilyPage tab) |
+| `8a4399b` | **fix:** translate GlobalSearch placeholder/UI text to English |
+| `ea5cb3f` | **fix:** replace all Persian UI text with English across Habits, Journal, Finance, HabitCard |
+| `284b173` | **feat:** implement medium impact features — Journal, Recurring Tasks/Events, Finance CSV, Pomodoro+Task link, Links page (Supabase-backed with tags/favorites) |
+| `6d06ea2` | **fix(supabase):** hardcode URL and key directly — remove all env var logic |
+| `2c6ee79` | **ci:** remove deleted Supabase secrets from workflow env |
+| `254c327` | **fix(supabase):** hardcoded URL/key is primary; env var only overrides if valid |
+| `46d58d2` | **fix(pwa):** set `navigateFallback: null` to fix SW crash on page navigation |
 | `7495a13` | **feat(family-hub):** add Family Hub page, components, hooks, routing |
-| `62d405e` | **feat(family-hub):** member role field with age-based defaults and role selector |
-| `dedd67a` | **feat(pwa):** add PWA support with service worker, offline page, install prompt, icons |
 | `d0fbdac` | **feat(photos):** masonry grid, lightbox, tags, search, timeline, AI tagging |
-| `1a942a8` | **feat(photos):** Photo Gallery with R2 storage, albums, lightbox |
 | `844f8f7` | **feat(music):** add Playlists tab |
-| `b690f49` | **feat(music):** YouTube search via Invidious API |
 | `b5c8ba2` | **feat(music):** full music page (YouTube player, local files, Pomodoro timer) |
 | `fdfa91f` | **feat(calendar):** migrate from localStorage to Supabase with offline fallback |
 
@@ -174,8 +232,8 @@ KEY:  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...TmhuyWcwEUwnSvxXJiZ2HueY6Jr0sudmyJW
 
 - These are **public credentials** (anon key with RLS) — safe to commit
 - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` GitHub secrets were **intentionally deleted** on 2026-05-28 after repeated incidents where wrong secret values broke auth
-- `client.ts` has a guard: if `VITE_SUPABASE_URL` doesn't contain `supabase.co`, it falls back to the hardcoded value
-- **Do not re-add these as GitHub secrets** unless you also update the guard logic
+- Credentials are hardcoded directly in `client.ts` — no env var fallback
+- **Do not re-add these as GitHub secrets**
 
 ### When Auth Breaks ("Failed to fetch" / "NetworkError")
 1. Check `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in GitHub secrets — if they exist with wrong values, delete them
@@ -187,6 +245,10 @@ KEY:  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...TmhuyWcwEUwnSvxXJiZ2HueY6Jr0sudmyJW
 - Projects **pause after 7 days of inactivity**
 - If paused: go to Supabase dashboard → restart project
 - Maintenance windows can cause temporary auth failures (check the banner in the dashboard)
+
+### Supabase Table Pattern
+
+- Always use `.maybeSingle()` (not `.single()`) when querying for an optionally-present row (e.g., today's mood, today's journal entry). `.single()` throws if no row is found.
 
 ### AI Worker
 - Source lives in `dailyflow-ai-worker/` (NOT in this repo's git history — no version control)
@@ -207,7 +269,57 @@ gh run watch <run-id>
 
 ---
 
-## 8. Known Bugs & Limitations
+## 8. i18n Architecture
+
+Lightweight custom i18n — **no i18next library**.
+
+### How it works
+
+- `src/i18n/index.ts` exports `translations` (en/de/fa dictionaries, ~200 keys) and `useT()` hook
+- `useT()` reads `language` from `useAppearance()` Zustand store; returns `{ t, lang, isRTL }`
+- `t('key', { count: 5 })` replaces `{{count}}` in the string
+- `LanguageProvider` (rendered inside `App.tsx`) syncs `html[lang]`, `html[dir]` (RTL for fa), and font class
+- Language persisted to `localStorage` via `dailyflow:appearance` Zustand key
+
+### Usage in components
+
+```tsx
+import { useT } from '@/i18n';
+const { t } = useT();
+// ...
+<h1>{t('habits_title')}</h1>
+<p>{t('habits_days', { count: streak })}</p>
+```
+
+### Usage in custom hooks (for toast messages)
+
+```tsx
+import { useT } from '@/i18n';
+export function useCreateHabit() {
+  const qc = useQueryClient();
+  const { t } = useT();  // valid — called at top level of a custom hook
+  return useMutation({
+    onSuccess: () => { qc.invalidateQueries(...); toast.success(t('habits_habit_added')); },
+  });
+}
+```
+
+### Supported languages
+
+| Code | Language | RTL | Status |
+|------|----------|-----|--------|
+| `en` | English | No | Default, all keys present |
+| `de` | German | No | All keys present |
+| `fa` | Farsi | **Yes** | All keys present |
+
+### Coverage (as of 2026-05-28)
+
+Translated: Navigation, common actions, Habits, Journal, Flashcards, Mood, Shopping, Settings (all tabs), auth, errors/toasts.
+**Not yet translated:** Dashboard, Tasks, Calendar, Finance, Documents, Music, Photos, Links, Learn AI pages.
+
+---
+
+## 9. Known Bugs & Limitations
 
 | # | Issue | Severity |
 |---|-------|---------|
@@ -219,6 +331,7 @@ gh run watch <run-id>
 | 6 | Signed URL lifetime for documents is short (~20s in some configs) | Low |
 | 7 | No error tracking (Sentry / CF Analytics) | Low |
 | 8 | `dailyflow-ai-worker` has no CI/CD and no git repo | Low |
+| 9 | Supabase generated types (`types.ts`) not updated for new tables — new services use `as any` casts | Low |
 
 ---
 
@@ -226,12 +339,12 @@ gh run watch <run-id>
 
 | Priority | Feature |
 |----------|---------|
-| High | Full Settings page (password change, language, notification prefs) |
 | High | Rate-limit AI Worker (Cloudflare Rate Limiting or KV counter) |
-| High | Add RLS policies documentation + migration files to repo |
+| Medium | Regenerate Supabase types (`supabase gen types`) to remove `as any` casts in new services |
 | Medium | Mobile-optimize Finance and Family pages |
 | Medium | Prune `learn_ai_messages` (DB trigger or scheduled function) |
-| Medium | Links page enhancements (tags, search, browser bookmark import) |
+| Medium | Flashcard AI card generation (auto-generate front/back from a topic) |
+| Medium | Extend i18n to remaining pages (Dashboard, Tasks, Calendar, Finance, Documents, Music, Photos, Links, Learn AI) |
 | Low | Sentry / error tracking |
 | Low | Expand Vitest test coverage for service layer |
 | Low | Git-initialize `dailyflow-ai-worker` and add deploy workflow |
