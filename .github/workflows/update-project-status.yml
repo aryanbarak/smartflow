@@ -1,0 +1,75 @@
+name: Update Project Status
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  update-status:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 2
+
+      - name: Update PROJECT_STATUS.md
+        run: |
+          python3 << 'PYEOF'
+          import re
+          import subprocess
+          from datetime import date
+          from pathlib import Path
+
+          status_file = Path('PROJECT_STATUS.md')
+          if not status_file.exists():
+              print("PROJECT_STATUS.md not found - skipping")
+              exit(0)
+
+          content = status_file.read_text(encoding='utf-8')
+
+          commit_msg = subprocess.check_output(
+              ['git', 'log', '-1', '--pretty=format:%s']
+          ).decode().strip()
+          commit_hash = subprocess.check_output(
+              ['git', 'log', '-1', '--pretty=format:%h']
+          ).decode().strip()
+
+          today = date.today().isoformat()
+
+          content = re.sub(
+              r'# Last updated: \d{4}-\d{2}-\d{2}',
+              f'# Last updated: {today}',
+              content
+          )
+          content = re.sub(
+              r'\*\*Last commit:\*\* .*',
+              f'**Last commit:** {commit_hash} - {commit_msg}',
+              content
+          )
+          content = re.sub(
+              r'\*\*Last deployment:\*\* .*',
+              f'**Last deployment:** {today} - Cloudflare Pages (auto)',
+              content
+          )
+
+          status_file.write_text(content, encoding='utf-8')
+          print(f"PROJECT_STATUS.md updated: {today} / {commit_hash}")
+          PYEOF
+
+      - name: Commit updated status
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet PROJECT_STATUS.md; then
+            echo "No changes to PROJECT_STATUS.md"
+          else
+            git add PROJECT_STATUS.md
+            git commit -m "chore: auto-update PROJECT_STATUS.md [skip ci]"
+            git push
+          fi

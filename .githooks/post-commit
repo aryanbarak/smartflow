@@ -1,0 +1,64 @@
+#!/bin/sh
+# dailyFlow post-commit hook — runs after every git commit
+
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+KNOWLEDGE_DIR="$PROJECT_ROOT/.knowledge"
+VENV_PYTHON="$KNOWLEDGE_DIR/venv/Scripts/python.exe"
+STATUS_FILE="$PROJECT_ROOT/PROJECT_STATUS.md"
+
+echo "[hook] Running post-commit hooks..."
+
+# 1. Update PROJECT_STATUS.md — last commit info
+if [ -f "$STATUS_FILE" ] && [ -f "$VENV_PYTHON" ]; then
+    "$VENV_PYTHON" - << 'PYEOF'
+import re
+import subprocess
+from pathlib import Path
+from datetime import date
+
+root = Path(subprocess.check_output(['git', 'rev-parse', '--show-toplevel']).decode().strip())
+status_file = root / 'PROJECT_STATUS.md'
+
+if not status_file.exists():
+    exit(0)
+
+content = status_file.read_text(encoding='utf-8')
+
+commit_msg = subprocess.check_output(['git', 'log', '-1', '--pretty=format:%s']).decode().strip()
+commit_hash = subprocess.check_output(['git', 'log', '-1', '--pretty=format:%h']).decode().strip()
+today = date.today().isoformat()
+
+content = re.sub(
+    r'# Last updated: \d{4}-\d{2}-\d{2}',
+    f'# Last updated: {today}',
+    content
+)
+content = re.sub(
+    r'\*\*Last commit:\*\* .*',
+    f'**Last commit:** {commit_hash} - {commit_msg}',
+    content
+)
+
+status_file.write_text(content, encoding='utf-8')
+print(f"[hook] PROJECT_STATUS.md updated ({today} / {commit_hash})")
+PYEOF
+else
+    echo "[hook] Skipping status update (venv or STATUS file not found)"
+fi
+
+# 2. Rebuild Knowledge Base only if .knowledge/docs/ or .prompts/ changed
+CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -E "^\.knowledge/docs/|^\.prompts/")
+
+if [ -n "$CHANGED" ] || [ ! -d "$KNOWLEDGE_DIR/chroma_db" ]; then
+    echo "[hook] Rebuilding Knowledge Base..."
+    if [ -f "$VENV_PYTHON" ]; then
+        "$VENV_PYTHON" "$KNOWLEDGE_DIR/build_kb.py"
+    else
+        echo "[hook] WARNING: KB venv not found - skipping KB rebuild"
+        echo "       Run: pip install chromadb ollama python-dotenv"
+    fi
+else
+    echo "[hook] KB up to date (no docs/.prompts changes)"
+fi
+
+echo "[hook] Post-commit hooks done"

@@ -1,0 +1,21 @@
+#!/bin/sh
+# dailyFlow pre-push hook — runs before git push
+
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+
+echo "[hook] Running pre-push checks..."
+
+cd "$PROJECT_ROOT" || exit 1
+
+if [ -f "package.json" ]; then
+    echo "[hook] Building project..."
+    npm run build --silent
+    if [ $? -ne 0 ]; then
+        echo "[hook] ERROR: Build failed - push blocked"
+        echo "       Fix TypeScript/build errors before pushing"
+        exit 1
+    fi
+    echo "[hook] Build passed"
+fi
+
+echo "[hook] Pre-push checks passed"

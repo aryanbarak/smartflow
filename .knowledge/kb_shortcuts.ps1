@@ -2,6 +2,10 @@
 # Add to PowerShell profile ($PROFILE):
 # . "C:\Projects\fiae-workspace\dailyflow\.knowledge\kb_shortcuts.ps1"
 
+# Suppress PSUseApprovedVerbs — these are user-facing aliases, not module cmdlets
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '', Scope = 'Function', Target = '*')]
+param()
+
 $KB_DIR = "C:\Projects\fiae-workspace\dailyflow\.knowledge"
 $VENV_ACTIVATE = "$KB_DIR\venv\Scripts\Activate.ps1"
 
@@ -40,6 +44,17 @@ function kb-daily {
     python "$KB_DIR\daily_update.py"
 }
 
+function kb-update {
+    <# Analyze recent commits and auto-update PROJECT_STATUS.md. Use -full to also rebuild KB. #>
+    param([switch]$full)
+    if (Test-Path $VENV_ACTIVATE) { & $VENV_ACTIVATE }
+    if ($full) {
+        python "$KB_DIR\auto_update.py" --full
+    } else {
+        python "$KB_DIR\auto_update.py"
+    }
+}
+
 function kb-install {
     <# Install Python dependencies for the knowledge base #>
     if (Test-Path $VENV_ACTIVATE) {
@@ -61,4 +76,6 @@ Write-Host "  kb-load             load full context for AI" -ForegroundColor Cya
 Write-Host "  kb-load 'topic'     load context for specific topic" -ForegroundColor Cyan
 Write-Host "  kb-query 'q'        quick semantic search" -ForegroundColor Cyan
 Write-Host "  kb-daily            create today's log entry" -ForegroundColor Cyan
+Write-Host "  kb-update           auto-update PROJECT_STATUS.md from git history" -ForegroundColor Cyan
+Write-Host "  kb-update -full     same + rebuild KB" -ForegroundColor Cyan
 Write-Host ""

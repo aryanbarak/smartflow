@@ -30,6 +30,9 @@ dist-ssr
 .knowledge/chroma_db/
 .knowledge/context_output.md
 
+# Git hooks — always commit
+!.githooks/
+
 # Knowledge source files ARE committed:
 # .knowledge/docs/
 # .knowledge/*.py
