@@ -22,11 +22,14 @@
 - Links page (tags + search + favicon + favorites)
 - Settings page (5 tabs: Profile, Security, Appearance, Notifications, Data)
 - i18n (en/de/fa — English default, RTL for Farsi)
-- Prompt Library (.prompts/ — 24 files, 7 categories)
-- Knowledge Base (Phase 2 — ChromaDB + nomic-embed-text)
+- Local AI Setup (Ollama + GPU via OLLAMA_VULKAN=1 + 4 models on E:\ollamaModels)
+- Prompt Library (.prompts/ — 24 files, 7 categories: system, review, refactor, templates, debugging, deployment, testing)
+- Knowledge Base (Phase 2 — ChromaDB + nomic-embed-text, 32 vectors, kb-build/load/query shortcuts)
+- Project Audit & Cleanup (AUDIT_REPORT.md — 19 files removed, 1,625 lines deleted, dead code eliminated)
 
 ## In Progress
-- Knowledge Base integration with Continue.dev (query_kb + load_context)
+
+- Continue.dev integration (blocked — Ollama crashes on Windows/Intel Arc; using Claude.ai + kb-load instead)
 
 ## Planned — High Priority
 - Rate limiting on AI Worker (Cloudflare KV counter)
@@ -37,6 +40,7 @@
 - Mobile-optimize Finance and Family pages
 - Prune learn_ai_messages (DB trigger or scheduled function)
 - Regenerate Supabase types (supabase gen types) to remove `as any` casts
+- Phase 3: AI Gateway + provider routing (Gemini → Ollama fallback)
 
 ## Planned — Low Priority
 - Sentry / error tracking

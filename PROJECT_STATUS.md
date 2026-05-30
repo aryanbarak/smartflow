@@ -5,21 +5,23 @@
 ---
 
 ## Current Branch
-- **Branch:** `main`
-- **Last commit:** feat: add DailyFlow Knowledge Base (Phase 2)
-- **Last deployment:** 2026-05-30 — Cloudflare Pages (auto)
+
+- **Branch:** `cleanup/audit-2026-05-30`
+- **Last commit:** cleanup: remove abandoned API key feature
+- **Last deployment:** 2026-05-30 — Cloudflare Pages (auto, from main)
 
 ---
 
 ## Recent Decisions
 | Date | Decision | Reason |
 |------|----------|--------|
+| 2026-05-30 | Audit-first before new features | Found 19 unused files, 1,625 lines of dead code |
+| 2026-05-30 | Drop user_api_keys table + feature | Hook had zero importers; feature never built |
 | 2026-05-30 | OLLAMA_VULKAN=1 for Intel Arc 140V | CPU was 13 t/s, GPU 14.5 t/s |
 | 2026-05-30 | OLLAMA_MODELS=E:\ollamaModels | F: drive didn't exist |
 | 2026-05-30 | Skip Continue.dev for now | Crash with Ollama on Windows/Intel Arc |
 | 2026-05-30 | Use kb-load + Claude.ai as primary workflow | Most reliable, largest context window |
 | 2026-05-28 | English-only for all docs/prompts | Better AI embedding quality |
-| 2026-05-28 | راهنما.md as only Persian file | Human reference, not AI-processed |
 | 2026-05-28 | config.yaml over config.json | Continue.dev v1.2+ dropped config.json |
 
 ---
@@ -44,7 +46,7 @@
 2. **Gemini → Ollama fallback** in Worker (Bug #4)
 3. **Supabase types regeneration** — remove `as any` casts (Bug #9)
 4. **Phase 3** — AI Gateway + provider routing
-5. **Fix Continue.dev** — debug Ollama integration on Windows
+5. **Fix Continue.dev** — debug Ollama crash on Windows/Intel Arc
 
 ---
 
@@ -60,30 +62,30 @@
 ## Local AI Status
 | Model | Size | Location | GPU | Speed |
 |-------|------|----------|-----|-------|
-| qwen2.5-coder:7b | 4.7 GB | E:\ollamaModels | ✅ Vulkan | 14 t/s |
+| qwen2.5-coder:7b | 4.7 GB | E:\ollamaModels | ✅ Vulkan | ~14 t/s |
 | qwen2.5-coder:14b | 9.0 GB | E:\ollamaModels | ✅ Vulkan | ~8 t/s |
 | llama3.1:8b | 4.9 GB | E:\ollamaModels | ✅ Vulkan | ~12 t/s |
-| nomic-embed-text | 0.3 GB | E:\ollamaModels | ✅ | — |
+| nomic-embed-text | 0.3 GB | E:\ollamaModels | ✅ Vulkan | embeddings only |
 
 ---
 
 ## Completed This Week (2026-05-28 to 2026-05-30)
-- ✅ All High Impact features planned (Habit Tracker, Budget Goals, Push Notifications, Global Search)
-- ✅ All Medium Impact features planned (Journal, Recurring, CSV, Pomodoro+Task, Links)
-- ✅ All Nice-to-Have features planned (Mood Tracker, Flashcards, Shopping List)
+
+- ✅ All High Impact features (Habit Tracker, Budget Goals, Push Notifications, Global Search)
+- ✅ All Medium Impact features (Journal, Recurring, CSV, Pomodoro+Task, Links)
+- ✅ All Nice-to-Have features (Mood Tracker, Flashcards, Shopping List)
 - ✅ Settings page (full — 5 tabs)
-- ✅ i18n (en/de/fa — English default)
-- ✅ Phase 1: Ollama + GPU setup
-- ✅ Phase 2: Knowledge Base (ChromaDB + 32 vectors)
+- ✅ i18n (en/de/fa — English default, RTL for Farsi)
+- ✅ Phase 1: Ollama + GPU setup (OLLAMA_VULKAN=1, 4 models, E:\ollamaModels)
+- ✅ Phase 2: Knowledge Base (ChromaDB + nomic-embed-text, 32 vectors)
 - ✅ Prompt Library (.prompts/ — 24 files, 7 categories)
-- ✅ dailyflow-ai/ structure created
+- ✅ Project Audit & Cleanup (19 files removed, 1,625 lines deleted)
 
 ---
 
 ## AI Workflow (Current)
 ```
 Morning:
-  kb-daily                    → create today's log
   kb-load                     → generate context_output.md
   paste into Claude.ai        → AI Technical Architect ready
 
@@ -91,6 +93,7 @@ During development:
   Claude Code Terminal        → implement features
   Claude.ai + context         → planning + review
 
-For quick questions:
-  ollama run qwen2.5-coder:7b "question"
+After significant changes:
+  kb-build                    → rebuild knowledge base vectors
+  update CLAUDE_CONTEXT.md    → keep context file current
 ```

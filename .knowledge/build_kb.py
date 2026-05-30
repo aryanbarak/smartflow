@@ -3,15 +3,10 @@ DailyFlow Knowledge Base Builder
 Usage: python .knowledge/build_kb.py
 """
 
-import os
 import sys
 import chromadb
 from chromadb.utils import embedding_functions
 from pathlib import Path
-from rich.console import Console
-from rich.progress import track
-
-console = Console()
 
 KB_DIR = Path(__file__).parent
 DOCS_DIR = KB_DIR / "docs"
@@ -29,7 +24,6 @@ def get_ollama_embeddings():
 def load_documents():
     docs = []
 
-    # Load KB docs (English only)
     for md_file in sorted(DOCS_DIR.glob("*.md")):
         content = md_file.read_text(encoding="utf-8")
         docs.append({
@@ -41,9 +35,8 @@ def load_documents():
                 "title": md_file.stem.replace("_", " ").title()
             }
         })
-        console.print(f"  📄 {md_file.name}")
+        print(f"  [kb]  {md_file.name}")
 
-    # Load prompt files (English only — skip Persian راهنما.md)
     for md_file in PROMPTS_DIR.rglob("*.md"):
         try:
             content = md_file.read_text(encoding="utf-8")
@@ -59,34 +52,32 @@ def load_documents():
                 "title": md_file.stem.replace("-", " ").title()
             }
         })
-        console.print(f"  📝 {rel_path}")
+        print(f"  [pr]  {rel_path}")
 
     return docs
 
 
 def build_knowledge_base():
-    console.print("\n[bold blue]🧠  DailyFlow Knowledge Base Builder[/bold blue]\n")
+    print("\n=== DailyFlow Knowledge Base Builder ===\n")
 
     import urllib.request
     try:
         urllib.request.urlopen("http://localhost:11434", timeout=3)
     except Exception:
-        console.print("[red]✗ Ollama is not running![/red]")
-        console.print("  Start it with: ollama serve")
+        print("ERROR: Ollama is not running. Start it with: ollama serve")
         sys.exit(1)
 
-    console.print("[green]✓ Ollama is running[/green]")
-
-    console.print("\n[bold]Loading documents...[/bold]")
+    print("OK   Ollama is running")
+    print("\nLoading documents...")
     docs = load_documents()
-    console.print(f"\n[green]✓ Loaded {len(docs)} documents[/green]")
+    print(f"\nOK   Loaded {len(docs)} documents")
 
-    console.print("\n[bold]Building vector database...[/bold]")
+    print("\nBuilding vector database...")
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
 
     try:
         client.delete_collection("dailyflow")
-        console.print("  🗑  Cleared existing collection")
+        print("     Cleared existing collection")
     except Exception:
         pass
 
@@ -98,17 +89,20 @@ def build_knowledge_base():
     )
 
     batch_size = 10
-    for i in track(range(0, len(docs), batch_size), description="Embedding..."):
+    total = len(docs)
+    for i in range(0, total, batch_size):
         batch = docs[i:i + batch_size]
         collection.add(
             ids=[d["id"] for d in batch],
             documents=[d["content"] for d in batch],
             metadatas=[d["metadata"] for d in batch]
         )
+        end = min(i + batch_size, total)
+        print(f"     Embedded {end}/{total}...")
 
-    console.print(f"\n[bold green]✓ Knowledge Base built![/bold green]")
-    console.print(f"   📦 {collection.count()} vectors stored")
-    console.print(f"   💾 Saved to: {CHROMA_DIR}\n")
+    print(f"\nDONE  Knowledge Base built!")
+    print(f"      {collection.count()} vectors stored")
+    print(f"      Saved to: {CHROMA_DIR}\n")
 
 
 if __name__ == "__main__":
