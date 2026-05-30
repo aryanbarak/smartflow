@@ -24,3 +24,14 @@ dist-ssr
 *.sw?
 .env
 .env.*
+
+# Knowledge Base — generated files (do not commit)
+.knowledge/venv/
+.knowledge/chroma_db/
+.knowledge/context_output.md
+
+# Knowledge source files ARE committed:
+# .knowledge/docs/
+# .knowledge/*.py
+# .knowledge/*.ps1
+# .knowledge/راهنما.md
