@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 753dd39 - Add files via upload
+- **Last commit:** 72adf09 - Delete public/screenshot-dashboard.png
 - **Last deployment:** 2026-05-31 - Cloudflare Pages (auto)
 
 ---
