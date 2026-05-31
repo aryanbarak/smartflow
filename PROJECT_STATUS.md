@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 742cd82 - Delete public/screenshot-finance.png
+- **Last commit:** 256d7e3 - Delete public/screenshot-tutor.png
 - **Last deployment:** 2026-05-31 - Cloudflare Pages (auto)
 
 ---
