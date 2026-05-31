@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** c215a1d - Add files via upload
+- **Last commit:** 753dd39 - Add files via upload
 - **Last deployment:** 2026-05-31 - Cloudflare Pages (auto)
 
 ---
