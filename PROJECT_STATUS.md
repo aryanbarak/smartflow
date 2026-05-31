@@ -1,5 +1,5 @@
 # dailyFlow — PROJECT STATUS
-# Last updated: 2026-05-30
+# Last updated: 2026-05-31
 # Keep this file under 2 pages — update after every session
 
 ---
@@ -7,8 +7,8 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** cleanup: remove abandoned API key feature
-- **Last deployment:** 2026-05-30 — Cloudflare Pages (auto, from main)
+- **Last commit:** a15bb9c - feat: document intelligence — PDF merge, AI summary, DeepL translation
+- **Last deployment:** 2026-05-31 - Cloudflare Pages (auto)
 
 ---
 
