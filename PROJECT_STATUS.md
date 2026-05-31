@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** a15bb9c - feat: document intelligence — PDF merge, AI summary, DeepL translation
+- **Last commit:** 4f1083c - fix: use unpkg CDN for pdf.js worker
 - **Last deployment:** 2026-05-31 - Cloudflare Pages (auto)
 
 ---
