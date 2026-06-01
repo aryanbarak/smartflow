@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -22,7 +22,7 @@ import {
   List, ListOrdered, Link2, Highlighter, Eraser,
   Palette, Download, Save, Undo2, Redo2,
   Table2, Image, Settings2, Search, FileText,
-  Sparkles, Printer, Check, Loader2, X,
+  Sparkles, Printer, Check, Loader2, X, FilePlus,
 } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
 import html2canvas from 'html2canvas';
@@ -61,6 +61,8 @@ const FONTS = [
 ];
 
 const FONT_SIZES = [10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 36, 48, 64];
+
+const DRAFT_KEY = 'dailyflow:editor-draft';
 
 type PageSizeKey  = keyof typeof PAGE_SIZES;
 type MarginKey    = keyof typeof MARGINS;
@@ -216,11 +218,13 @@ export function TextEditorTool({ onSave }: Props) {
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving]       = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [lastEdit, setLastEdit]       = useState(0);
 
-  const pageRef      = useRef<HTMLDivElement>(null);
-  const colorRef     = useRef<HTMLInputElement>(null);
-  const hlColorRef   = useRef<HTMLInputElement>(null);
+  const pageRef        = useRef<HTMLDivElement>(null);
+  const colorRef       = useRef<HTMLInputElement>(null);
+  const hlColorRef     = useRef<HTMLInputElement>(null);
+  // Draft auto-save refs (avoids stale closures in TipTap onUpdate)
+  const draftTimerRef  = useRef<ReturnType<typeof setTimeout>>();
+  const docTitleRef    = useRef(docTitle);
 
   useEditorStyles();
 
@@ -255,30 +259,44 @@ export function TextEditorTool({ onSave }: Props) {
       const text = ed.getText();
       const words = text.trim() ? text.trim().split(/\s+/).length : 0;
       setWordCount({ words, chars: text.length });
-      setSaveStatus('unsaved');
-      setLastEdit(Date.now());
+      setSaveStatus('saving');
+      clearTimeout(draftTimerRef.current);
+      draftTimerRef.current = setTimeout(() => {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+          title: docTitleRef.current,
+          content: ed.getHTML(),
+          savedAt: new Date().toISOString(),
+        }));
+        setSaveStatus('saved');
+      }, 2000);
     },
   });
 
-  // Auto-save after 30 s of inactivity
-  const handleAutoSave = useCallback(async () => {
-    if (!editor || !onSave) return;
-    setSaveStatus('saving');
-    try {
-      const html = editor.getHTML();
-      const blob = new Blob([html], { type: 'text/html' });
-      await onSave(new File([blob], `${docTitle}.html`, { type: 'text/html' }), docTitle);
-      setSaveStatus('saved');
-    } catch {
-      setSaveStatus('unsaved');
-    }
-  }, [editor, onSave, docTitle]);
+  // Keep docTitleRef current so the onUpdate closure reads the latest title.
+  useEffect(() => { docTitleRef.current = docTitle; }, [docTitle]);
 
+  // Cleanup draft timer on unmount.
+  useEffect(() => () => clearTimeout(draftTimerRef.current), []);
+
+  // Restore draft on mount (within 7 days).
   useEffect(() => {
-    if (saveStatus !== 'unsaved') return;
-    const timer = setTimeout(() => void handleAutoSave(), 30_000);
-    return () => clearTimeout(timer);
-  }, [lastEdit, handleAutoSave, saveStatus]);
+    if (!editor) return;
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    try {
+      const draft = JSON.parse(raw) as { title: string; content: string; savedAt: string };
+      if (Date.now() - new Date(draft.savedAt).getTime() < 7 * 24 * 60 * 60 * 1000) {
+        editor.commands.setContent(draft.content);
+        setDocTitle(draft.title);
+        docTitleRef.current = draft.title;
+        setSaveStatus('saved');
+        toast.info(`Draft restored from ${new Date(draft.savedAt).toLocaleTimeString()}`);
+      }
+    } catch {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor]); // run once when editor is ready
 
   // ── Export helpers ─────────────────────────────────────────────────────────
 
@@ -313,13 +331,12 @@ export function TextEditorTool({ onSave }: Props) {
     toast.success('.docx downloaded');
   };
 
-  const handleSaveToDocuments = async (silent = false) => {
+  const handleSaveToDocuments = async () => {
     if (!editor || !onSave) return;
     setIsSaving(true);
     setSaveStatus('saving');
     try {
       if (!pageRef.current || editor.isEmpty) {
-        // Save as HTML if nothing visual to capture
         const blob = new Blob([editor.getHTML()], { type: 'text/html' });
         await onSave(new File([blob], `${docTitle}.html`, { type: 'text/html' }), docTitle);
       } else {
@@ -327,10 +344,11 @@ export function TextEditorTool({ onSave }: Props) {
         await onSave(new File([bytes], `${docTitle}.pdf`, { type: 'application/pdf' }), docTitle);
       }
       setSaveStatus('saved');
-      if (!silent) toast.success('Saved to Documents');
+      localStorage.removeItem(DRAFT_KEY); // draft promoted to cloud — clear local copy
+      toast.success('Saved to Documents library');
     } catch (e) {
       setSaveStatus('unsaved');
-      if (!silent) toast.error(e instanceof Error ? e.message : 'Save failed');
+      toast.error(e instanceof Error ? e.message : 'Save failed');
     } finally {
       setIsSaving(false);
     }
@@ -426,6 +444,22 @@ export function TextEditorTool({ onSave }: Props) {
     input.click();
   };
 
+  // ── New document ───────────────────────────────────────────────────────────
+
+  const handleNewDocument = () => {
+    if (saveStatus === 'unsaved') {
+      const ok = window.confirm('You have unsaved changes. Start a new document anyway?');
+      if (!ok) return;
+    }
+    clearTimeout(draftTimerRef.current);
+    editor?.commands.clearContent();
+    setDocTitle('Untitled Document');
+    docTitleRef.current = 'Untitled Document';
+    setWordCount({ words: 0, chars: 0 });
+    setSaveStatus('saved');
+    localStorage.removeItem(DRAFT_KEY);
+  };
+
   // ── Toolbar primitives ─────────────────────────────────────────────────────
 
   const Btn = ({
@@ -456,17 +490,39 @@ export function TextEditorTool({ onSave }: Props) {
     <div className="max-w-4xl mx-auto space-y-0">
 
       {/* ── Title bar ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 mb-2">
+      <div className="flex items-center gap-2 mb-2">
+        <button
+          type="button"
+          title="New document"
+          onClick={handleNewDocument}
+          className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-700 transition-colors flex-shrink-0"
+        >
+          <FilePlus className="w-4 h-4" />
+        </button>
         <input
           value={docTitle}
-          onChange={e => { setDocTitle(e.target.value); setSaveStatus('unsaved'); }}
+          onChange={e => {
+            setDocTitle(e.target.value);
+            docTitleRef.current = e.target.value;
+            setSaveStatus('saving');
+            clearTimeout(draftTimerRef.current);
+            draftTimerRef.current = setTimeout(() => {
+              if (!editor) return;
+              localStorage.setItem(DRAFT_KEY, JSON.stringify({
+                title: e.target.value,
+                content: editor.getHTML(),
+                savedAt: new Date().toISOString(),
+              }));
+              setSaveStatus('saved');
+            }, 2000);
+          }}
           className="bg-transparent text-white text-lg font-semibold border-b border-transparent hover:border-slate-600 focus:border-cyan-500 focus:outline-none px-1 py-0.5 flex-1"
           placeholder="Untitled Document"
           aria-label="Document title"
         />
         <span className="text-xs text-slate-500 flex items-center gap-1 whitespace-nowrap">
-          {saveStatus === 'saving'  && <><Loader2 className="w-3 h-3 animate-spin" /> Saving…</>}
-          {saveStatus === 'saved'   && <><Check   className="w-3 h-3 text-green-400" /> Saved</>}
+          {saveStatus === 'saving'  && <><Loader2 className="w-3 h-3 animate-spin" /> Saving draft…</>}
+          {saveStatus === 'saved'   && <><Check   className="w-3 h-3 text-green-400" /> Draft saved locally ✓</>}
           {saveStatus === 'unsaved' && '● Unsaved'}
         </span>
       </div>
