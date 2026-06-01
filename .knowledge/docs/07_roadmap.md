@@ -26,6 +26,10 @@
 - Prompt Library (.prompts/ — 24 files, 7 categories: system, review, refactor, templates, debugging, deployment, testing)
 - Knowledge Base (Phase 2 — ChromaDB + nomic-embed-text, 32 vectors, kb-build/load/query shortcuts)
 - Project Audit & Cleanup (AUDIT_REPORT.md — 19 files removed, 1,625 lines deleted, dead code eliminated)
+- Document Intelligence — PDF Merge (pdf-lib, client-side, drag-to-reorder)
+- AI Summary — PDF text extraction (PDF.js) + Gemini summary + key points + word count
+- Text Translator — DeepL API via Cloudflare Worker (de/en/fa, 1M free characters/month)
+- Auto text extraction on document upload (cached in DB, no re-extraction needed)
 
 ## In Progress
 
@@ -42,10 +46,14 @@
 - Regenerate Supabase types (supabase gen types) to remove `as any` casts
 - Phase 3: AI Gateway + provider routing (Gemini → Ollama fallback)
 
+## Planned — Medium Priority (added)
+
+- Git-initialize dailyflow-ai-worker + add CI/CD deploy workflow
+
 ## Planned — Low Priority
+
 - Sentry / error tracking
 - Vitest test coverage for service layer
-- Git-initialize dailyflow-ai-worker and add deploy workflow
 
 ## Known Bugs
 1. learn_ai_messages grows unbounded — no pruning (Low)

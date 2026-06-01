@@ -69,7 +69,7 @@
 
 ---
 
-## Completed This Week (2026-05-28 to 2026-05-30)
+## Completed This Week (2026-05-28 to 2026-06-01)
 
 - ✅ All High Impact features (Habit Tracker, Budget Goals, Push Notifications, Global Search)
 - ✅ All Medium Impact features (Journal, Recurring, CSV, Pomodoro+Task, Links)
@@ -80,6 +80,11 @@
 - ✅ Phase 2: Knowledge Base (ChromaDB + nomic-embed-text, 32 vectors)
 - ✅ Prompt Library (.prompts/ — 24 files, 7 categories)
 - ✅ Project Audit & Cleanup (19 files removed, 1,625 lines deleted)
+- ✅ Document Intelligence — PDF Merge (pdf-lib, client-side, drag-to-reorder)
+- ✅ AI Summary — PDF text extraction + Gemini summary + key points (cached in DB)
+- ✅ DeepL Translation — integrated in Cloudflare Worker (de/en/fa, 1M free chars/month)
+- ✅ Text Translator — standalone component replacing document-tied translation
+- ✅ Filename fix — removed timestamp prefix from uploaded document names
 
 ---
 
@@ -90,10 +95,11 @@ Morning:
   paste into Claude.ai        → AI Technical Architect ready
 
 During development:
-  Claude Code Terminal        → implement features
-  Claude.ai + context         → planning + review
+  Claude Code (VSCode/terminal) → implement features, build, push
+  Claude.ai + context           → planning + architecture review
 
 After significant changes:
-  kb-build                    → rebuild knowledge base vectors
-  update CLAUDE_CONTEXT.md    → keep context file current
+  update .knowledge/docs/       → roadmap, lessons learned
+  python .knowledge/build_kb.py → rebuild knowledge base vectors
+  update PROJECT_STATUS.md      → keep status current
 ```

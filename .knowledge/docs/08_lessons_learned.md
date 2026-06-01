@@ -82,6 +82,42 @@ Result: Found 19 unused files, deleted 1,625 lines of dead code, removed 1 aband
   DB table + migration.
 Rule: Audit the codebase every few months. A clean repo is faster to reason about.
 
+### DeepL vs Gemini for Translation
+
+Problem: Gemini translation quality for Farsi and German was inconsistent — occasional
+  hallucinations, wrong register, and poor handling of compound German words.
+Solution: Use DeepL API via Cloudflare Worker for all translation tasks.
+Result: Noticeably better Farsi and German output; 1M free characters/month is sufficient
+  for typical personal-app usage.
+Rule: Always use DeepL (not an LLM) for de/en/fa translation in this project.
+
+### VITE_AI_AGENT_URL Must Include the /analyze Path
+
+Problem: Setting VITE_AI_AGENT_URL to just the base domain (e.g. `https://api.barakzai.cloud`)
+  caused all AI requests to 404. The translate URL was derived with `.replace('/analyze', '/translate')`,
+  so both endpoints silently pointed to the root.
+Solution: VITE_AI_AGENT_URL must be set to `https://api.barakzai.cloud/analyze` (full path).
+Rule: Always set VITE_AI_AGENT_URL to the full /analyze endpoint, not just the base URL.
+
+### PDF Document Translation → Simple Text Translator
+
+Problem: Translating entire PDF documents was impractical — chunking 50k+ characters in parallel
+  hits DeepL rate limits, and users rarely needed the full document translated verbatim.
+Solution: Replace the document-tied DocumentTranslation component with a standalone TextTranslator
+  that accepts free-form text input and calls translationService.translate() directly.
+Result: Better UX (no document required), simpler code, no chunking needed.
+Rule: Prefer a simple text-input translation UX over document-level translation unless bulk
+  translation is an explicit requirement.
+
+### Cloudflare Worker Secrets — Always Verify with wrangler secret list
+
+Problem: A secret set via the Cloudflare dashboard appeared to be active but was under the wrong
+  name, causing the Worker to fall back to an undefined key silently.
+Solution: Run `wrangler secret list` to confirm the exact secret names visible to the Worker
+  at runtime. Dashboard display names and wrangler names can differ.
+Rule: After adding or updating any Cloudflare Worker secret, always verify with
+  `wrangler secret list` before assuming the Worker can see it.
+
 ## Development Workflow That Works
 1. Plan feature with Claude — get implementation plan as .md file
 2. Implement with Claude Code (terminal)
