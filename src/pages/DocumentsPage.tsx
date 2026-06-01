@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Upload, FileText, Download, Trash2, Loader2, Eye,
-  FolderOpen, Merge, Sparkles, File as FileIcon,
+  FolderOpen, Merge, Scissors, Minimize2, Scan, ImagePlus, PenLine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,8 +22,11 @@ import { useDocuments } from "@/features/documents/useDocuments";
 import type { Document } from "@/features/documents/documentsService";
 import { getDocumentSignedUrl } from "@/features/documents/getDocumentUrl";
 import { PdfMerge } from "@/features/documents/components/PdfMerge";
-import { DocumentSummary } from "@/features/documents/components/DocumentSummary";
-import { TextTranslator } from "@/features/documents/components/TextTranslator";
+import { PdfSplitTool } from "@/features/documents/components/PdfSplitTool";
+import { PdfCompressTool } from "@/features/documents/components/PdfCompressTool";
+import { PdfOcrTool } from "@/features/documents/components/PdfOcrTool";
+import { ImageToPdfTool } from "@/features/documents/components/ImageToPdfTool";
+import { TextEditorTool } from "@/features/documents/components/TextEditorTool";
 import { cn } from "@/lib/utils";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
@@ -44,16 +47,6 @@ function formatDate(value: string | null) {
 function isPdf(mimeType: string | null, fileName: string) {
   return mimeType?.includes("pdf") || fileName.toLowerCase().endsWith(".pdf");
 }
-
-// Extend Document type with optional AI fields returned from Supabase
-type DocumentWithAi = Document & {
-  summary?: string | null;
-  key_points?: string[] | null;
-  word_count?: number | null;
-  summary_language?: string | null;
-  summary_generated_at?: string | null;
-  extracted_text?: string | null;
-};
 
 export default function DocumentsPage() {
   const {
@@ -79,12 +72,8 @@ export default function DocumentsPage() {
   const [editDescription, setEditDescription] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // AI Tools tab state
-  const [aiDoc, setAiDoc] = useState<DocumentWithAi | null>(null);
-  const [aiFile, setAiFile] = useState<File | null>(null);
-
   const sortedDocs = useMemo(
-    () => (documents as DocumentWithAi[])
+    () => (documents as Document[])
       .filter(doc => isPdf(doc.mimeType, doc.fileName))
       .sort((a, b) => {
         const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -157,17 +146,7 @@ export default function DocumentsPage() {
     setEditTarget(null);
   };
 
-  const handleAiFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    if (file && (file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf"))) {
-      setAiFile(file);
-    }
-  };
-
-  const aiFileStatusText = aiFile ? `File loaded: ${aiFile.name}` : 'Load PDF for AI processing';
-
-  // Shared document list for the library and AI selector
-  function DocList({ onSelect }: { onSelect?: (doc: DocumentWithAi) => void }) {
+  function DocList() {
     if (error) return <StatePanel variant="error" title="Unable to load" description={error} />;
     if (isInitialLoading) return (
       <div className="space-y-3">
@@ -179,60 +158,66 @@ export default function DocumentsPage() {
     );
     return (
       <div className="space-y-2">
-        {sortedDocs.map(doc => {
-          const rowClass = onSelect
-            ? "cursor-pointer hover:bg-muted/50 border-border/60 bg-secondary/30"
-            : "bg-secondary/40 border-border/60";
-          const sharedClass = cn(
-            "w-full flex items-center justify-between gap-3 rounded-xl border p-3 transition-colors text-left",
-            rowClass,
-            aiDoc?.id === doc.id && "border-primary bg-primary/5",
-          );
-          const inner = (
-            <>
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-4 h-4 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{doc.title ?? doc.fileName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatBytes(doc.sizeBytes)} · {formatDate(doc.createdAt)}
-                    {doc.summary && <span className="ml-2 text-primary">✦ AI</span>}
-                  </p>
-                </div>
+        {sortedDocs.map(doc => (
+          <div
+            key={doc.id}
+            className={cn(
+              "w-full flex items-center justify-between gap-3 rounded-xl border p-3 transition-colors text-left",
+              "bg-secondary/40 border-border/60",
+            )}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <FileText className="w-4 h-4 text-primary" />
               </div>
-              {!onSelect && (
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <Button variant="secondary" size="sm" onClick={() => handleView(doc)}>
-                    <Eye className="w-3.5 h-3.5 mr-1" /> View
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={() => handleStartEdit(doc)}>
-                    Rename
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={() => download(doc)}>
-                    <Download className="w-3.5 h-3.5 mr-1" /> Download
-                  </Button>
-                  <Button
-                    variant="destructive" size="sm"
-                    disabled={isDeleting}
-                    onClick={() => setDeleteTarget(doc)}
-                  >
-                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
-                  </Button>
-                </div>
-              )}
-            </>
-          );
-          return onSelect ? (
-            <button key={doc.id} type="button" className={sharedClass} onClick={() => onSelect(doc)}>
-              {inner}
-            </button>
-          ) : (
-            <div key={doc.id} className={sharedClass}>{inner}</div>
-          );
-        })}
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{doc.title ?? doc.fileName}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatBytes(doc.sizeBytes)} · {formatDate(doc.createdAt)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <Button variant="secondary" size="sm" onClick={() => handleView(doc)}>
+                <Eye className="w-3.5 h-3.5 mr-1" /> View
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => handleStartEdit(doc)}>
+                Rename
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => download(doc)}>
+                <Download className="w-3.5 h-3.5 mr-1" /> Download
+              </Button>
+              <Button
+                variant="destructive" size="sm"
+                disabled={isDeleting}
+                onClick={() => setDeleteTarget(doc)}
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+              </Button>
+            </div>
+          </div>
+        ))}
       </div>
+    );
+  }
+
+  // Wrap each tool tab in a card
+  function ToolCard({ title, description, icon, children }: {
+    title: string;
+    description: string;
+    icon: React.ReactNode;
+    children: React.ReactNode;
+  }) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            {icon} {title}
+          </CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </CardHeader>
+        <CardContent>{children}</CardContent>
+      </Card>
     );
   }
 
@@ -244,21 +229,36 @@ export default function DocumentsPage() {
         className="mb-8"
       >
         <h1 className="text-2xl lg:text-3xl font-semibold mb-1">Documents</h1>
-        <p className="text-muted-foreground">Upload, merge, and analyze your PDFs</p>
+        <p className="text-muted-foreground">Upload, manage, and transform your PDFs</p>
       </motion.div>
 
       <Tabs defaultValue="library" className="space-y-6">
-        <TabsList className="grid grid-cols-3 w-full max-w-md">
-          <TabsTrigger value="library" className="flex items-center gap-1.5">
-            <FolderOpen size={14} /> Library
-          </TabsTrigger>
-          <TabsTrigger value="merge" className="flex items-center gap-1.5">
-            <Merge size={14} /> Merge PDFs
-          </TabsTrigger>
-          <TabsTrigger value="tools" className="flex items-center gap-1.5">
-            <Sparkles size={14} /> AI Tools
-          </TabsTrigger>
-        </TabsList>
+        {/* Scrollable tab list for 7 tabs */}
+        <div className="overflow-x-auto pb-1">
+          <TabsList className="flex w-max gap-0.5 h-auto p-1">
+            <TabsTrigger value="library" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+              <FolderOpen size={13} /> Library
+            </TabsTrigger>
+            <TabsTrigger value="merge" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+              <Merge size={13} /> Merge PDFs
+            </TabsTrigger>
+            <TabsTrigger value="split" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+              <Scissors size={13} /> Split PDF
+            </TabsTrigger>
+            <TabsTrigger value="compress" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+              <Minimize2 size={13} /> Compress PDF
+            </TabsTrigger>
+            <TabsTrigger value="ocr" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+              <Scan size={13} /> OCR
+            </TabsTrigger>
+            <TabsTrigger value="image-pdf" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+              <ImagePlus size={13} /> Image → PDF
+            </TabsTrigger>
+            <TabsTrigger value="editor" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+              <PenLine size={13} /> Text Editor
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* ── Library Tab ───────────────────────────────────────────── */}
         <TabsContent value="library">
@@ -307,106 +307,68 @@ export default function DocumentsPage() {
 
         {/* ── Merge PDFs Tab ────────────────────────────────────────── */}
         <TabsContent value="merge">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Merge className="w-4 h-4 text-primary" /> Merge PDFs
-              </CardTitle>
-              <CardDescription>
-                Combine multiple PDF files into one. Drag to reorder pages.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PdfMerge />
-            </CardContent>
-          </Card>
+          <ToolCard
+            title="Merge PDFs"
+            description="Combine multiple PDF files into one. Drag to reorder."
+            icon={<Merge className="w-4 h-4 text-primary" />}
+          >
+            <PdfMerge />
+          </ToolCard>
         </TabsContent>
 
-        {/* ── AI Tools Tab ──────────────────────────────────────────── */}
-        <TabsContent value="tools">
-          <div className="space-y-6">
-            {/* Text Translator — standalone, no document required */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Languages size={16} className="text-primary" /> Text Translator
-                </CardTitle>
-                <CardDescription>Translate text between German, English, and Persian</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <TextTranslator />
-              </CardContent>
-            </Card>
+        {/* ── Split PDF Tab ──────────────────────────────────────────── */}
+        <TabsContent value="split">
+          <ToolCard
+            title="Split PDF"
+            description="Extract page ranges or split into equal chunks."
+            icon={<Scissors className="w-4 h-4 text-primary" />}
+          >
+            <PdfSplitTool />
+          </ToolCard>
+        </TabsContent>
 
-            {/* Document AI Summary */}
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <FolderOpen className="w-4 h-4 text-primary" /> Select Document
-                  </CardTitle>
-                  <CardDescription>Click a document to summarize with AI</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <DocList onSelect={doc => { setAiDoc(doc); setAiFile(null); }} />
-                </CardContent>
-              </Card>
+        {/* ── Compress PDF Tab ───────────────────────────────────────── */}
+        <TabsContent value="compress">
+          <ToolCard
+            title="Compress PDF"
+            description="Re-save with object stream optimization to reduce file size."
+            icon={<Minimize2 className="w-4 h-4 text-primary" />}
+          >
+            <PdfCompressTool />
+          </ToolCard>
+        </TabsContent>
 
-              <div className="space-y-4">
-                {aiDoc ? (
-                  <>
-                    <div className="bg-muted/30 rounded-xl px-4 py-3 flex items-center gap-3">
-                      <FileText size={16} className="text-primary flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{aiDoc.title ?? aiDoc.fileName}</p>
-                        <p className="text-xs text-muted-foreground">{formatBytes(aiDoc.sizeBytes)}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => { setAiDoc(null); setAiFile(null); }}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        Change
-                      </button>
-                    </div>
+        {/* ── OCR Tab ────────────────────────────────────────────────── */}
+        <TabsContent value="ocr">
+          <ToolCard
+            title="OCR — Extract Text"
+            description="Use Gemini Vision to extract text from PDFs and images."
+            icon={<Scan className="w-4 h-4 text-primary" />}
+          >
+            <PdfOcrTool onSave={(file, title) => createFromUpload(file, { title: title ?? null })} />
+          </ToolCard>
+        </TabsContent>
 
-                    <div className="border border-dashed border-border rounded-xl p-4 space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                        <FileIcon size={12} />
-                        {aiFileStatusText}
-                      </p>
-                      <input
-                        type="file"
-                        accept="application/pdf,.pdf"
-                        aria-label="Load PDF file for AI processing"
-                        onChange={handleAiFileChange}
-                        className="text-xs text-muted-foreground file:mr-2 file:px-3 file:py-1 file:rounded-lg file:border-0 file:bg-muted file:text-foreground file:text-xs hover:file:bg-muted/70 cursor-pointer"
-                      />
-                    </div>
+        {/* ── Image → PDF Tab ────────────────────────────────────────── */}
+        <TabsContent value="image-pdf">
+          <ToolCard
+            title="Image → PDF"
+            description="Convert JPG, PNG, or WebP images into a single PDF. Drag to reorder."
+            icon={<ImagePlus className="w-4 h-4 text-primary" />}
+          >
+            <ImageToPdfTool />
+          </ToolCard>
+        </TabsContent>
 
-                    <DocumentSummary
-                      document={{
-                        id: aiDoc.id,
-                        file_name: aiDoc.fileName,
-                        summary: aiDoc.summary,
-                        key_points: aiDoc.key_points,
-                        word_count: aiDoc.word_count,
-                        summary_language: aiDoc.summary_language,
-                        summary_generated_at: aiDoc.summary_generated_at,
-                      }}
-                      file={aiFile}
-                    />
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-64 text-muted-foreground space-y-3 border border-dashed border-border rounded-xl">
-                    <Sparkles size={32} className="opacity-30" />
-                    <p className="text-sm">Select a document from the list</p>
-                    <p className="text-xs opacity-60">AI Summary</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+        {/* ── Text Editor Tab ────────────────────────────────────────── */}
+        <TabsContent value="editor">
+          <ToolCard
+            title="Text Editor"
+            description="Write and export documents as PDF or plain text."
+            icon={<PenLine className="w-4 h-4 text-primary" />}
+          >
+            <TextEditorTool onSave={(file, title) => createFromUpload(file, { title: title ?? null })} />
+          </ToolCard>
         </TabsContent>
       </Tabs>
 
@@ -452,14 +414,3 @@ export default function DocumentsPage() {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function Languages(props: { size?: number; className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={props.size ?? 16} height={props.size ?? 16}
-      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-      strokeLinecap="round" strokeLinejoin="round" className={props.className}>
-      <path d="m5 8 6 6" /><path d="m4 14 6-6 2-3" /><path d="M2 5h12" />
-      <path d="M7 2h1" /><path d="m22 22-5-10-5 10" /><path d="M14 18h6" />
-    </svg>
-  );
-}
