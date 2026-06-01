@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 571da44 - perf: code-split vendors + lazy-load heavy pages
+- **Last commit:** 2388053 - fix: replace Supabase auto-save with localStorage draft (TextEditor)
 - **Last deployment:** 2026-06-01 - Cloudflare Pages (auto)
 
 ---
