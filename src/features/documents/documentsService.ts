@@ -102,7 +102,7 @@ export async function deleteDocument(id: string): Promise<void> {
 }
 
 export async function uploadToStorage(userId: string, file: File) {
-  const safeName = `${Date.now()}_${file.name.replace(/[^A-Za-z0-9._-]/g, "_")}`;
+  const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, "_");
   const storagePath = `${userId}/${safeName}`;
   const { error } = await supabase.storage.from(DOCUMENTS_BUCKET).upload(storagePath, file, { upsert: false });
   if (error) throw error;

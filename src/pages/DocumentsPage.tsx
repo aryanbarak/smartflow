@@ -23,7 +23,7 @@ import type { Document } from "@/features/documents/documentsService";
 import { getDocumentSignedUrl } from "@/features/documents/getDocumentUrl";
 import { PdfMerge } from "@/features/documents/components/PdfMerge";
 import { DocumentSummary } from "@/features/documents/components/DocumentSummary";
-import { DocumentTranslation } from "@/features/documents/components/DocumentTranslation";
+import { TextTranslator } from "@/features/documents/components/TextTranslator";
 import { cn } from "@/lib/utils";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
@@ -324,94 +324,87 @@ export default function DocumentsPage() {
 
         {/* ── AI Tools Tab ──────────────────────────────────────────── */}
         <TabsContent value="tools">
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Document selector */}
+          <div className="space-y-6">
+            {/* Text Translator — standalone, no document required */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <FolderOpen className="w-4 h-4 text-primary" /> Select Document
+                  <Languages size={16} className="text-primary" /> Text Translator
                 </CardTitle>
-                <CardDescription>Click a document to analyze it with AI</CardDescription>
+                <CardDescription>Translate text between German, English, and Persian</CardDescription>
               </CardHeader>
               <CardContent>
-                <DocList onSelect={doc => { setAiDoc(doc); setAiFile(null); }} />
+                <TextTranslator />
               </CardContent>
             </Card>
 
-            {/* AI panels */}
-            <div className="space-y-4">
-              {aiDoc ? (
-                <>
-                  <div className="bg-muted/30 rounded-xl px-4 py-3 flex items-center gap-3">
-                    <FileText size={16} className="text-primary flex-shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{aiDoc.title ?? aiDoc.fileName}</p>
-                      <p className="text-xs text-muted-foreground">{formatBytes(aiDoc.sizeBytes)}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => { setAiDoc(null); setAiFile(null); }}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      Change
-                    </button>
-                  </div>
+            {/* Document AI Summary */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FolderOpen className="w-4 h-4 text-primary" /> Select Document
+                  </CardTitle>
+                  <CardDescription>Click a document to summarize with AI</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <DocList onSelect={doc => { setAiDoc(doc); setAiFile(null); }} />
+                </CardContent>
+              </Card>
 
-                  {/* File picker — needed for fresh extraction */}
-                  <div className="border border-dashed border-border rounded-xl p-4 space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                      <FileIcon size={12} />
-                      {aiFileStatusText}
-                    </p>
-                    <input
-                      type="file"
-                      accept="application/pdf,.pdf"
-                      aria-label="Load PDF file for AI processing"
-                      onChange={handleAiFileChange}
-                      className="text-xs text-muted-foreground file:mr-2 file:px-3 file:py-1 file:rounded-lg file:border-0 file:bg-muted file:text-foreground file:text-xs hover:file:bg-muted/70 cursor-pointer"
-                    />
-                    {aiDoc.extracted_text && !aiFile && (
-                      <p className="text-xs text-primary">
-                        ✦ Cached text available — translation works without re-loading
+              <div className="space-y-4">
+                {aiDoc ? (
+                  <>
+                    <div className="bg-muted/30 rounded-xl px-4 py-3 flex items-center gap-3">
+                      <FileText size={16} className="text-primary flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{aiDoc.title ?? aiDoc.fileName}</p>
+                        <p className="text-xs text-muted-foreground">{formatBytes(aiDoc.sizeBytes)}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setAiDoc(null); setAiFile(null); }}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Change
+                      </button>
+                    </div>
+
+                    <div className="border border-dashed border-border rounded-xl p-4 space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                        <FileIcon size={12} />
+                        {aiFileStatusText}
                       </p>
-                    )}
-                  </div>
-
-                  <DocumentSummary
-                    document={{
-                      id: aiDoc.id,
-                      file_name: aiDoc.fileName,
-                      summary: aiDoc.summary,
-                      key_points: aiDoc.key_points,
-                      word_count: aiDoc.word_count,
-                      summary_language: aiDoc.summary_language,
-                      summary_generated_at: aiDoc.summary_generated_at,
-                    }}
-                    file={aiFile}
-                  />
-
-                  <div className="border border-border rounded-xl p-4 space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Languages size={15} className="text-primary" />
-                      <span className="text-sm font-medium">Translation</span>
+                      <input
+                        type="file"
+                        accept="application/pdf,.pdf"
+                        aria-label="Load PDF file for AI processing"
+                        onChange={handleAiFileChange}
+                        className="text-xs text-muted-foreground file:mr-2 file:px-3 file:py-1 file:rounded-lg file:border-0 file:bg-muted file:text-foreground file:text-xs hover:file:bg-muted/70 cursor-pointer"
+                      />
                     </div>
-                    <DocumentTranslation
+
+                    <DocumentSummary
                       document={{
                         id: aiDoc.id,
                         file_name: aiDoc.fileName,
-                        extracted_text: aiDoc.extracted_text,
+                        summary: aiDoc.summary,
+                        key_points: aiDoc.key_points,
+                        word_count: aiDoc.word_count,
+                        summary_language: aiDoc.summary_language,
+                        summary_generated_at: aiDoc.summary_generated_at,
                       }}
                       file={aiFile}
                     />
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-64 text-muted-foreground space-y-3 border border-dashed border-border rounded-xl">
+                    <Sparkles size={32} className="opacity-30" />
+                    <p className="text-sm">Select a document from the list</p>
+                    <p className="text-xs opacity-60">AI Summary</p>
                   </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground space-y-3 border border-dashed border-border rounded-xl">
-                  <Sparkles size={32} className="opacity-30" />
-                  <p className="text-sm">Select a document from the list</p>
-                  <p className="text-xs opacity-60">AI Summary + DeepL Translation</p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </TabsContent>
