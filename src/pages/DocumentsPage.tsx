@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Upload, FileText, Download, Trash2, Loader2, Eye,
-  FolderOpen, Merge, Scissors, Minimize2, Scan, ImagePlus, PenLine,
+  FolderOpen, Merge, Scissors, Minimize2, Scan, ImagePlus, PenLine, Volume2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +27,7 @@ import { PdfCompressTool } from "@/features/documents/components/PdfCompressTool
 import { PdfOcrTool } from "@/features/documents/components/PdfOcrTool";
 import { ImageToPdfTool } from "@/features/documents/components/ImageToPdfTool";
 import { TextEditorTool } from "@/features/documents/components/TextEditorTool";
+import { AudioGeneratorTool } from "@/features/documents/components/AudioGeneratorTool";
 import { cn } from "@/lib/utils";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
@@ -257,6 +258,9 @@ export default function DocumentsPage() {
             <TabsTrigger value="editor" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
               <PenLine size={13} /> Text Editor
             </TabsTrigger>
+            <TabsTrigger value="audio" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+              <Volume2 size={13} /> Audio
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -368,6 +372,17 @@ export default function DocumentsPage() {
             icon={<PenLine className="w-4 h-4 text-primary" />}
           >
             <TextEditorTool onSave={(file, title) => createFromUpload(file, { title: title ?? null })} />
+          </ToolCard>
+        </TabsContent>
+
+        {/* ── Audio Generator Tab ───────────────────────────────────────── */}
+        <TabsContent value="audio">
+          <ToolCard
+            title="Audio Generator"
+            description="Convert text to natural Persian, German, or English speech via ElevenLabs."
+            icon={<Volume2 className="w-4 h-4 text-primary" />}
+          >
+            <AudioGeneratorTool />
           </ToolCard>
         </TabsContent>
       </Tabs>
