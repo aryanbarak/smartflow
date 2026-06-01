@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** fe0a984 - feat: replace contentEditable editor with TipTap
+- **Last commit:** 0b68112 - feat: major TextEditor upgrade — TipTap pro editor with full feature set
 - **Last deployment:** 2026-06-01 - Cloudflare Pages (auto)
 
 ---
