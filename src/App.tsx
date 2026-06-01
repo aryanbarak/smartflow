@@ -12,15 +12,16 @@ import TasksPage from "./pages/TasksPage";
 import FinancePage from "./pages/FinancePage";
 import FamilyPage from "./pages/FamilyPage";
 import FamilyHubPage from "./pages/FamilyHubPage";
-import DocumentsPage from "./pages/DocumentsPage";
-import MusicPage from "./pages/MusicPage";
-import PhotosPage from "./pages/PhotosPage";
 import LinksPage from "./pages/LinksPage";
 import SettingsPage from "./pages/SettingsPage";
-import LearnAIPage from "./pages/LearnAIPage";
 import HabitsPage from "./pages/HabitsPage";
 import JournalPage from "./pages/JournalPage";
 import FlashcardsPage from "./pages/FlashcardsPage";
+
+const DocumentsPage = lazy(() => import("./pages/DocumentsPage"));
+const PhotosPage    = lazy(() => import("./pages/PhotosPage"));
+const MusicPage     = lazy(() => import("./pages/MusicPage"));
+const LearnAIPage   = lazy(() => import("./pages/LearnAIPage"));
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import OfflinePage from "./pages/OfflinePage";
@@ -78,11 +79,11 @@ const App = () => (
               <Route path="/finance" element={<FinancePage />} />
               <Route path="/family" element={<FamilyPage />} />
               <Route path="/family-hub" element={<FamilyHubPage />} />
-              <Route path="/documents" element={<DocumentsPage />} />
-              <Route path="/music" element={<MusicPage />} />
-              <Route path="/photos" element={<PhotosPage />} />
+              <Route path="/documents" element={<Suspense fallback={<AppLoader />}><DocumentsPage /></Suspense>} />
+              <Route path="/music"     element={<Suspense fallback={<AppLoader />}><MusicPage /></Suspense>} />
+              <Route path="/photos"   element={<Suspense fallback={<AppLoader />}><PhotosPage /></Suspense>} />
               <Route path="/links" element={<LinksPage />} />
-              <Route path="/learn-ai" element={<LearnAIPage />} />
+              <Route path="/learn-ai" element={<Suspense fallback={<AppLoader />}><LearnAIPage /></Suspense>} />
               <Route
                 path="/tutor"
                 element={

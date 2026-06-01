@@ -89,14 +89,34 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 650,
       rollupOptions: {
         output: {
-          manualChunks(id) {
-            if (id.includes("node_modules/pdfjs-dist")) return "pdfjs";
-            if (id.includes("node_modules/react-pdf")) return "react-pdf";
-            if (id.includes("node_modules/recharts")) return "recharts";
-            if (id.includes("node_modules/@supabase/supabase-js")) return "supabase";
-            if (id.includes("node_modules/framer-motion")) return "framer-motion";
-            if (id.includes("node_modules/@tanstack/react-query")) return "tanstack-query";
-            if (id.includes("node_modules/pdf-lib")) return "pdf-lib";
+          manualChunks: {
+            'vendor-react':    ['react', 'react-dom', 'react-router-dom'],
+            'vendor-query':    ['@tanstack/react-query', 'zustand'],
+            'vendor-motion':   ['framer-motion'],
+            'vendor-supabase': ['@supabase/supabase-js'],
+            'vendor-recharts': ['recharts'],
+            'vendor-pdfjs':    ['pdfjs-dist'],
+            'vendor-pdf-lib':  ['pdf-lib'],
+            'vendor-canvas':   ['html2canvas', 'jszip'],
+            'vendor-tiptap': [
+              '@tiptap/react',
+              '@tiptap/starter-kit',
+              '@tiptap/extension-underline',
+              '@tiptap/extension-text-align',
+              '@tiptap/extension-color',
+              '@tiptap/extension-text-style',
+              '@tiptap/extension-font-family',
+              '@tiptap/extension-highlight',
+              '@tiptap/extension-link',
+              '@tiptap/extension-placeholder',
+              '@tiptap/extension-table',
+              '@tiptap/extension-table-row',
+              '@tiptap/extension-table-header',
+              '@tiptap/extension-table-cell',
+              '@tiptap/extension-image',
+              '@tiptap/extension-typography',
+            ],
+            'vendor-docx': ['docx'],
           },
         },
       },
