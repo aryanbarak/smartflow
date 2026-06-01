@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 182ba7a - feat: add 5 PDF tools (Split, Compress, OCR, Image→PDF, TextEditor)
+- **Last commit:** fe0a984 - feat: replace contentEditable editor with TipTap
 - **Last deployment:** 2026-06-01 - Cloudflare Pages (auto)
 
 ---
