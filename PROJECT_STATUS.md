@@ -1,5 +1,5 @@
 # dailyFlow — PROJECT STATUS
-# Last updated: 2026-05-31
+# Last updated: 2026-06-01
 # Keep this file under 2 pages — update after every session
 
 ---
@@ -7,8 +7,8 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 9f096cb - Add files via upload
-- **Last deployment:** 2026-05-31 - Cloudflare Pages (auto)
+- **Last commit:** 6fe89a8 - Replace DocumentTranslation with standalone TextTranslator; remove filename timestamp
+- **Last deployment:** 2026-06-01 - Cloudflare Pages (auto)
 
 ---
 
