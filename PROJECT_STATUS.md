@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 2388053 - fix: replace Supabase auto-save with localStorage draft (TextEditor)
+- **Last commit:** e5cf409 - feat: add Audio Generator tool (ElevenLabs TTS, fa/de/en)
 - **Last deployment:** 2026-06-01 - Cloudflare Pages (auto)
 
 ---
