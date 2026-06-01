@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 6fe89a8 - Replace DocumentTranslation with standalone TextTranslator; remove filename timestamp
+- **Last commit:** 6d7d5c6 - docs: update roadmap, lessons, and PROJECT_STATUS after Document Intelligence
 - **Last deployment:** 2026-06-01 - Cloudflare Pages (auto)
 
 ---
