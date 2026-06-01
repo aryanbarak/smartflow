@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 0b68112 - feat: major TextEditor upgrade — TipTap pro editor with full feature set
+- **Last commit:** 571da44 - perf: code-split vendors + lazy-load heavy pages
 - **Last deployment:** 2026-06-01 - Cloudflare Pages (auto)
 
 ---
