@@ -335,21 +335,14 @@ export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Prop
   const handleSaveToDocuments = async () => {
     if (!editor || !onSave) return;
     setIsSaving(true);
-    setSaveStatus('saving');
     try {
-      if (!pageRef.current || editor.isEmpty) {
-        const blob = new Blob([editor.getHTML()], { type: 'text/html' });
-        await onSave(new File([blob], `${docTitle}.html`, { type: 'text/html' }), docTitle);
-      } else {
-        const bytes = await captureAsPdf(pageRef.current);
-        await onSave(new File([bytes], `${docTitle}.pdf`, { type: 'application/pdf' }), docTitle);
-      }
-      setSaveStatus('saved');
-      localStorage.removeItem(DRAFT_KEY); // draft promoted to cloud — clear local copy
-      toast.success('Saved to Documents library');
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${docTitle}</title></head><body>${editor.getHTML()}</body></html>`;
+      const blob = new Blob([html], { type: "text/html" });
+      await onSave(new File([blob], `${docTitle}.html`, { type: "text/html" }), docTitle);
+      localStorage.removeItem(DRAFT_KEY);
+      toast.success("Saved to Documents library");
     } catch (e) {
-      setSaveStatus('unsaved');
-      toast.error(e instanceof Error ? e.message : 'Save failed');
+      toast.error(e instanceof Error ? e.message : "Save failed");
     } finally {
       setIsSaving(false);
     }
@@ -783,3 +776,4 @@ export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Prop
     </div>
   );
 }
+
