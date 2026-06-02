@@ -1,5 +1,5 @@
 # dailyFlow — PROJECT STATUS
-# Last updated: 2026-06-01
+# Last updated: 2026-06-02
 # Keep this file under 2 pages — update after every session
 
 ---
@@ -7,8 +7,8 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** e5cf409 - feat: add Audio Generator tool (ElevenLabs TTS, fa/de/en)
-- **Last deployment:** 2026-06-01 - Cloudflare Pages (auto)
+- **Last commit:** 6ccbf63 - fix: keep TextEditor mounted to prevent reset on save
+- **Last deployment:** 2026-06-02 - Cloudflare Pages (auto)
 
 ---
 
