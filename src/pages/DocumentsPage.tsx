@@ -1,11 +1,29 @@
 import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Upload, FileText, Download, Trash2, Loader2, Eye,
-  FolderOpen, Merge, Scissors, Minimize2, Scan, ImagePlus, PenLine, Volume2,
+  Upload,
+  FileText,
+  Download,
+  Trash2,
+  Loader2,
+  Eye,
+  FolderOpen,
+  Merge,
+  Scissors,
+  Minimize2,
+  Scan,
+  ImagePlus,
+  PenLine,
+  Volume2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,11 +31,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatePanel } from "@/components/common/StatePanel";
 import { SkeletonListItem } from "@/components/common/Skeletons";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useDocuments } from "@/features/documents/useDocuments";
 import type { Document } from "@/features/documents/documentsService";
 import { getDocumentSignedUrl } from "@/features/documents/getDocumentUrl";
@@ -67,7 +95,11 @@ export default function DocumentsPage() {
   const [titleInput, setTitleInput] = useState("");
   const [descriptionInput, setDescriptionInput] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('library');
+  const [activeTab, setActiveTab] = useState("library");
+  const [editorInitialContent, setEditorInitialContent] = useState<{
+    html: string;
+    title: string;
+  } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
   const [editTarget, setEditTarget] = useState<Document | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -75,21 +107,28 @@ export default function DocumentsPage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const sortedDocs = useMemo(
-    () => (documents as Document[])
-      .filter(doc => isPdf(doc.mimeType, doc.fileName))
-      .sort((a, b) => {
-        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return bTime - aTime;
-      }),
+    () =>
+      (documents as Document[])
+        .filter((doc) => isPdf(doc.mimeType, doc.fileName))
+        .sort((a, b) => {
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bTime - aTime;
+        }),
     [documents],
   );
   const isInitialLoading = isLoading && sortedDocs.length === 0;
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
-    if (!file) { setSelectedFile(null); return; }
-    if (!file.type.includes("pdf") && !file.name.toLowerCase().endsWith(".pdf")) {
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+    if (
+      !file.type.includes("pdf") &&
+      !file.name.toLowerCase().endsWith(".pdf")
+    ) {
       setFormError("Only PDF files are supported.");
       setSelectedFile(null);
       event.target.value = "";
@@ -106,7 +145,10 @@ export default function DocumentsPage() {
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) { setFormError("Please choose a file."); return; }
+    if (!selectedFile) {
+      setFormError("Please choose a file.");
+      return;
+    }
     setFormError(null);
     await createFromUpload(selectedFile, {
       title: titleInput || null,
@@ -149,18 +191,33 @@ export default function DocumentsPage() {
   };
 
   function DocList() {
-    if (error) return <StatePanel variant="error" title="Unable to load" description={error} />;
-    if (isInitialLoading) return (
-      <div className="space-y-3">
-        {['sk-0', 'sk-1', 'sk-2', 'sk-3'].map(id => <SkeletonListItem key={id} />)}
-      </div>
-    );
-    if (sortedDocs.length === 0) return (
-      <StatePanel variant="empty" title="No documents yet" description="Upload your first PDF." />
-    );
+    if (error)
+      return (
+        <StatePanel
+          variant="error"
+          title="Unable to load"
+          description={error}
+        />
+      );
+    if (isInitialLoading)
+      return (
+        <div className="space-y-3">
+          {["sk-0", "sk-1", "sk-2", "sk-3"].map((id) => (
+            <SkeletonListItem key={id} />
+          ))}
+        </div>
+      );
+    if (sortedDocs.length === 0)
+      return (
+        <StatePanel
+          variant="empty"
+          title="No documents yet"
+          description="Upload your first PDF."
+        />
+      );
     return (
       <div className="space-y-2">
-        {sortedDocs.map(doc => (
+        {sortedDocs.map((doc) => (
           <div
             key={doc.id}
             className={cn(
@@ -173,24 +230,39 @@ export default function DocumentsPage() {
                 <FileText className="w-4 h-4 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{doc.title ?? doc.fileName}</p>
+                <p className="text-sm font-medium truncate">
+                  {doc.title ?? doc.fileName}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {formatBytes(doc.sizeBytes)} · {formatDate(doc.createdAt)}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
-              <Button variant="secondary" size="sm" onClick={() => handleView(doc)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleView(doc)}
+              >
                 <Eye className="w-3.5 h-3.5 mr-1" /> View
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => handleStartEdit(doc)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleStartEdit(doc)}
+              >
                 Rename
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => download(doc)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => download(doc)}
+              >
                 <Download className="w-3.5 h-3.5 mr-1" /> Download
               </Button>
               <Button
-                variant="destructive" size="sm"
+                variant="destructive"
+                size="sm"
                 disabled={isDeleting}
                 onClick={() => setDeleteTarget(doc)}
               >
@@ -204,7 +276,12 @@ export default function DocumentsPage() {
   }
 
   // Wrap each tool tab in a card
-  function ToolCard({ title, description, icon, children }: {
+  function ToolCard({
+    title,
+    description,
+    icon,
+    children,
+  }: {
     title: string;
     description: string;
     icon: React.ReactNode;
@@ -231,35 +308,65 @@ export default function DocumentsPage() {
         className="mb-8"
       >
         <h1 className="text-2xl lg:text-3xl font-semibold mb-1">Documents</h1>
-        <p className="text-muted-foreground">Upload, manage, and transform your PDFs</p>
+        <p className="text-muted-foreground">
+          Upload, manage, and transform your PDFs
+        </p>
       </motion.div>
 
-      <Tabs defaultValue="library" className="space-y-6" onValueChange={setActiveTab}>
+      <Tabs
+        defaultValue="library"
+        className="space-y-6"
+        onValueChange={setActiveTab}
+      >
         {/* Scrollable tab list for 7 tabs */}
         <div className="overflow-x-auto pb-1">
           <TabsList className="flex w-max gap-0.5 h-auto p-1">
-            <TabsTrigger value="library" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+            <TabsTrigger
+              value="library"
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm"
+            >
               <FolderOpen size={13} /> Library
             </TabsTrigger>
-            <TabsTrigger value="merge" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+            <TabsTrigger
+              value="merge"
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm"
+            >
               <Merge size={13} /> Merge PDFs
             </TabsTrigger>
-            <TabsTrigger value="split" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+            <TabsTrigger
+              value="split"
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm"
+            >
               <Scissors size={13} /> Split PDF
             </TabsTrigger>
-            <TabsTrigger value="compress" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+            <TabsTrigger
+              value="compress"
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm"
+            >
               <Minimize2 size={13} /> Compress PDF
             </TabsTrigger>
-            <TabsTrigger value="ocr" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+            <TabsTrigger
+              value="ocr"
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm"
+            >
               <Scan size={13} /> OCR
             </TabsTrigger>
-            <TabsTrigger value="image-pdf" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+            <TabsTrigger
+              value="image-pdf"
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm"
+            >
               <ImagePlus size={13} /> Image → PDF
             </TabsTrigger>
-            <TabsTrigger value="editor" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+            <TabsTrigger
+              value="editor"
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm"
+            >
               <PenLine size={13} /> Text Editor
             </TabsTrigger>
-            <TabsTrigger value="audio" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+            <TabsTrigger
+              value="audio"
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm"
+            >
               <Volume2 size={13} /> Audio
             </TabsTrigger>
           </TabsList>
@@ -281,14 +388,39 @@ export default function DocumentsPage() {
                     <AlertDescription>{formError}</AlertDescription>
                   </Alert>
                 )}
-                <Input ref={inputRef} type="file" accept="application/pdf,.pdf"
-                  onChange={handleFileChange} disabled={isUploading} />
-                <Input value={titleInput} onChange={e => setTitleInput(e.target.value)}
-                  placeholder="Title (optional)" disabled={isUploading} />
-                <Textarea value={descriptionInput} onChange={e => setDescriptionInput(e.target.value)}
-                  placeholder="Description (optional)" rows={3} disabled={isUploading} />
-                <Button onClick={handleUpload} disabled={isUploading || !selectedFile} className="w-full">
-                  {isUploading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Uploading…</> : "Upload document"}
+                <Input
+                  ref={inputRef}
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={handleFileChange}
+                  disabled={isUploading}
+                />
+                <Input
+                  value={titleInput}
+                  onChange={(e) => setTitleInput(e.target.value)}
+                  placeholder="Title (optional)"
+                  disabled={isUploading}
+                />
+                <Textarea
+                  value={descriptionInput}
+                  onChange={(e) => setDescriptionInput(e.target.value)}
+                  placeholder="Description (optional)"
+                  rows={3}
+                  disabled={isUploading}
+                />
+                <Button
+                  onClick={handleUpload}
+                  disabled={isUploading || !selectedFile}
+                  className="w-full"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Uploading…
+                    </>
+                  ) : (
+                    "Upload document"
+                  )}
                 </Button>
                 {selectedFile && (
                   <p className="text-xs text-muted-foreground">
@@ -301,7 +433,9 @@ export default function DocumentsPage() {
             <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle className="text-lg">Your Files</CardTitle>
-                <CardDescription>{sortedDocs.length} document(s)</CardDescription>
+                <CardDescription>
+                  {sortedDocs.length} document(s)
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <DocList />
@@ -350,7 +484,11 @@ export default function DocumentsPage() {
             description="Use Gemini Vision to extract text from PDFs and images."
             icon={<Scan className="w-4 h-4 text-primary" />}
           >
-            <PdfOcrTool onSave={(file, title) => createFromUpload(file, { title: title ?? null })} />
+            <PdfOcrTool
+              onSave={(file, title) =>
+                createFromUpload(file, { title: title ?? null })
+              }
+            />
           </ToolCard>
         </TabsContent>
 
@@ -367,15 +505,23 @@ export default function DocumentsPage() {
 
         {/* ── Text Editor Tab ────────────────────────────────────────── */}
         {/* ── Text Editor Tab ────────────────────────────────────────── */}
-<TabsContent value="editor" forceMount className={activeTab === 'editor' ? '' : 'hidden'}>
-  <ToolCard
-    title="Text Editor"
-    description="Write and export documents as PDF or plain text."
-    icon={<PenLine className="w-4 h-4 text-primary" />}
-  >
-    <TextEditorTool onSave={(file, title) => createFromUpload(file, { title: title ?? null })} />
-  </ToolCard>
-</TabsContent>
+        <TabsContent
+          value="editor"
+          forceMount
+          className={activeTab === "editor" ? "" : "hidden"}
+        >
+          <ToolCard
+            title="Text Editor"
+            description="Write and export documents as PDF or plain text."
+            icon={<PenLine className="w-4 h-4 text-primary" />}
+          >
+            <TextEditorTool
+              onSave={(file, title) =>
+                createFromUpload(file, { title: title ?? null })
+              }
+            />
+          </ToolCard>
+        </TabsContent>
 
         {/* ── Audio Generator Tab ───────────────────────────────────────── */}
         <TabsContent value="audio">
@@ -390,38 +536,62 @@ export default function DocumentsPage() {
       </Tabs>
 
       {/* Delete confirmation dialog */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete document?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove "{deleteTarget?.title ?? deleteTarget?.fileName}" from storage.
+              This will permanently remove "
+              {deleteTarget?.title ?? deleteTarget?.fileName}" from storage.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>Delete</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       {/* Edit metadata dialog */}
-      <Dialog open={!!editTarget} onOpenChange={open => !open && setEditTarget(null)}>
+      <Dialog
+        open={!!editTarget}
+        onOpenChange={(open) => !open && setEditTarget(null)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit document</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-2">
-              <label htmlFor="edit-doc-title" className="text-sm font-medium">Title</label>
-              <Input id="edit-doc-title" value={editTitle} onChange={e => setEditTitle(e.target.value)} />
+              <label htmlFor="edit-doc-title" className="text-sm font-medium">
+                Title
+              </label>
+              <Input
+                id="edit-doc-title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
-              <label htmlFor="edit-doc-desc" className="text-sm font-medium">Description</label>
-              <Textarea id="edit-doc-desc" value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={3} />
+              <label htmlFor="edit-doc-desc" className="text-sm font-medium">
+                Description
+              </label>
+              <Textarea
+                id="edit-doc-desc"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                rows={3}
+              />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setEditTarget(null)}>Cancel</Button>
+              <Button variant="secondary" onClick={() => setEditTarget(null)}>
+                Cancel
+              </Button>
               <Button onClick={handleSaveEdit}>Save</Button>
             </div>
           </div>
@@ -430,4 +600,3 @@ export default function DocumentsPage() {
     </div>
   );
 }
-

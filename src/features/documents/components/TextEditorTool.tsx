@@ -190,10 +190,11 @@ const AI_URL = (import.meta.env.VITE_AI_AGENT_URL as string | undefined)
 
 interface Props {
   onSave?: (file: File, title?: string) => Promise<void>;
+  initialContent?: { html: string; title: string };
+  onContentLoaded?: () => void;
 }
 
-export function TextEditorTool({ onSave }: Props) {
-  const { t, lang } = useT();
+export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Props) {  const { t, lang } = useT();
   const { session } = useAuth();
 
   // Page settings
