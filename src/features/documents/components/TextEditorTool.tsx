@@ -299,6 +299,18 @@ export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Prop
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]); // run once when editor is ready
 
+
+  // Load content from Library (Open in Editor)
+  useEffect(() => {
+    if (!editor || !initialContent) return;
+    editor.commands.setContent(initialContent.html);
+    setDocTitle(initialContent.title);
+    docTitleRef.current = initialContent.title;
+    setSaveStatus('saved');
+    localStorage.removeItem(DRAFT_KEY);
+    onContentLoaded?.();
+  }, [initialContent, editor]);
+
   // ── Export helpers ─────────────────────────────────────────────────────────
 
   const handleExportPdf = async () => {
@@ -337,12 +349,14 @@ export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Prop
     setIsSaving(true);
     try {
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${docTitle}</title></head><body>${editor.getHTML()}</body></html>`;
-      const blob = new Blob([html], { type: "text/html" });
-      await onSave(new File([blob], `${docTitle}.html`, { type: "text/html" }), docTitle);
+      const blob = new Blob([html], { type: 'text/html' });
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+      const fileName = `${docTitle}_${timestamp}.html`;
+      await onSave(new File([blob], fileName, { type: "text/html" }), docTitle);
       localStorage.removeItem(DRAFT_KEY);
-      toast.success("Saved to Documents library");
+      toast.success('Saved to Documents library');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed");
+      toast.error(e instanceof Error ? e.message : 'Save failed');
     } finally {
       setIsSaving(false);
     }
@@ -776,4 +790,3 @@ export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Prop
     </div>
   );
 }
-
