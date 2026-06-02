@@ -67,6 +67,7 @@ export default function DocumentsPage() {
   const [titleInput, setTitleInput] = useState("");
   const [descriptionInput, setDescriptionInput] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('library');
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
   const [editTarget, setEditTarget] = useState<Document | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -233,7 +234,7 @@ export default function DocumentsPage() {
         <p className="text-muted-foreground">Upload, manage, and transform your PDFs</p>
       </motion.div>
 
-      <Tabs defaultValue="library" className="space-y-6">
+      <Tabs defaultValue="library" className="space-y-6" onValueChange={setActiveTab}>
         {/* Scrollable tab list for 7 tabs */}
         <div className="overflow-x-auto pb-1">
           <TabsList className="flex w-max gap-0.5 h-auto p-1">
@@ -365,15 +366,16 @@ export default function DocumentsPage() {
         </TabsContent>
 
         {/* ── Text Editor Tab ────────────────────────────────────────── */}
-        <TabsContent value="editor">
-          <ToolCard
-            title="Text Editor"
-            description="Write and export documents as PDF or plain text."
-            icon={<PenLine className="w-4 h-4 text-primary" />}
-          >
-            <TextEditorTool onSave={(file, title) => createFromUpload(file, { title: title ?? null })} />
-          </ToolCard>
-        </TabsContent>
+        {/* ── Text Editor Tab ────────────────────────────────────────── */}
+<TabsContent value="editor" forceMount className={activeTab === 'editor' ? '' : 'hidden'}>
+  <ToolCard
+    title="Text Editor"
+    description="Write and export documents as PDF or plain text."
+    icon={<PenLine className="w-4 h-4 text-primary" />}
+  >
+    <TextEditorTool onSave={(file, title) => createFromUpload(file, { title: title ?? null })} />
+  </ToolCard>
+</TabsContent>
 
         {/* ── Audio Generator Tab ───────────────────────────────────────── */}
         <TabsContent value="audio">
