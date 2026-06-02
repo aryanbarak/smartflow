@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 6ccbf63 - fix: keep TextEditor mounted to prevent reset on save
+- **Last commit:** 180e375 - feat: open HTML docs from Library in Text Editor
 - **Last deployment:** 2026-06-02 - Cloudflare Pages (auto)
 
 ---
