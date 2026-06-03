@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 7ba658c - fix: resolve TipTap duplicate extensions, fix HTML edit flow in Library
+- **Last commit:** 720c4bb - fix: uploadToStorage — safe ASCII filename with document fallback
 - **Last deployment:** 2026-06-03 - Cloudflare Pages (auto)
 
 ---
