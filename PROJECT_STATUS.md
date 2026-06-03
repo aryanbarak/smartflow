@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 7fb27d1 - chore: fix git merge conflicts and storage upsert
+- **Last commit:** ce4be1f - fix: amend commit to include PROJECT_STATUS.md
 - **Last deployment:** 2026-06-03 - Cloudflare Pages (auto)
 
 ---
