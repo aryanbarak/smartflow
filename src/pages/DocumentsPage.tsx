@@ -54,7 +54,7 @@ import { PdfSplitTool } from "@/features/documents/components/PdfSplitTool";
 import { PdfCompressTool } from "@/features/documents/components/PdfCompressTool";
 import { PdfOcrTool } from "@/features/documents/components/PdfOcrTool";
 import { ImageToPdfTool } from "@/features/documents/components/ImageToPdfTool";
-import { TextEditorTool } from "@/features/documents/components/TextEditorTool";
+import { TextEditorTool, type TextEditorHandle } from "@/features/documents/components/TextEditorTool";
 import { AudioGeneratorTool } from "@/features/documents/components/AudioGeneratorTool";
 import { cn } from "@/lib/utils";
 
@@ -100,11 +100,7 @@ export default function DocumentsPage() {
   const [descriptionInput, setDescriptionInput] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("library");
-  const [editorInitialContent, setEditorInitialContent] = useState<{
-    html: string;
-    title: string;
-  } | null>(null);
-  const [editorKey, setEditorKey] = useState(0);
+  const editorRef = useRef<TextEditorHandle>(null);
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
   const [editTarget, setEditTarget] = useState<Document | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -228,14 +224,9 @@ export default function DocumentsPage() {
       if (bodyMatch?.[1]) bodyContent = bodyMatch[1].trim();
       if (!bodyContent || bodyContent.length < 5) bodyContent = '<p>Document appears to be empty.</p>';
 
-      console.log('[handleOpenInEditor] loaded content length:', bodyContent.length);
-
-      setEditorInitialContent({
-        html: bodyContent,
-        title: doc.title ?? doc.fileName.replace(/\.html?$/i, ''),
-      });
-      setEditorKey((prev) => prev + 1);
+      const title = doc.title ?? doc.fileName.replace(/\.html?$/i, '');
       setActiveTab('editor');
+      editorRef.current?.loadFromLibrary(bodyContent, title);
     } catch (err) {
       console.error('[handleOpenInEditor] error:', err);
       setFormError(err instanceof Error ? err.message : 'Failed to open file in editor.');
@@ -579,12 +570,10 @@ export default function DocumentsPage() {
             icon={<PenLine className="w-4 h-4 text-primary" />}
           >
             <TextEditorTool
-              key={editorKey}
+              ref={editorRef}
               onSave={(file, title) =>
                 createFromUpload(file, { title: title ?? null })
               }
-              initialContent={editorInitialContent ?? undefined}
-              onContentLoaded={() => setEditorInitialContent(null)}
             />
           </ToolCard>
         </TabsContent>

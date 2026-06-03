@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -187,13 +187,16 @@ const AI_URL = (import.meta.env.VITE_AI_AGENT_URL as string | undefined)
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-interface Props {
-  onSave?: (file: File, title?: string) => Promise<void>;
-  initialContent?: { html: string; title: string };
-  onContentLoaded?: () => void;
+export interface TextEditorHandle {
+  loadFromLibrary: (html: string, title: string) => void;
 }
 
-export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Props) {  const { t, lang } = useT();
+interface Props {
+  onSave?: (file: File, title?: string) => Promise<void>;
+}
+
+export const TextEditorTool = forwardRef<TextEditorHandle, Props>(
+function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
   const { session } = useAuth();
 
   // Page settings
@@ -283,7 +286,6 @@ export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Prop
   // Restore draft on mount (within 7 days).
   useEffect(() => {
     if (!editor) return;
-    if (initialContent) return; // ← این خط اضافه شد
     const raw = localStorage.getItem(DRAFT_KEY);
     if (!raw) return;
     try {
@@ -298,19 +300,17 @@ export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Prop
     } catch {
       localStorage.removeItem(DRAFT_KEY);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]); // run once when editor is ready
 
-
-  // Load content from Library (Open in Editor)
-  useEffect(() => {
-    if (!editor || !initialContent) return;
-    const timer = setTimeout(() => {
+  // Expose loadFromLibrary for DocumentsPage to call imperatively.
+  useImperativeHandle(ref, () => ({
+    loadFromLibrary: (html: string, title: string) => {
+      if (!editor) return;
       editor.commands.clearContent();
-      editor.commands.setContent(initialContent.html, true);
+      editor.commands.setContent(html);
       editor.commands.focus('start');
-      setDocTitle(initialContent.title);
-      docTitleRef.current = initialContent.title;
+      setDocTitle(title);
+      docTitleRef.current = title;
       const text = editor.getText();
       setWordCount({
         words: text.trim().split(/\s+/).filter(Boolean).length,
@@ -318,10 +318,8 @@ export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Prop
       });
       setSaveStatus('saved');
       localStorage.removeItem(DRAFT_KEY);
-      onContentLoaded?.();
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [initialContent, editor]);
+    },
+  }), [editor]);
 
   // ── Export helpers ─────────────────────────────────────────────────────────
 
@@ -801,4 +799,5 @@ export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Prop
       </div>
     </div>
   );
-}
+});
+TextEditorTool.displayName = 'TextEditorTool';
