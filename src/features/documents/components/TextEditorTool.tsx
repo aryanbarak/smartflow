@@ -13,7 +13,6 @@ import { Table } from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableHeader from '@tiptap/extension-table-header';
 import TableCell from '@tiptap/extension-table-cell';
-import Typography from '@tiptap/extension-typography';
 import Placeholder from '@tiptap/extension-placeholder';
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
@@ -247,7 +246,6 @@ export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Prop
       TableRow,
       TableHeader,
       TableCell,
-      Typography,
       Placeholder.configure({ placeholder: 'Start writing your document…' }),
     ],
     editorProps: {
@@ -303,12 +301,15 @@ export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Prop
   // Load content from Library (Open in Editor)
   useEffect(() => {
     if (!editor || !initialContent) return;
-    editor.commands.setContent(initialContent.html);
-    setDocTitle(initialContent.title);
-    docTitleRef.current = initialContent.title;
-    setSaveStatus('saved');
-    localStorage.removeItem(DRAFT_KEY);
-    onContentLoaded?.();
+    const timer = setTimeout(() => {
+      editor.commands.setContent(initialContent.html);
+      setDocTitle(initialContent.title);
+      docTitleRef.current = initialContent.title;
+      setSaveStatus('saved');
+      localStorage.removeItem(DRAFT_KEY);
+      onContentLoaded?.();
+    }, 100);
+    return () => clearTimeout(timer);
   }, [initialContent, editor]);
 
   // ── Export helpers ─────────────────────────────────────────────────────────

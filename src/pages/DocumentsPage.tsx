@@ -109,7 +109,7 @@ export default function DocumentsPage() {
   const sortedDocs = useMemo(
     () =>
       (documents as Document[])
-        .filter((doc) => isPdf(doc.mimeType, doc.fileName))
+        .filter(Boolean)
         .sort((a, b) => {
           const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
           const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -125,11 +125,10 @@ export default function DocumentsPage() {
       setSelectedFile(null);
       return;
     }
-    if (
-      !file.type.includes("pdf") &&
-      !file.name.toLowerCase().endsWith(".pdf")
-    ) {
-      setFormError("Only PDF files are supported.");
+    const isPdfFile = file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf");
+    const isHtmlFile = file.type.includes("html") || file.name.toLowerCase().endsWith(".html");
+    if (!isPdfFile && !isHtmlFile) {
+      setFormError("Only PDF and HTML files are supported.");
       setSelectedFile(null);
       event.target.value = "";
       return;
@@ -190,6 +189,31 @@ export default function DocumentsPage() {
     setEditTarget(null);
   };
 
+  const handleOpenInEditor = async (doc: Document) => {
+    try {
+      const { url } = await getDocumentSignedUrl(doc.storagePath);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const html = await res.text();
+
+      let bodyContent = html;
+      const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      if (bodyMatch?.[1]) bodyContent = bodyMatch[1].trim();
+      if (!bodyContent || bodyContent.length < 5) bodyContent = '<p>Document appears to be empty.</p>';
+
+      console.log('[handleOpenInEditor] loaded content length:', bodyContent.length);
+
+      setEditorInitialContent({
+        html: bodyContent,
+        title: doc.title ?? doc.fileName.replace(/\.html?$/i, ''),
+      });
+      setActiveTab('editor');
+    } catch (err) {
+      console.error('[handleOpenInEditor] error:', err);
+      setFormError(err instanceof Error ? err.message : 'Failed to open file in editor.');
+    }
+  };
+
   function DocList() {
     if (error)
       return (
@@ -239,6 +263,17 @@ export default function DocumentsPage() {
               </div>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
+              {(doc.mimeType === 'text/html' ||
+                doc.mimeType?.includes('html') ||
+                doc.fileName?.toLowerCase().endsWith('.html')) && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void handleOpenInEditor(doc)}
+                >
+                  <PenLine className="w-3.5 h-3.5 mr-1" /> Edit
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="sm"
@@ -314,7 +349,7 @@ export default function DocumentsPage() {
       </motion.div>
 
       <Tabs
-        defaultValue="library"
+        value={activeTab}
         className="space-y-6"
         onValueChange={setActiveTab}
       >
@@ -380,7 +415,7 @@ export default function DocumentsPage() {
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Upload className="w-4 h-4 text-primary" /> Upload Document
                 </CardTitle>
-                <CardDescription>PDFs up to 20MB</CardDescription>
+                <CardDescription>PDFs and HTML documents up to 20MB</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {formError && (
@@ -391,7 +426,7 @@ export default function DocumentsPage() {
                 <Input
                   ref={inputRef}
                   type="file"
-                  accept="application/pdf,.pdf"
+                  accept="application/pdf,.pdf,text/html,.html"
                   onChange={handleFileChange}
                   disabled={isUploading}
                 />
@@ -519,6 +554,8 @@ export default function DocumentsPage() {
               onSave={(file, title) =>
                 createFromUpload(file, { title: title ?? null })
               }
+              initialContent={editorInitialContent ?? undefined}
+              onContentLoaded={() => setEditorInitialContent(null)}
             />
           </ToolCard>
         </TabsContent>

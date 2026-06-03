@@ -67,6 +67,7 @@ export function useDocuments() {
       setIsUploading(true);
       try {
         const { storagePath, fileName } = await uploadToStorage(user.id, file);
+        console.log('[createFromUpload] storage done:', { storagePath, fileName, type: file.type });
         const created = await createDocument({
           storagePath,
           fileName,
@@ -75,6 +76,7 @@ export function useDocuments() {
           title: meta?.title ?? null,
           description: meta?.description ?? null,
         });
+        console.log('[createFromUpload] document created:', created);
         setDocuments((prev) => [created, ...prev]);
         toast({ title: "File uploaded" });
       } catch (err) {

@@ -101,15 +101,35 @@ export async function deleteDocument(id: string): Promise<void> {
   if (deleteError) throw deleteError;
 }
 
-export async function uploadToStorage(userId: string, file: File) {
-  const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, "_");
+export async function uploadToStorage(
+  userId: string,
+  file: File,
+): Promise<{ storagePath: string; fileName: string }> {
+  const ext = file.name.split('.').pop() ?? 'bin';
+  const ts = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+  const baseName = file.name
+    .replace(/\.[^.]+$/, '')
+    .replace(/[^a-zA-Z0-9؀-ۿ._-]/g, '_')
+    .slice(0, 60);
+  const safeName = `${baseName}_${ts}.${ext}`;
   const storagePath = `${userId}/${safeName}`;
-  const { error } = await supabase.storage.from(DOCUMENTS_BUCKET).upload(storagePath, file, { upsert: true });
-  if (error) throw error;
-  return {
-    storagePath,
-    fileName: safeName,
-  };
+
+  console.log('[uploadToStorage] uploading:', { storagePath, mimeType: file.type, size: file.size });
+
+  const { error } = await supabase.storage
+    .from(DOCUMENTS_BUCKET)
+    .upload(storagePath, file, {
+      upsert: true,
+      contentType: file.type || 'application/octet-stream',
+    });
+
+  if (error) {
+    console.error('[uploadToStorage] error:', error);
+    throw error;
+  }
+
+  console.log('[uploadToStorage] success:', storagePath);
+  return { storagePath, fileName: safeName };
 }
 
 export async function downloadDocument(storagePath: string): Promise<Blob> {
