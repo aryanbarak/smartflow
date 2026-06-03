@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** e542573 - fix: HTML view renders properly, Edit button forces remount with content
+- **Last commit:** a5d26be - fix: disable StarterKit link/underline (TipTap v3 duplicate warning)
 - **Last deployment:** 2026-06-03 - Cloudflare Pages (auto)
 
 ---
