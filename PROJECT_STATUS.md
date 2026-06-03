@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 29aa0f3 - fix: skip draft restore when initialContent is provided
+- **Last commit:** 37c45e3 - refactor: replace prop-based initialContent with forwardRef loadFromLibrary
 - **Last deployment:** 2026-06-03 - Cloudflare Pages (auto)
 
 ---
