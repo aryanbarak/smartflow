@@ -1,3 +1,4 @@
+@'
 #!/bin/sh
 # dailyFlow post-commit hook — runs after every git commit
 
@@ -42,6 +43,8 @@ content = re.sub(
 status_file.write_text(content, encoding='utf-8')
 print(f"[hook] PROJECT_STATUS.md updated ({today} / {commit_hash})")
 PYEOF
+    git add "$STATUS_FILE"
+    git commit --amend --no-edit --no-verify 2>/dev/null || true
 else
     echo "[hook] Skipping status update (venv or STATUS file not found)"
 fi
@@ -62,3 +65,4 @@ else
 fi
 
 echo "[hook] Post-commit hooks done"
+'@ | Set-Content ".githooks/post-commit" -Encoding UTF8
