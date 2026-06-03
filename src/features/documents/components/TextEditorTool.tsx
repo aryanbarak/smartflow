@@ -302,13 +302,20 @@ export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Prop
   useEffect(() => {
     if (!editor || !initialContent) return;
     const timer = setTimeout(() => {
-      editor.commands.setContent(initialContent.html);
+      editor.commands.clearContent();
+      editor.commands.setContent(initialContent.html, true);
+      editor.commands.focus('start');
       setDocTitle(initialContent.title);
       docTitleRef.current = initialContent.title;
+      const text = editor.getText();
+      setWordCount({
+        words: text.trim().split(/\s+/).filter(Boolean).length,
+        chars: text.length,
+      });
       setSaveStatus('saved');
       localStorage.removeItem(DRAFT_KEY);
       onContentLoaded?.();
-    }, 100);
+    }, 200);
     return () => clearTimeout(timer);
   }, [initialContent, editor]);
 

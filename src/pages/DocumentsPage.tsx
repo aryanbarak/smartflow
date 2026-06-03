@@ -77,6 +77,10 @@ function isPdf(mimeType: string | null, fileName: string) {
   return mimeType?.includes("pdf") || fileName.toLowerCase().endsWith(".pdf");
 }
 
+function isHtml(mimeType: string | null, fileName: string) {
+  return mimeType === 'text/html' || mimeType?.includes('html') || fileName.toLowerCase().endsWith('.html');
+}
+
 export default function DocumentsPage() {
   const {
     documents,
@@ -100,6 +104,7 @@ export default function DocumentsPage() {
     html: string;
     title: string;
   } | null>(null);
+  const [editorKey, setEditorKey] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
   const [editTarget, setEditTarget] = useState<Document | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -168,9 +173,31 @@ export default function DocumentsPage() {
   const handleView = async (doc: Document) => {
     try {
       const { url } = await getDocumentSignedUrl(doc.storagePath);
-      window.open(url, "_blank", "noopener,noreferrer");
+      if (isHtml(doc.mimeType, doc.fileName)) {
+        const res = await fetch(url);
+        const html = await res.text();
+        const win = window.open('', '_blank');
+        if (!win) return;
+        if (html.includes('<html')) {
+          win.document.write(html);
+        } else {
+          win.document.write(`<!DOCTYPE html><html><head>
+            <meta charset="utf-8">
+            <title>${doc.title ?? 'Document'}</title>
+            <style>
+              body { font-family: Georgia, serif; max-width: 800px;
+                     margin: 40px auto; padding: 20px; color: #1a1a1a;
+                     line-height: 1.7; }
+              h1 { font-size: 2em; } h2 { font-size: 1.5em; }
+            </style>
+          </head><body>${html}</body></html>`);
+        }
+        win.document.close();
+      } else {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Failed to open PDF.");
+      setFormError(err instanceof Error ? err.message : 'Failed to open document.');
     }
   };
 
@@ -207,6 +234,7 @@ export default function DocumentsPage() {
         html: bodyContent,
         title: doc.title ?? doc.fileName.replace(/\.html?$/i, ''),
       });
+      setEditorKey((prev) => prev + 1);
       setActiveTab('editor');
     } catch (err) {
       console.error('[handleOpenInEditor] error:', err);
@@ -551,6 +579,7 @@ export default function DocumentsPage() {
             icon={<PenLine className="w-4 h-4 text-primary" />}
           >
             <TextEditorTool
+              key={editorKey}
               onSave={(file, title) =>
                 createFromUpload(file, { title: title ?? null })
               }
