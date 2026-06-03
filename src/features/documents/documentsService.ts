@@ -105,18 +105,19 @@ export async function uploadToStorage(
   userId: string,
   file: File,
 ): Promise<{ storagePath: string; fileName: string }> {
-  const ext = file.name.split('.').pop() ?? 'bin';
-  const ts = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-  const baseName = file.name
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin';
+  const ts = Date.now();
+  const base = file.name
     .replace(/\.[^.]+$/, '')
-    .replace(/[^a-zA-Z0-9؀-ۿ._-]/g, '_')
-    .slice(0, 60);
-  const safeName = `${baseName}_${ts}.${ext}`;
+    .replace(/\s+/g, '_')
+    .replace(/[^a-zA-Z0-9_-]/g, '')
+    .slice(0, 40) || 'document';
+  const safeName = `${base}_${ts}.${ext}`;
   const storagePath = `${userId}/${safeName}`;
 
-  console.log('[uploadToStorage] uploading:', { storagePath, mimeType: file.type, size: file.size });
+  console.log('[uploadToStorage] START', { storagePath, type: file.type, size: file.size });
 
-  const { error } = await supabase.storage
+  const { data, error } = await supabase.storage
     .from(DOCUMENTS_BUCKET)
     .upload(storagePath, file, {
       upsert: true,
@@ -124,11 +125,11 @@ export async function uploadToStorage(
     });
 
   if (error) {
-    console.error('[uploadToStorage] error:', error);
-    throw error;
+    console.error('[uploadToStorage] FAILED', error);
+    throw new Error(`Storage upload failed: ${error.message}`);
   }
 
-  console.log('[uploadToStorage] success:', storagePath);
+  console.log('[uploadToStorage] SUCCESS', data);
   return { storagePath, fileName: safeName };
 }
 
