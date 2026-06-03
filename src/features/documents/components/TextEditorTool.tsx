@@ -233,7 +233,10 @@ export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Prop
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        link: false,      // disabled — we configure Link separately below
+        underline: false, // disabled — we add Underline separately below
+      }),
       Underline,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       TextStyleExt,

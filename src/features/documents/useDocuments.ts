@@ -148,10 +148,15 @@ export function useDocuments() {
       }
       try {
         const blob = await downloadDocument(doc.storagePath);
+        const ext = doc.mimeType?.includes('html') ? 'html'
+          : doc.mimeType?.includes('pdf') ? 'pdf' : 'bin';
+        const cleanTitle = (doc.title ?? doc.fileName)
+          .replace(/\.[^.]+$/, '')
+          .replace(/_\d{8,}.*$/, '');
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = doc.fileName;
+        link.download = `${cleanTitle}.${ext}`;
         document.body.appendChild(link);
         link.click();
         link.remove();
