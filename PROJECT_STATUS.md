@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 720c4bb - fix: uploadToStorage — safe ASCII filename with document fallback
+- **Last commit:** e542573 - fix: HTML view renders properly, Edit button forces remount with content
 - **Last deployment:** 2026-06-03 - Cloudflare Pages (auto)
 
 ---
