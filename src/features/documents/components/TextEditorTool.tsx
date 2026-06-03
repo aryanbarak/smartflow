@@ -283,6 +283,7 @@ export function TextEditorTool({ onSave, initialContent, onContentLoaded }: Prop
   // Restore draft on mount (within 7 days).
   useEffect(() => {
     if (!editor) return;
+    if (initialContent) return; // ← این خط اضافه شد
     const raw = localStorage.getItem(DRAFT_KEY);
     if (!raw) return;
     try {
