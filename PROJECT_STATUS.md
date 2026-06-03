@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** a5d26be - fix: disable StarterKit link/underline (TipTap v3 duplicate warning)
+- **Last commit:** 29aa0f3 - fix: skip draft restore when initialContent is provided
 - **Last deployment:** 2026-06-03 - Cloudflare Pages (auto)
 
 ---
