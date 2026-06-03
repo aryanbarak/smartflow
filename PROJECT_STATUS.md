@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** ce4be1f - fix: amend commit to include PROJECT_STATUS.md
+- **Last commit:** 7ba658c - fix: resolve TipTap duplicate extensions, fix HTML edit flow in Library
 - **Last deployment:** 2026-06-03 - Cloudflare Pages (auto)
 
 ---
