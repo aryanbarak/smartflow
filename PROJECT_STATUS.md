@@ -1,5 +1,5 @@
 # dailyFlow — PROJECT STATUS
-# Last updated: 2026-06-02
+# Last updated: 2026-06-03
 # Keep this file under 2 pages — update after every session
 
 ---
@@ -7,8 +7,8 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** a02395e - fix: add timestamp to HTML filename to prevent storage conflicts
-- **Last deployment:** 2026-06-02 - Cloudflare Pages (auto)
+- **Last commit:** 7fb27d1 - chore: fix git merge conflicts and storage upsert
+- **Last deployment:** 2026-06-03 - Cloudflare Pages (auto)
 
 ---
 
