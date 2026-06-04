@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Calendar, CheckSquare, Users, Wallet, Sparkles } from "lucide-react";
+import { Calendar, CheckSquare, Users, Wallet, Sparkles, RefreshCw } from "lucide-react";
+import { useBriefing } from "@/features/briefing/useBriefing";
 import { MoodWidget } from "@/features/mood/MoodWidget";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -182,6 +183,9 @@ export default function Dashboard() {
   const isFamilyInitialLoading =
     isFamilyLoading && (familyChildren ?? []).length === 0;
   const isLearnInitialLoading = isLearnLoading && messages.length === 0;
+
+  const { briefing: weeklyBriefing, isLoading: briefingLoading, generate: generateBriefing, loadFromCache } = useBriefing();
+  useEffect(() => { loadFromCache(); }, [loadFromCache]);
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
@@ -472,6 +476,68 @@ export default function Dashboard() {
         <div className="md:col-span-2 lg:col-span-3">
           <MoodWidget />
         </div>
+
+        {/* Weekly Briefing widget */}
+        <Card className="md:col-span-2 lg:col-span-3">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-cyan-400" />
+                Weekly Briefing
+              </CardTitle>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => void generateBriefing(true)}
+                  disabled={briefingLoading}
+                  className="text-xs text-muted-foreground hover:text-white transition-colors flex items-center gap-1"
+                >
+                  <RefreshCw className={`w-3 h-3 ${briefingLoading ? 'animate-spin' : ''}`} />
+                  {briefingLoading ? 'Generating…' : 'Refresh'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/briefing')}
+                  className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                >
+                  View full →
+                </button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {briefingLoading && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                <div className="w-4 h-4 rounded-full border border-cyan-500 border-t-transparent animate-spin" />
+                Analyzing your week…
+              </div>
+            )}
+            {weeklyBriefing && !briefingLoading && (
+              <div className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
+                {weeklyBriefing.replace(/#{1,3} .+?\n/g, '').replace(/\*\*/g, '').slice(0, 280)}…
+                <button
+                  type="button"
+                  onClick={() => navigate('/briefing')}
+                  className="text-cyan-400 hover:text-cyan-300 ml-1 transition-colors"
+                >
+                  read more
+                </button>
+              </div>
+            )}
+            {!weeklyBriefing && !briefingLoading && (
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">No briefing yet.</p>
+                <button
+                  type="button"
+                  onClick={() => void generateBriefing()}
+                  className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                >
+                  Generate →
+                </button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

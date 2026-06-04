@@ -17,6 +17,7 @@ import {
   Flame,
   BookOpen,
   Layers,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,6 +43,7 @@ const navItems: { icon: React.ElementType; key: TranslationKey; path: string }[]
   { icon: Brain, key: 'nav_learn_ai', path: "/learn-ai" },
   { icon: GraduationCap, key: 'nav_tutor', path: "/tutor" },
   { icon: Bot, key: 'nav_tutor_app', path: "/tutor/app" },
+  { icon: Sparkles, key: 'nav_briefing', path: "/briefing" },
   { icon: Settings, key: 'nav_settings', path: "/settings" },
 ];
 
