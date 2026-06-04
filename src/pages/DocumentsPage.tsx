@@ -305,7 +305,7 @@ export default function DocumentsPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0">
               {(doc.mimeType === 'text/html' ||
                 doc.mimeType?.includes('html') ||
                 doc.fileName?.toLowerCase().endsWith('.html')) && (
@@ -313,38 +313,48 @@ export default function DocumentsPage() {
                   variant="secondary"
                   size="sm"
                   onClick={() => void handleOpenInEditor(doc)}
+                  title="Edit in Text Editor"
                 >
-                  <PenLine className="w-3.5 h-3.5 mr-1" /> Edit
+                  <PenLine className="w-3.5 h-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">Edit</span>
                 </Button>
               )}
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => handleView(doc)}
+                title="View document"
               >
-                <Eye className="w-3.5 h-3.5 mr-1" /> View
+                <Eye className="w-3.5 h-3.5 sm:mr-1" />
+                <span className="hidden sm:inline">View</span>
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => handleStartEdit(doc)}
+                title="Rename document"
               >
-                Rename
+                <span className="hidden sm:inline">Rename</span>
+                <span className="inline sm:hidden text-xs">✎</span>
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => download(doc)}
+                title="Download document"
               >
-                <Download className="w-3.5 h-3.5 mr-1" /> Download
+                <Download className="w-3.5 h-3.5 sm:mr-1" />
+                <span className="hidden sm:inline">Download</span>
               </Button>
               <Button
                 variant="destructive"
                 size="sm"
                 disabled={isDeleting}
                 onClick={() => setDeleteTarget(doc)}
+                title="Delete document"
               >
-                <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+                <Trash2 className="w-3.5 h-3.5 sm:mr-1" />
+                <span className="hidden sm:inline">Delete</span>
               </Button>
             </div>
           </div>

@@ -546,101 +546,87 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
       </div>
 
       {/* ── Main toolbar ─────────────────────────────────────────────────── */}
-      <div className="bg-slate-800 border border-slate-700 rounded-t-lg p-2 flex flex-wrap items-center gap-1">
-
-        {/* History */}
-        <Btn title="Undo (Ctrl+Z)" onClick={() => editor.chain().focus().undo().run()}><Undo2 size={14} /></Btn>
-        <Btn title="Redo (Ctrl+Y)" onClick={() => editor.chain().focus().redo().run()}><Redo2 size={14} /></Btn>
-        <Div />
-
-        {/* Text style */}
-        <Btn title="Bold (Ctrl+B)"      active={editor.isActive('bold')}      onClick={() => editor.chain().focus().toggleBold().run()}><Bold size={14} /></Btn>
-        <Btn title="Italic (Ctrl+I)"    active={editor.isActive('italic')}    onClick={() => editor.chain().focus().toggleItalic().run()}><Italic size={14} /></Btn>
-        <Btn title="Underline (Ctrl+U)" active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}><UnderlineIcon size={14} /></Btn>
-        <Btn title="Strikethrough"      active={editor.isActive('strike')}    onClick={() => editor.chain().focus().toggleStrike().run()}><Strikethrough size={14} /></Btn>
-        <Div />
-
-        {/* Headings */}
-        <Btn title="Paragraph" active={editor.isActive('paragraph')}              onClick={() => editor.chain().focus().setParagraph().run()}><Type size={14} /></Btn>
-        <Btn title="Heading 1" active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}><Heading1 size={14} /></Btn>
-        <Btn title="Heading 2" active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}><Heading2 size={14} /></Btn>
-        <Btn title="Heading 3" active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}><Heading3 size={14} /></Btn>
-        <Div />
-
-        {/* Alignment */}
-        <Btn title="Align left"    active={editor.isActive({ textAlign: 'left' })}    onClick={() => editor.chain().focus().setTextAlign('left').run()}><AlignLeft size={14} /></Btn>
-        <Btn title="Align center"  active={editor.isActive({ textAlign: 'center' })}  onClick={() => editor.chain().focus().setTextAlign('center').run()}><AlignCenter size={14} /></Btn>
-        <Btn title="Align right"   active={editor.isActive({ textAlign: 'right' })}   onClick={() => editor.chain().focus().setTextAlign('right').run()}><AlignRight size={14} /></Btn>
-        <Btn title="Justify"       active={editor.isActive({ textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()}><AlignJustify size={14} /></Btn>
-        <Div />
-
-        {/* Lists + Insert */}
-        <Btn title="Bullet list"  active={editor.isActive('bulletList')}  onClick={() => editor.chain().focus().toggleBulletList().run()}><List size={14} /></Btn>
-        <Btn title="Ordered list" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}><ListOrdered size={14} /></Btn>
-        <Btn title="Insert table" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table2 size={14} /></Btn>
-        <Btn title="Insert image" onClick={insertImage}><Image size={14} /></Btn>
-        <Div />
-
-        {/* Marks */}
-        <Btn title="Link" active={editor.isActive('link')} onClick={() => {
-          const prev = (editor.getAttributes('link').href as string) ?? '';
-          const url = window.prompt('URL', prev);
-          if (url === null) return;
-          if (!url) { editor.chain().focus().extendMarkRange('link').unsetLink().run(); return; }
-          editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
-        }}><Link2 size={14} /></Btn>
-        <Btn title="Highlight" active={editor.isActive('highlight')} onClick={() => editor.chain().focus().toggleHighlight({ color: '#fef08a' }).run()}><Highlighter size={14} /></Btn>
-        <Btn title="Clear formatting" onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}><Eraser size={14} /></Btn>
-
-        {/* Row 2: Font family + size + colors + RTL */}
-        <div className="w-full flex flex-wrap items-center gap-1 mt-1.5 pt-1.5 border-t border-slate-700">
-          <select
-            defaultValue=""
-            onChange={e => { editor.chain().focus().setFontFamily(e.target.value).run(); e.target.value = ''; }}
-            className="text-xs bg-slate-700 text-slate-200 border border-slate-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-            aria-label="Font family"
-          >
-            <option value="" disabled>Font…</option>
-            {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-          </select>
-
-          <select
-            defaultValue=""
-            onChange={e => { editor.chain().focus().setMark('textStyle', { fontSize: `${e.target.value}px` }).run(); e.target.value = ''; }}
-            className="text-xs bg-slate-700 text-slate-200 border border-slate-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-cyan-500 w-20"
-            aria-label="Font size"
-          >
-            <option value="" disabled>Size…</option>
-            {FONT_SIZES.map(s => <option key={s} value={s}>{s}px</option>)}
-          </select>
-
-          <Div />
-
-          {/* Text color */}
-          <label title="Text color" className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer flex items-center transition-colors" onMouseDown={e => e.preventDefault()} onClick={() => colorRef.current?.click()}>
-            <Palette size={14} />
-            <input ref={colorRef} type="color" aria-label="Text color picker" title="Text color" className="w-0 h-0 opacity-0 absolute" defaultValue="#1a1a1a"
-              onInput={e => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()} />
-          </label>
-
-          {/* Highlight color */}
-          <label title="Highlight color" className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer flex items-center transition-colors" onMouseDown={e => e.preventDefault()} onClick={() => hlColorRef.current?.click()}>
-            <Highlighter size={14} />
-            <input ref={hlColorRef} type="color" aria-label="Highlight color picker" title="Highlight color" className="w-0 h-0 opacity-0 absolute" defaultValue="#fef08a"
-              onInput={e => editor.chain().focus().toggleHighlight({ color: (e.target as HTMLInputElement).value }).run()} />
-          </label>
-
-          <Div />
-
-          {/* RTL toggle */}
-          <Btn title="Toggle RTL / LTR" active={docRTL} onClick={() => setDocRTL(v => !v)}>
-            <span className="text-xs font-mono">RTL</span>
-          </Btn>
+      <div className="bg-slate-800 border border-slate-700 rounded-t-lg">
+        {/* Row 1: formatting — horizontally scrollable on mobile */}
+        <div className="overflow-x-auto [&::-webkit-scrollbar]:h-[2px] [&::-webkit-scrollbar-thumb]:bg-slate-600">
+          <div className="p-2 flex items-center gap-1 min-w-max">
+            <Btn title="Undo (Ctrl+Z)" onClick={() => editor.chain().focus().undo().run()}><Undo2 size={14} /></Btn>
+            <Btn title="Redo (Ctrl+Y)" onClick={() => editor.chain().focus().redo().run()}><Redo2 size={14} /></Btn>
+            <Div />
+            <Btn title="Bold (Ctrl+B)"      active={editor.isActive('bold')}      onClick={() => editor.chain().focus().toggleBold().run()}><Bold size={14} /></Btn>
+            <Btn title="Italic (Ctrl+I)"    active={editor.isActive('italic')}    onClick={() => editor.chain().focus().toggleItalic().run()}><Italic size={14} /></Btn>
+            <Btn title="Underline (Ctrl+U)" active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}><UnderlineIcon size={14} /></Btn>
+            <Btn title="Strikethrough"      active={editor.isActive('strike')}    onClick={() => editor.chain().focus().toggleStrike().run()}><Strikethrough size={14} /></Btn>
+            <Div />
+            <Btn title="Paragraph" active={editor.isActive('paragraph')}              onClick={() => editor.chain().focus().setParagraph().run()}><Type size={14} /></Btn>
+            <Btn title="Heading 1" active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}><Heading1 size={14} /></Btn>
+            <Btn title="Heading 2" active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}><Heading2 size={14} /></Btn>
+            <Btn title="Heading 3" active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}><Heading3 size={14} /></Btn>
+            <Div />
+            <Btn title="Align left"    active={editor.isActive({ textAlign: 'left' })}    onClick={() => editor.chain().focus().setTextAlign('left').run()}><AlignLeft size={14} /></Btn>
+            <Btn title="Align center"  active={editor.isActive({ textAlign: 'center' })}  onClick={() => editor.chain().focus().setTextAlign('center').run()}><AlignCenter size={14} /></Btn>
+            <Btn title="Align right"   active={editor.isActive({ textAlign: 'right' })}   onClick={() => editor.chain().focus().setTextAlign('right').run()}><AlignRight size={14} /></Btn>
+            <Btn title="Justify"       active={editor.isActive({ textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()}><AlignJustify size={14} /></Btn>
+            <Div />
+            <Btn title="Bullet list"  active={editor.isActive('bulletList')}  onClick={() => editor.chain().focus().toggleBulletList().run()}><List size={14} /></Btn>
+            <Btn title="Ordered list" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}><ListOrdered size={14} /></Btn>
+            <Btn title="Insert table" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table2 size={14} /></Btn>
+            <Btn title="Insert image" onClick={insertImage}><Image size={14} /></Btn>
+            <Div />
+            <Btn title="Link" active={editor.isActive('link')} onClick={() => {
+              const prev = (editor.getAttributes('link').href as string) ?? '';
+              const url = window.prompt('URL', prev);
+              if (url === null) return;
+              if (!url) { editor.chain().focus().extendMarkRange('link').unsetLink().run(); return; }
+              editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+            }}><Link2 size={14} /></Btn>
+            <Btn title="Highlight" active={editor.isActive('highlight')} onClick={() => editor.chain().focus().toggleHighlight({ color: '#fef08a' }).run()}><Highlighter size={14} /></Btn>
+            <Btn title="Clear formatting" onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}><Eraser size={14} /></Btn>
+          </div>
+        </div>
+        {/* Row 2: font / size / colors / RTL — horizontally scrollable on mobile */}
+        <div className="overflow-x-auto border-t border-slate-700 [&::-webkit-scrollbar]:h-[2px] [&::-webkit-scrollbar-thumb]:bg-slate-600">
+          <div className="px-2 py-1.5 flex items-center gap-1 min-w-max">
+            <select
+              defaultValue=""
+              onChange={e => { editor.chain().focus().setFontFamily(e.target.value).run(); e.target.value = ''; }}
+              className="text-xs bg-slate-700 text-slate-200 border border-slate-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              aria-label="Font family"
+            >
+              <option value="" disabled>Font…</option>
+              {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+            </select>
+            <select
+              defaultValue=""
+              onChange={e => { editor.chain().focus().setMark('textStyle', { fontSize: `${e.target.value}px` }).run(); e.target.value = ''; }}
+              className="text-xs bg-slate-700 text-slate-200 border border-slate-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-cyan-500 w-20"
+              aria-label="Font size"
+            >
+              <option value="" disabled>Size…</option>
+              {FONT_SIZES.map(s => <option key={s} value={s}>{s}px</option>)}
+            </select>
+            <Div />
+            <label title="Text color" className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer flex items-center transition-colors" onMouseDown={e => e.preventDefault()} onClick={() => colorRef.current?.click()}>
+              <Palette size={14} />
+              <input ref={colorRef} type="color" aria-label="Text color picker" title="Text color" className="w-0 h-0 opacity-0 absolute" defaultValue="#1a1a1a"
+                onInput={e => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()} />
+            </label>
+            <label title="Highlight color" className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer flex items-center transition-colors" onMouseDown={e => e.preventDefault()} onClick={() => hlColorRef.current?.click()}>
+              <Highlighter size={14} />
+              <input ref={hlColorRef} type="color" aria-label="Highlight color picker" title="Highlight color" className="w-0 h-0 opacity-0 absolute" defaultValue="#fef08a"
+                onInput={e => editor.chain().focus().toggleHighlight({ color: (e.target as HTMLInputElement).value }).run()} />
+            </label>
+            <Div />
+            <Btn title="Toggle RTL / LTR" active={docRTL} onClick={() => setDocRTL(v => !v)}>
+              <span className="text-xs font-mono">RTL</span>
+            </Btn>
+          </div>
         </div>
       </div>
 
       {/* ── Secondary toolbar ──────────────────────────────────────────────── */}
-      <div className="bg-slate-800/70 border-x border-slate-700 px-2 py-1.5 flex flex-wrap items-center gap-1">
+      <div className="bg-slate-800/70 border-x border-slate-700 overflow-x-auto [&::-webkit-scrollbar]:h-[2px] [&::-webkit-scrollbar-thumb]:bg-slate-600">
+      <div className="px-2 py-1.5 flex items-center gap-1 min-w-max">
         <button type="button" title="Page settings" onClick={() => { setShowPageSettings(v => !v); setShowTemplates(false); }}
           className={cn('flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors', showPageSettings ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white hover:bg-slate-700')}>
           <Settings2 size={12} /> Page
@@ -668,6 +654,7 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
             </button>
           );
         })}
+      </div>
       </div>
 
       {/* ── Page Settings panel ───────────────────────────────────────────── */}
@@ -737,8 +724,8 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
         </div>
       )}
 
-      {/* ── Keyboard hint ──────────────────────────────────────────────────── */}
-      <div className="bg-slate-800/50 border-x border-slate-700 px-3 py-1">
+      {/* ── Keyboard hint — desktop only ───────────────────────────────────── */}
+      <div className="hidden md:block bg-slate-800/50 border-x border-slate-700 px-3 py-1">
         <span className="text-xs text-slate-600">
           Ctrl+B Bold · Ctrl+I Italic · Ctrl+U Underline · Ctrl+Z Undo · Ctrl+H Find & Replace · Ctrl+P Print
         </span>
@@ -766,11 +753,11 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
       </div>
 
       {/* ── Status bar ──────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mt-2 px-1 flex-wrap gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-2 px-1 gap-2">
         <span className="text-xs text-slate-500">
           {wordCount.words} words · {wordCount.chars} chars · ~{Math.max(1, Math.ceil(wordCount.words / 200))} min read
         </span>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:h-[2px] [&::-webkit-scrollbar-thumb]:bg-slate-600">
           <button type="button" title="Print document (Ctrl+P)" onClick={handlePrint}
             className="flex items-center gap-1 text-xs px-2 py-1.5 rounded border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
             <Printer size={13} /> Print
