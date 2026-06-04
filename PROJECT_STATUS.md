@@ -7,7 +7,7 @@ Last updated: 2026-06-04 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** b4996fa - chore: auto-update PROJECT_STATUS.md
+- **Last commit:** 627dc6d - docs: fix PROJECT_STATUS.md format + update CI regex
 - **Last deployment:** 2026-06-04 - Cloudflare Pages (auto)
 
 ---
