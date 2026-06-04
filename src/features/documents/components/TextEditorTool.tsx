@@ -507,71 +507,68 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
   return (
     <div className="w-full space-y-0">
 
-      {/* ── Title bar ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 mb-3 px-1">
-        <button
-          type="button"
-          title="New document"
-          onClick={handleNewDocument}
-          className="text-slate-500 hover:text-white p-1.5 rounded-lg hover:bg-slate-700 transition-colors flex-shrink-0 border border-slate-700"
-        >
-          <FilePlus className="w-4 h-4" />
-        </button>
-        <input
-          value={docTitle}
-          onChange={e => {
-            setDocTitle(e.target.value);
-            docTitleRef.current = e.target.value;
-            setSaveStatus('saving');
-            clearTimeout(draftTimerRef.current);
-            draftTimerRef.current = setTimeout(() => {
-              if (!editor) return;
-              localStorage.setItem(DRAFT_KEY, JSON.stringify({
-                title: e.target.value,
-                content: editor.getHTML(),
-                savedAt: new Date().toISOString(),
-              }));
-              setSaveStatus('saved');
-            }, 2000);
-          }}
-          className="bg-transparent text-white text-xl font-semibold border-b-2 border-transparent hover:border-slate-600 focus:border-cyan-500 focus:outline-none px-1 py-1 flex-1 placeholder:text-slate-600"
-          placeholder="Document title..."
-          aria-label="Document title"
-        />
-        <span className="text-xs text-slate-500 flex items-center gap-1.5 whitespace-nowrap bg-slate-800/50 px-2.5 py-1 rounded-full border border-slate-700">
-          {saveStatus === 'saving'  && <><Loader2 className="w-3 h-3 animate-spin text-yellow-400" /><span className="text-yellow-400">Saving…</span></>}
-          {saveStatus === 'saved'   && <><Check   className="w-3 h-3 text-green-400" /><span className="text-green-400">Saved locally</span></>}
-          {saveStatus === 'unsaved' && <><span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" /><span className="text-orange-400">Unsaved</span></>}
-        </span>
-      </div>
-
-      {/* ── Main toolbar ─────────────────────────────────────────────────── */}
+      {/* ── Toolbar (4 connected rows) ────────────────────────────────────── */}
       <div className="bg-slate-800 border border-slate-700 rounded-t-lg">
-        {/* Row 1: formatting — horizontally scrollable on mobile */}
-        <div className="overflow-x-auto [&::-webkit-scrollbar]:h-[2px] [&::-webkit-scrollbar-thumb]:bg-slate-600">
-          <div className="p-2 flex items-center gap-1 min-w-max">
-            <Btn title="Undo (Ctrl+Z)" onClick={() => editor.chain().focus().undo().run()}><Undo2 size={14} /></Btn>
-            <Btn title="Redo (Ctrl+Y)" onClick={() => editor.chain().focus().redo().run()}><Redo2 size={14} /></Btn>
+
+        {/* Row 1: Title bar */}
+        <div className="px-3 py-2 flex items-center gap-2 border-b border-slate-700/50">
+          <button type="button" title="New document" onClick={handleNewDocument}
+            className="text-slate-500 hover:text-white p-1 rounded hover:bg-slate-700 transition-colors flex-shrink-0">
+            <FilePlus className="w-3.5 h-3.5" />
+          </button>
+          <input
+            value={docTitle}
+            onChange={e => {
+              setDocTitle(e.target.value);
+              docTitleRef.current = e.target.value;
+              setSaveStatus('saving');
+              clearTimeout(draftTimerRef.current);
+              draftTimerRef.current = setTimeout(() => {
+                if (!editor) return;
+                localStorage.setItem(DRAFT_KEY, JSON.stringify({
+                  title: e.target.value,
+                  content: editor.getHTML(),
+                  savedAt: new Date().toISOString(),
+                }));
+                setSaveStatus('saved');
+              }, 2000);
+            }}
+            className="bg-transparent text-white text-sm font-medium border-0 focus:outline-none flex-1 placeholder:text-slate-600 min-w-0"
+            placeholder="Document title..."
+            aria-label="Document title"
+          />
+          <span className="text-xs flex items-center gap-1 whitespace-nowrap flex-shrink-0">
+            {saveStatus === 'saving'  && <><Loader2 className="w-3 h-3 animate-spin text-yellow-400" /><span className="text-yellow-400">Saving…</span></>}
+            {saveStatus === 'saved'   && <><Check className="w-3 h-3 text-green-400" /><span className="text-green-400">Saved</span></>}
+            {saveStatus === 'unsaved' && <span className="text-orange-400">● Unsaved</span>}
+          </span>
+        </div>
+
+        {/* Row 2: Formatting — horizontally scrollable on mobile */}
+        <div className="overflow-x-auto border-t border-slate-700/50 [&::-webkit-scrollbar]:h-[2px] [&::-webkit-scrollbar-thumb]:bg-slate-600">
+          <div className="px-2 py-1.5 flex items-center gap-1 min-w-max">
+            <Btn title="Undo (Ctrl+Z)" onClick={() => editor.chain().focus().undo().run()}><Undo2 size={13} /></Btn>
+            <Btn title="Redo (Ctrl+Y)" onClick={() => editor.chain().focus().redo().run()}><Redo2 size={13} /></Btn>
             <Div />
-            <Btn title="Bold (Ctrl+B)"      active={editor.isActive('bold')}      onClick={() => editor.chain().focus().toggleBold().run()}><Bold size={14} /></Btn>
-            <Btn title="Italic (Ctrl+I)"    active={editor.isActive('italic')}    onClick={() => editor.chain().focus().toggleItalic().run()}><Italic size={14} /></Btn>
-            <Btn title="Underline (Ctrl+U)" active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}><UnderlineIcon size={14} /></Btn>
-            <Btn title="Strikethrough"      active={editor.isActive('strike')}    onClick={() => editor.chain().focus().toggleStrike().run()}><Strikethrough size={14} /></Btn>
+            <Btn title="Bold (Ctrl+B)"      active={editor.isActive('bold')}      onClick={() => editor.chain().focus().toggleBold().run()}><Bold size={13} /></Btn>
+            <Btn title="Italic (Ctrl+I)"    active={editor.isActive('italic')}    onClick={() => editor.chain().focus().toggleItalic().run()}><Italic size={13} /></Btn>
+            <Btn title="Underline (Ctrl+U)" active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}><UnderlineIcon size={13} /></Btn>
+            <Btn title="Strikethrough"      active={editor.isActive('strike')}    onClick={() => editor.chain().focus().toggleStrike().run()}><Strikethrough size={13} /></Btn>
             <Div />
-            <Btn title="Paragraph" active={editor.isActive('paragraph')}              onClick={() => editor.chain().focus().setParagraph().run()}><Type size={14} /></Btn>
-            <Btn title="Heading 1" active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}><Heading1 size={14} /></Btn>
-            <Btn title="Heading 2" active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}><Heading2 size={14} /></Btn>
-            <Btn title="Heading 3" active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}><Heading3 size={14} /></Btn>
+            <Btn title="Paragraph" active={editor.isActive('paragraph')}              onClick={() => editor.chain().focus().setParagraph().run()}><Type size={13} /></Btn>
+            <Btn title="Heading 1" active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}><Heading1 size={13} /></Btn>
+            <Btn title="Heading 2" active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}><Heading2 size={13} /></Btn>
+            <Btn title="Heading 3" active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}><Heading3 size={13} /></Btn>
             <Div />
-            <Btn title="Align left"    active={editor.isActive({ textAlign: 'left' })}    onClick={() => editor.chain().focus().setTextAlign('left').run()}><AlignLeft size={14} /></Btn>
-            <Btn title="Align center"  active={editor.isActive({ textAlign: 'center' })}  onClick={() => editor.chain().focus().setTextAlign('center').run()}><AlignCenter size={14} /></Btn>
-            <Btn title="Align right"   active={editor.isActive({ textAlign: 'right' })}   onClick={() => editor.chain().focus().setTextAlign('right').run()}><AlignRight size={14} /></Btn>
-            <Btn title="Justify"       active={editor.isActive({ textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()}><AlignJustify size={14} /></Btn>
+            <Btn title="Align left"    active={editor.isActive({ textAlign: 'left' })}    onClick={() => editor.chain().focus().setTextAlign('left').run()}><AlignLeft size={13} /></Btn>
+            <Btn title="Align center"  active={editor.isActive({ textAlign: 'center' })}  onClick={() => editor.chain().focus().setTextAlign('center').run()}><AlignCenter size={13} /></Btn>
+            <Btn title="Align right"   active={editor.isActive({ textAlign: 'right' })}   onClick={() => editor.chain().focus().setTextAlign('right').run()}><AlignRight size={13} /></Btn>
+            <Btn title="Justify"       active={editor.isActive({ textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()}><AlignJustify size={13} /></Btn>
             <Div />
-            <Btn title="Bullet list"  active={editor.isActive('bulletList')}  onClick={() => editor.chain().focus().toggleBulletList().run()}><List size={14} /></Btn>
-            <Btn title="Ordered list" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}><ListOrdered size={14} /></Btn>
-            <Btn title="Insert table" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table2 size={14} /></Btn>
-            <Btn title="Insert image" onClick={insertImage}><Image size={14} /></Btn>
+            <Btn title="Bullet list"  active={editor.isActive('bulletList')}  onClick={() => editor.chain().focus().toggleBulletList().run()}><List size={13} /></Btn>
+            <Btn title="Ordered list" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}><ListOrdered size={13} /></Btn>
+            <Btn title="Insert table" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table2 size={13} /></Btn>
+            <Btn title="Insert image" onClick={insertImage}><Image size={13} /></Btn>
             <Div />
             <Btn title="Link" active={editor.isActive('link')} onClick={() => {
               const prev = (editor.getAttributes('link').href as string) ?? '';
@@ -579,82 +576,67 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
               if (url === null) return;
               if (!url) { editor.chain().focus().extendMarkRange('link').unsetLink().run(); return; }
               editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
-            }}><Link2 size={14} /></Btn>
-            <Btn title="Highlight" active={editor.isActive('highlight')} onClick={() => editor.chain().focus().toggleHighlight({ color: '#fef08a' }).run()}><Highlighter size={14} /></Btn>
-            <Btn title="Clear formatting" onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}><Eraser size={14} /></Btn>
+            }}><Link2 size={13} /></Btn>
+            <Btn title="Highlight" active={editor.isActive('highlight')} onClick={() => editor.chain().focus().toggleHighlight({ color: '#fef08a' }).run()}><Highlighter size={13} /></Btn>
+            <Btn title="Clear formatting" onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}><Eraser size={13} /></Btn>
           </div>
         </div>
-        {/* Row 2: font / size / colors / RTL — horizontally scrollable on mobile */}
-        <div className="overflow-x-auto border-t border-slate-700 [&::-webkit-scrollbar]:h-[2px] [&::-webkit-scrollbar-thumb]:bg-slate-600">
-          <div className="px-2 py-1.5 flex items-center gap-1 min-w-max">
-            <select
-              defaultValue=""
-              onChange={e => { editor.chain().focus().setFontFamily(e.target.value).run(); e.target.value = ''; }}
-              className="text-xs bg-slate-700 text-slate-200 border border-slate-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-              aria-label="Font family"
-            >
-              <option value="" disabled>Font…</option>
-              {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-            </select>
-            <select
-              defaultValue=""
-              onChange={e => { editor.chain().focus().setMark('textStyle', { fontSize: `${e.target.value}px` }).run(); e.target.value = ''; }}
-              className="text-xs bg-slate-700 text-slate-200 border border-slate-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-cyan-500 w-20"
-              aria-label="Font size"
-            >
-              <option value="" disabled>Size…</option>
-              {FONT_SIZES.map(s => <option key={s} value={s}>{s}px</option>)}
-            </select>
-            <Div />
-            <label title="Text color" className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer flex items-center transition-colors" onMouseDown={e => e.preventDefault()} onClick={() => colorRef.current?.click()}>
-              <Palette size={14} />
-              <input ref={colorRef} type="color" aria-label="Text color picker" title="Text color" className="w-0 h-0 opacity-0 absolute" defaultValue="#1a1a1a"
-                onInput={e => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()} />
-            </label>
-            <label title="Highlight color" className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer flex items-center transition-colors" onMouseDown={e => e.preventDefault()} onClick={() => hlColorRef.current?.click()}>
-              <Highlighter size={14} />
-              <input ref={hlColorRef} type="color" aria-label="Highlight color picker" title="Highlight color" className="w-0 h-0 opacity-0 absolute" defaultValue="#fef08a"
-                onInput={e => editor.chain().focus().toggleHighlight({ color: (e.target as HTMLInputElement).value }).run()} />
-            </label>
-            <Div />
-            <Btn title="Toggle RTL / LTR" active={docRTL} onClick={() => setDocRTL(v => !v)}>
-              <span className="text-xs font-mono">RTL</span>
-            </Btn>
-          </div>
-        </div>
-      </div>
 
-      {/* ── Secondary toolbar ──────────────────────────────────────────────── */}
-      <div className="bg-slate-800/70 border-x border-slate-700 overflow-x-auto [&::-webkit-scrollbar]:h-[2px] [&::-webkit-scrollbar-thumb]:bg-slate-600">
-      <div className="px-2 py-1.5 flex items-center gap-1 min-w-max">
-        <button type="button" title="Page settings" onClick={() => { setShowPageSettings(v => !v); setShowTemplates(false); }}
-          className={cn('flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors', showPageSettings ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white hover:bg-slate-700')}>
-          <Settings2 size={12} /> Page
-        </button>
-        <button type="button" title="Find and replace (Ctrl+H)" onClick={() => setShowFindReplace(v => !v)}
-          className={cn('flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors', showFindReplace ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white hover:bg-slate-700')}>
-          <Search size={12} /> Find & Replace
-        </button>
-        <button type="button" title="Load a template" onClick={() => { setShowTemplates(v => !v); setShowPageSettings(false); }}
-          className={cn('flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors', showTemplates ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white hover:bg-slate-700')}>
-          <FileText size={12} /> Templates
-        </button>
-
-        <div className="flex-1" />
-
-        {/* AI tools */}
-        {(['improve', 'translate', 'summarize'] as const).map(action => {
-          const label = action === 'improve' ? 'Improve writing' : action === 'translate' ? 'Translate selection' : 'Summarize text';
-          return (
-            <button key={action} type="button" title={label} disabled={isAiLoading}
-              onClick={() => void handleAiAction(action)}
-              className="flex items-center gap-1 text-xs px-2 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-40 transition-colors capitalize">
+        {/* Row 3: Font / size / colors / RTL + Page / Find / Templates + AI */}
+        <div className="border-t border-slate-700/50 px-2 py-1 flex flex-wrap items-center gap-1 bg-slate-800/60">
+          <select defaultValue=""
+            onChange={e => { editor.chain().focus().setFontFamily(e.target.value).run(); e.target.value = ''; }}
+            className="text-xs bg-slate-700 text-slate-200 border border-slate-600 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+            aria-label="Font family">
+            <option value="" disabled>Font…</option>
+            {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+          </select>
+          <select defaultValue=""
+            onChange={e => { editor.chain().focus().setMark('textStyle', { fontSize: `${e.target.value}px` }).run(); e.target.value = ''; }}
+            className="text-xs bg-slate-700 text-slate-200 border border-slate-600 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-cyan-500 w-[4.5rem]"
+            aria-label="Font size">
+            <option value="" disabled>Size…</option>
+            {FONT_SIZES.map(s => <option key={s} value={s}>{s}px</option>)}
+          </select>
+          <Div />
+          <label title="Text color" className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer flex items-center transition-colors" onMouseDown={e => e.preventDefault()} onClick={() => colorRef.current?.click()}>
+            <Palette size={13} />
+            <input ref={colorRef} type="color" aria-label="Text color picker" title="Text color" className="w-0 h-0 opacity-0 absolute" defaultValue="#1a1a1a"
+              onInput={e => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()} />
+          </label>
+          <label title="Highlight color" className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer flex items-center transition-colors" onMouseDown={e => e.preventDefault()} onClick={() => hlColorRef.current?.click()}>
+            <Highlighter size={13} />
+            <input ref={hlColorRef} type="color" aria-label="Highlight color picker" title="Highlight color" className="w-0 h-0 opacity-0 absolute" defaultValue="#fef08a"
+              onInput={e => editor.chain().focus().toggleHighlight({ color: (e.target as HTMLInputElement).value }).run()} />
+          </label>
+          <Btn title="Toggle RTL / LTR" active={docRTL} onClick={() => setDocRTL(v => !v)}>
+            <span className="text-xs font-mono">RTL</span>
+          </Btn>
+          <Div />
+          <button type="button" title="Page settings" onClick={() => { setShowPageSettings(v => !v); setShowTemplates(false); }}
+            className={cn('flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors', showPageSettings ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white hover:bg-slate-700')}>
+            <Settings2 size={12} /> Page
+          </button>
+          <button type="button" title="Find and replace (Ctrl+H)" onClick={() => setShowFindReplace(v => !v)}
+            className={cn('flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors', showFindReplace ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white hover:bg-slate-700')}>
+            <Search size={12} /> Find
+          </button>
+          <button type="button" title="Load a template" onClick={() => { setShowTemplates(v => !v); setShowPageSettings(false); }}
+            className={cn('flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors', showTemplates ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white hover:bg-slate-700')}>
+            <FileText size={12} /> Templates
+          </button>
+          <div className="flex-1" />
+          {(['improve', 'translate', 'summarize'] as const).map(action => (
+            <button key={action} type="button"
+              title={action === 'improve' ? 'Improve writing' : action === 'translate' ? 'Translate selection' : 'Summarize text'}
+              disabled={isAiLoading} onClick={() => void handleAiAction(action)}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-40 transition-colors">
               {isAiLoading ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
               {action === 'improve' ? 'Improve' : action === 'translate' ? 'Translate' : 'Summarize'}
             </button>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+
       </div>
 
       {/* ── Page Settings panel ───────────────────────────────────────────── */}
@@ -724,13 +706,13 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
         </div>
       )}
 
-      {/* ── Keyboard hint + page info — desktop only ───────────────────────── */}
-      <div className="hidden md:flex bg-slate-800/30 border-x border-b border-slate-700 px-3 py-1.5 items-center justify-between">
-        <span className="text-xs text-slate-600">
-          Ctrl+B Bold · Ctrl+I Italic · Ctrl+U Underline · Ctrl+Z Undo · Ctrl+H Find & Replace · Ctrl+P Print
+      {/* ── Keyboard hint + page info ──────────────────────────────────────── */}
+      <div className="bg-slate-800/30 border-x border-b border-slate-700 px-3 py-1 flex items-center justify-between">
+        <span className="hidden md:inline text-xs text-slate-600">
+          Ctrl+B · Ctrl+I · Ctrl+U · Ctrl+Z · Ctrl+H · Ctrl+P
         </span>
         <span className="text-xs text-slate-600 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500/60 inline-block" />
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500/50 inline-block" />
           {pageSize} · {orientation === 'portrait' ? 'Portrait' : 'Landscape'}
         </span>
       </div>
@@ -757,17 +739,10 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
       </div>
 
       {/* ── Status bar ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-3 px-1 gap-2">
-        <div className="flex items-center gap-3 text-xs text-slate-500">
-          <span className="flex items-center gap-1">
-            <Type size={11} className="text-slate-600" />
-            {wordCount.words} words
-          </span>
-          <span className="text-slate-700">·</span>
-          <span>{wordCount.chars} chars</span>
-          <span className="text-slate-700">·</span>
-          <span>~{Math.max(1, Math.ceil(wordCount.words / 200))} min read</span>
-        </div>
+      <div className="flex items-center justify-between mt-2 px-1 flex-wrap gap-2">
+        <span className="text-xs text-slate-500">
+          {wordCount.words} words · {wordCount.chars} chars · ~{Math.max(1, Math.ceil(wordCount.words / 200))} min read
+        </span>
         <div className="flex gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:h-[2px] [&::-webkit-scrollbar-thumb]:bg-slate-600">
           <button type="button" title="Print document (Ctrl+P)" onClick={handlePrint}
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 hover:border-slate-600 transition-all whitespace-nowrap">
