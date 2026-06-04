@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 5ea2cf6 - ui: Text Editor visual polish — title bar, toolbar, page, status bar
+- **Last commit:** 4100ee7 - ui: compact editor layout — title integrated into toolbar, 3-row design
 - **Last deployment:** 2026-06-04 - Cloudflare Pages (auto)
 
 ---
