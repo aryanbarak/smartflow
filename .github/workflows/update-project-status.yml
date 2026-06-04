@@ -43,8 +43,8 @@ jobs:
           today = date.today().isoformat()
 
           content = re.sub(
-              r'# Last updated: \d{4}-\d{2}-\d{2}',
-              f'# Last updated: {today}',
+              r'Last updated: \d{4}-\d{2}-\d{2}',
+              f'Last updated: {today}',
               content
           )
           content = re.sub(

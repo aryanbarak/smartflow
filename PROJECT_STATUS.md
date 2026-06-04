@@ -1,105 +1,115 @@
 # dailyFlow — PROJECT STATUS
-# Last updated: 2026-06-04
-# Keep this file under 2 pages — update after every session
+
+Last updated: 2026-06-04 — Keep this file under 2 pages, update after every session.
 
 ---
 
 ## Current Branch
 
-- **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** b57e369 - docs: add MASTER_CONTEXT.md, update PROJECT_STATUS.md for 2026-06-04 session
+- **Branch:** `main`
+- **Last commit:** b4996fa - chore: auto-update PROJECT_STATUS.md
 - **Last deployment:** 2026-06-04 - Cloudflare Pages (auto)
 
 ---
 
 ## Recent Decisions
+
 | Date | Decision | Reason |
-|------|----------|--------|
+| --- | --- | --- |
+| 2026-06-04 | TextEditorTool → forwardRef + loadFromLibrary | Props + key remount had unfixable timing race |
+| 2026-06-04 | Move ToolCard to module scope | Defined inside DocumentsPage → remounted editor on every re-render |
+| 2026-06-04 | StarterKit.configure({ link: false, underline: false }) | TipTap v3 includes Link+Underline in StarterKit |
+| 2026-06-04 | Ctrl+S → export .docx | Browser was intercepting Ctrl+S and opening Save Page dialog |
+| 2026-06-04 | Rate limit by user_id from JWT (IP fallback) | Shared NAT would block multiple users |
 | 2026-05-30 | Audit-first before new features | Found 19 unused files, 1,625 lines of dead code |
-| 2026-05-30 | Drop user_api_keys table + feature | Hook had zero importers; feature never built |
-| 2026-05-30 | OLLAMA_VULKAN=1 for Intel Arc 140V | CPU was 13 t/s, GPU 14.5 t/s |
-| 2026-05-30 | OLLAMA_MODELS=E:\ollamaModels | F: drive didn't exist |
-| 2026-05-30 | Skip Continue.dev for now | Crash with Ollama on Windows/Intel Arc |
 | 2026-05-30 | Use kb-load + Claude.ai as primary workflow | Most reliable, largest context window |
-| 2026-05-28 | English-only for all docs/prompts | Better AI embedding quality |
-| 2026-05-28 | config.yaml over config.json | Continue.dev v1.2+ dropped config.json |
 
 ---
 
 ## Known Bugs
+
 | # | Bug | Severity | Status |
-|---|-----|----------|--------|
+| --- | --- | --- | --- |
 | 1 | learn_ai_messages grows unbounded | Low | Open |
 | 2 | Family JSONB arrays grow unbounded | Low | Open |
 | 3 | No optimistic rollback on write failure | Medium | Open |
-| 4 | Single Gemini model — no fallback | Medium | Partial (Ollama ready) |
-| 5 | No rate limiting on /analyze endpoint | Medium | Open |
-| 6 | Short signed URL lifetime for documents | Low | Open |
-| 7 | No error tracking (Sentry) | Low | Open |
-| 8 | dailyflow-ai-worker: no git, no CI/CD | Low | Open |
-| 9 | Supabase types not regenerated for new tables | Low | Open |
+| 4 | Single Gemini model — no fallback | Medium | Open |
+| 5 | Short signed URL lifetime for documents | Low | Open |
+| 6 | No error tracking (Sentry) | Low | Open |
 
 ---
 
 ## Next Priorities
-1. **Rate limiting on AI Worker** — Cloudflare KV counter (Bug #5)
-2. **Gemini → Ollama fallback** in Worker (Bug #4)
-3. **Supabase types regeneration** — remove `as any` casts (Bug #9)
+
+1. **Gemini → Ollama fallback** in Worker (Bug #4)
+2. **Optimistic rollback** — affects all mutation hooks
+3. **Prune learn_ai_messages** — DB trigger or scheduled function (Bug #1)
 4. **Phase 3** — AI Gateway + provider routing
-5. **Fix Continue.dev** — debug Ollama crash on Windows/Intel Arc
+5. **Mobile layout** — Finance and Family pages
 
 ---
 
 ## Blocked Tasks
+
 | Task | Blocked by | Notes |
-|------|-----------|-------|
-| Continue.dev local AI | Ollama crash on Windows/Intel Arc | Use Claude.ai instead for now |
-| Optimistic rollback | Needs planning | Affects all mutation hooks |
-| Supabase types | Need to run `supabase gen types` | Then fix all `as any` |
+| --- | --- | --- |
+| Continue.dev local AI | Ollama crash on Windows/Intel Arc | Use Claude.ai instead |
+| Optimistic rollback | Needs architecture planning | Affects all mutation hooks |
+
+---
+
+## Completed This Session (2026-06-04)
+
+### Documents Feature — Major fixes
+
+- ✅ HTML files now appear in Library (filter was PDF-only)
+- ✅ Edit button loads file content — forwardRef + useImperativeHandle + loadFromLibrary
+- ✅ Root cause: ToolCard inside DocumentsPage remounted editor on every re-render
+- ✅ TipTap v3 duplicate extension warning fixed (StarterKit v3 includes Link + Underline)
+- ✅ View button renders HTML with proper styling in new window
+- ✅ Download uses clean filename (doc.title, no timestamp suffix)
+- ✅ Upload: unique filename + upsert: true on Supabase Storage
+
+### Text Editor UI
+
+- ✅ Title integrated into toolbar Row 1 (compact 4-row layout, no wasted space)
+- ✅ Toolbar rows horizontally scrollable on mobile
+- ✅ Editor uses full page width (max-w-6xl removed when editor tab active)
+- ✅ Ctrl+S exports .docx (global keydown listener, latest-ref pattern)
+- ✅ Warmer page background (#eeeae4), ring on paper, my-8 spacing
+- ✅ Library doc actions: icon-only on mobile, text on desktop
+
+### AI Worker
+
+- ✅ Rate limiting: user_id from JWT sub (IP fallback) — per endpoint, 1h window
+- ✅ Deployed via wrangler deploy
+
+### TypeScript
+
+- ✅ All as any casts removed (familyService, familyHubService, errorMessages, tasksService)
+
+---
+
+## Completed Previously (2026-05-28 → 2026-06-03)
+
+- ✅ All core features (Tasks, Calendar, Finance, Family, Documents, Music, Photos, Links, AI, Habits, Journal, Flashcards, Settings)
+- ✅ i18n (en/de/fa — RTL for Farsi), PWA (installable + offline badge)
+- ✅ Project Audit & Cleanup (19 files, 1,625 lines deleted)
+- ✅ PDF tools (Merge, Split, Compress, OCR, Image→PDF)
+- ✅ DeepL Translation + ElevenLabs TTS + Photo AI tagging via Cloudflare Worker
+- ✅ Rate limiting on AI Worker (KV-based, per user)
+- ✅ Supabase types regenerated — all as any casts eliminated
+- ✅ MASTER_CONTEXT.md created (architecture, patterns, critical rules)
 
 ---
 
 ## Local AI Status
-| Model | Size | Location | GPU | Speed |
-|-------|------|----------|-----|-------|
-| qwen2.5-coder:7b | 4.7 GB | E:\ollamaModels | ✅ Vulkan | ~14 t/s |
-| qwen2.5-coder:14b | 9.0 GB | E:\ollamaModels | ✅ Vulkan | ~8 t/s |
-| llama3.1:8b | 4.9 GB | E:\ollamaModels | ✅ Vulkan | ~12 t/s |
-| nomic-embed-text | 0.3 GB | E:\ollamaModels | ✅ Vulkan | embeddings only |
 
----
+| Model | Size | GPU | Speed |
+| --- | --- | --- | --- |
+| qwen2.5-coder:7b | 4.7 GB | ✅ Vulkan | ~14 t/s |
+| qwen2.5-coder:14b | 9.0 GB | ✅ Vulkan | ~8 t/s |
+| llama3.1:8b | 4.9 GB | ✅ Vulkan | ~12 t/s |
+| nomic-embed-text | 0.3 GB | ✅ Vulkan | embeddings |
 
-## Completed This Week (2026-05-28 to 2026-06-01)
-
-- ✅ All High Impact features (Habit Tracker, Budget Goals, Push Notifications, Global Search)
-- ✅ All Medium Impact features (Journal, Recurring, CSV, Pomodoro+Task, Links)
-- ✅ All Nice-to-Have features (Mood Tracker, Flashcards, Shopping List)
-- ✅ Settings page (full — 5 tabs)
-- ✅ i18n (en/de/fa — English default, RTL for Farsi)
-- ✅ Phase 1: Ollama + GPU setup (OLLAMA_VULKAN=1, 4 models, E:\ollamaModels)
-- ✅ Phase 2: Knowledge Base (ChromaDB + nomic-embed-text, 32 vectors)
-- ✅ Prompt Library (.prompts/ — 24 files, 7 categories)
-- ✅ Project Audit & Cleanup (19 files removed, 1,625 lines deleted)
-- ✅ Document Intelligence — PDF Merge (pdf-lib, client-side, drag-to-reorder)
-- ✅ AI Summary — PDF text extraction + Gemini summary + key points (cached in DB)
-- ✅ DeepL Translation — integrated in Cloudflare Worker (de/en/fa, 1M free chars/month)
-- ✅ Text Translator — standalone component replacing document-tied translation
-- ✅ Filename fix — removed timestamp prefix from uploaded document names
-
----
-
-## AI Workflow (Current)
-```
-Morning:
-  kb-load                     → generate context_output.md
-  paste into Claude.ai        → AI Technical Architect ready
-
-During development:
-  Claude Code (VSCode/terminal) → implement features, build, push
-  Claude.ai + context           → planning + architecture review
-
-After significant changes:
-  update .knowledge/docs/       → roadmap, lessons learned
-  python .knowledge/build_kb.py → rebuild knowledge base vectors
-  update PROJECT_STATUS.md      → keep status current
-```
+Location: E:\ollamaModels — OLLAMA_VULKAN=1
