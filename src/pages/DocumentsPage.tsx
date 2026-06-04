@@ -364,7 +364,10 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-6xl mx-auto">
+    <div className={cn(
+      "px-4 sm:px-6 lg:px-8 py-6",
+      activeTab !== "editor" && "max-w-6xl mx-auto",
+    )}>
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -567,24 +570,17 @@ export default function DocumentsPage() {
         </TabsContent>
 
         {/* ── Text Editor Tab ────────────────────────────────────────── */}
-        {/* ── Text Editor Tab ────────────────────────────────────────── */}
         <TabsContent
           value="editor"
           forceMount
           className={activeTab === "editor" ? "" : "hidden"}
         >
-          <ToolCard
-            title="Text Editor"
-            description="Write and export documents as PDF or plain text."
-            icon={<PenLine className="w-4 h-4 text-primary" />}
-          >
-            <TextEditorTool
-              ref={editorRef}
-              onSave={(file, title) =>
-                createFromUpload(file, { title: title ?? null })
-              }
-            />
-          </ToolCard>
+          <TextEditorTool
+            ref={editorRef}
+            onSave={(file, title) =>
+              createFromUpload(file, { title: title ?? null })
+            }
+          />
         </TabsContent>
 
         {/* ── Audio Generator Tab ───────────────────────────────────────── */}
