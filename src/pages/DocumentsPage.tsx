@@ -81,6 +81,30 @@ function isHtml(mimeType: string | null, fileName: string) {
   return mimeType === 'text/html' || mimeType?.includes('html') || fileName.toLowerCase().endsWith('.html');
 }
 
+function ToolCard({
+  title,
+  description,
+  icon,
+  children,
+}: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          {icon} {title}
+        </CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+}
+
 export default function DocumentsPage() {
   const {
     documents,
@@ -326,31 +350,6 @@ export default function DocumentsPage() {
           </div>
         ))}
       </div>
-    );
-  }
-
-  // Wrap each tool tab in a card
-  function ToolCard({
-    title,
-    description,
-    icon,
-    children,
-  }: {
-    title: string;
-    description: string;
-    icon: React.ReactNode;
-    children: React.ReactNode;
-  }) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            {icon} {title}
-          </CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </CardHeader>
-        <CardContent>{children}</CardContent>
-      </Card>
     );
   }
 
