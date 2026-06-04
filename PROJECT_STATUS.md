@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** cef4db8 - fix: Ctrl+S downloads .docx instead of browser save-page dialog
+- **Last commit:** 9563e6d - fix: move exportDocxRef after handleExportDocx to avoid TDZ crash
 - **Last deployment:** 2026-06-04 - Cloudflare Pages (auto)
 
 ---
