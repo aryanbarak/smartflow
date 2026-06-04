@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 4c7cbf2 - fix: move ToolCard to module scope — stops TextEditorTool from remounting
+- **Last commit:** b4a9247 - ui: responsive toolbar + mobile-optimized Library doc actions
 - **Last deployment:** 2026-06-04 - Cloudflare Pages (auto)
 
 ---
