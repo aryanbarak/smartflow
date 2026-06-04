@@ -283,6 +283,21 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
   // Cleanup draft timer on unmount.
   useEffect(() => () => clearTimeout(draftTimerRef.current), []);
 
+  // Intercept Ctrl+S globally — download as .docx instead of browser "Save page".
+  const exportDocxRef = useRef<() => Promise<void>>(async () => { /* placeholder */ });
+  exportDocxRef.current = handleExportDocx; // always points to the latest closure
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        void exportDocxRef.current();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   // Restore draft on mount (within 7 days).
   useEffect(() => {
     if (!editor) return;
@@ -709,7 +724,7 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
       {/* ── Keyboard hint + page info ──────────────────────────────────────── */}
       <div className="bg-slate-800/30 border-x border-b border-slate-700 px-3 py-1 flex items-center justify-between">
         <span className="hidden md:inline text-xs text-slate-600">
-          Ctrl+B · Ctrl+I · Ctrl+U · Ctrl+Z · Ctrl+H · Ctrl+P
+          Ctrl+S Save .docx · Ctrl+B · Ctrl+I · Ctrl+U · Ctrl+Z · Ctrl+H · Ctrl+P
         </span>
         <span className="text-xs text-slate-600 flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-green-500/50 inline-block" />
@@ -744,13 +759,13 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
           {wordCount.words} words · {wordCount.chars} chars · ~{Math.max(1, Math.ceil(wordCount.words / 200))} min read
         </span>
         <div className="flex gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:h-[2px] [&::-webkit-scrollbar-thumb]:bg-slate-600">
+          <button type="button" title="Download as Word document (Ctrl+S)" onClick={() => void handleExportDocx()}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-slate-700 border border-slate-600 text-slate-200 hover:text-white hover:bg-slate-600 transition-all whitespace-nowrap">
+            <Download size={12} /> .docx
+          </button>
           <button type="button" title="Print document (Ctrl+P)" onClick={handlePrint}
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 hover:border-slate-600 transition-all whitespace-nowrap">
             <Printer size={12} /> Print
-          </button>
-          <button type="button" title="Download as .docx" onClick={() => void handleExportDocx()}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 hover:border-slate-600 transition-all whitespace-nowrap">
-            <Download size={12} /> .docx
           </button>
           <button type="button" title="Download as PDF" onClick={handleExportPdf} disabled={isExporting}
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 hover:border-slate-600 transition-all disabled:opacity-50 whitespace-nowrap">
