@@ -283,21 +283,6 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
   // Cleanup draft timer on unmount.
   useEffect(() => () => clearTimeout(draftTimerRef.current), []);
 
-  // Intercept Ctrl+S globally — download as .docx instead of browser "Save page".
-  const exportDocxRef = useRef<() => Promise<void>>(async () => { /* placeholder */ });
-  exportDocxRef.current = handleExportDocx; // always points to the latest closure
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        void exportDocxRef.current();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, []);
-
   // Restore draft on mount (within 7 days).
   useEffect(() => {
     if (!editor) return;
@@ -368,6 +353,21 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
     downloadBlob(blob, `${docTitle}.docx`);
     toast.success('.docx downloaded');
   };
+
+  // Intercept Ctrl+S globally — download .docx instead of browser "Save page".
+  const exportDocxRef = useRef<() => Promise<void>>(async () => { /* noop until editor ready */ });
+  exportDocxRef.current = handleExportDocx; // update every render so closure is fresh
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        void exportDocxRef.current();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const handleSaveToDocuments = async () => {
     if (!editor || !onSave) return;
