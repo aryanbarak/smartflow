@@ -1,5 +1,5 @@
 # dailyFlow — PROJECT STATUS
-# Last updated: 2026-06-03
+# Last updated: 2026-06-04
 # Keep this file under 2 pages — update after every session
 
 ---
@@ -7,8 +7,8 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 37c45e3 - refactor: replace prop-based initialContent with forwardRef loadFromLibrary
-- **Last deployment:** 2026-06-03 - Cloudflare Pages (auto)
+- **Last commit:** 4c7cbf2 - fix: move ToolCard to module scope — stops TextEditorTool from remounting
+- **Last deployment:** 2026-06-04 - Cloudflare Pages (auto)
 
 ---
 
