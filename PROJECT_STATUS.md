@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 1aea462 - fix: remove all as any casts after Supabase types regeneration
+- **Last commit:** b57e369 - docs: add MASTER_CONTEXT.md, update PROJECT_STATUS.md for 2026-06-04 session
 - **Last deployment:** 2026-06-04 - Cloudflare Pages (auto)
 
 ---
