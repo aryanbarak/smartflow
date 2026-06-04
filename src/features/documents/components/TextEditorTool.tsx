@@ -489,10 +489,10 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
       disabled={disabled}
       onMouseDown={e => { e.preventDefault(); if (!disabled) onClick(); }}
       className={cn(
-        'p-1.5 rounded text-sm transition-colors',
+        'p-2 rounded-lg text-sm transition-all',
         active
-          ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-          : 'text-slate-400 hover:text-white hover:bg-slate-700',
+          ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-sm shadow-cyan-500/10'
+          : 'text-slate-400 hover:text-white hover:bg-slate-700/80',
         disabled && 'opacity-40 cursor-not-allowed',
       )}
     >
@@ -500,7 +500,7 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
     </button>
   );
 
-  const Div = () => <div className="w-px h-5 bg-slate-700 mx-0.5 self-center" />;
+  const Div = () => <div className="w-px h-5 bg-slate-600/60 mx-1 self-center" />;
 
   if (!editor) return null;
 
@@ -508,12 +508,12 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
     <div className="w-full space-y-0">
 
       {/* ── Title bar ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-3 mb-3 px-1">
         <button
           type="button"
           title="New document"
           onClick={handleNewDocument}
-          className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-700 transition-colors flex-shrink-0"
+          className="text-slate-500 hover:text-white p-1.5 rounded-lg hover:bg-slate-700 transition-colors flex-shrink-0 border border-slate-700"
         >
           <FilePlus className="w-4 h-4" />
         </button>
@@ -534,14 +534,14 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
               setSaveStatus('saved');
             }, 2000);
           }}
-          className="bg-transparent text-white text-lg font-semibold border-b border-transparent hover:border-slate-600 focus:border-cyan-500 focus:outline-none px-1 py-0.5 flex-1"
-          placeholder="Untitled Document"
+          className="bg-transparent text-white text-xl font-semibold border-b-2 border-transparent hover:border-slate-600 focus:border-cyan-500 focus:outline-none px-1 py-1 flex-1 placeholder:text-slate-600"
+          placeholder="Document title..."
           aria-label="Document title"
         />
-        <span className="text-xs text-slate-500 flex items-center gap-1 whitespace-nowrap">
-          {saveStatus === 'saving'  && <><Loader2 className="w-3 h-3 animate-spin" /> Saving draft…</>}
-          {saveStatus === 'saved'   && <><Check   className="w-3 h-3 text-green-400" /> Draft saved locally ✓</>}
-          {saveStatus === 'unsaved' && '● Unsaved'}
+        <span className="text-xs text-slate-500 flex items-center gap-1.5 whitespace-nowrap bg-slate-800/50 px-2.5 py-1 rounded-full border border-slate-700">
+          {saveStatus === 'saving'  && <><Loader2 className="w-3 h-3 animate-spin text-yellow-400" /><span className="text-yellow-400">Saving…</span></>}
+          {saveStatus === 'saved'   && <><Check   className="w-3 h-3 text-green-400" /><span className="text-green-400">Saved locally</span></>}
+          {saveStatus === 'unsaved' && <><span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" /><span className="text-orange-400">Unsaved</span></>}
         </span>
       </div>
 
@@ -724,16 +724,20 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
         </div>
       )}
 
-      {/* ── Keyboard hint — desktop only ───────────────────────────────────── */}
-      <div className="hidden md:block bg-slate-800/50 border-x border-slate-700 px-3 py-1">
+      {/* ── Keyboard hint + page info — desktop only ───────────────────────── */}
+      <div className="hidden md:flex bg-slate-800/30 border-x border-b border-slate-700 px-3 py-1.5 items-center justify-between">
         <span className="text-xs text-slate-600">
           Ctrl+B Bold · Ctrl+I Italic · Ctrl+U Underline · Ctrl+Z Undo · Ctrl+H Find & Replace · Ctrl+P Print
+        </span>
+        <span className="text-xs text-slate-600 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500/60 inline-block" />
+          {pageSize} · {orientation === 'portrait' ? 'Portrait' : 'Landscape'}
         </span>
       </div>
 
       {/* ── White page area ───────────────────────────────────────────────── */}
       <div
-        className="border border-t-0 border-slate-700 rounded-b-lg overflow-auto bg-[#e8e8e8] min-h-[600px]"
+        className="border border-t-0 border-slate-700 rounded-b-lg overflow-auto min-h-[600px] bg-[#eeeae4]"
         onKeyDown={e => {
           if ((e.ctrlKey || e.metaKey) && e.key === 'h') { e.preventDefault(); setShowFindReplace(true); }
           if ((e.ctrlKey || e.metaKey) && e.key === 'p') { e.preventDefault(); handlePrint(); }
@@ -743,7 +747,7 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
           ref={pageRef}
           dir={docRTL ? 'rtl' : 'ltr'}
           className={cn(
-            'mx-auto my-6 shadow-xl rounded overflow-hidden bg-white',
+            'mx-auto my-8 shadow-xl rounded-sm overflow-hidden bg-white ring-1 ring-black/8',
             PAGE_DIM_CLASSES[pageSize][orientation],
             PADDING_CLASSES[margin],
           )}
@@ -753,33 +757,40 @@ function TextEditorTool({ onSave }, ref) {  const { t, lang } = useT();
       </div>
 
       {/* ── Status bar ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-2 px-1 gap-2">
-        <span className="text-xs text-slate-500">
-          {wordCount.words} words · {wordCount.chars} chars · ~{Math.max(1, Math.ceil(wordCount.words / 200))} min read
-        </span>
-        <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:h-[2px] [&::-webkit-scrollbar-thumb]:bg-slate-600">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-3 px-1 gap-2">
+        <div className="flex items-center gap-3 text-xs text-slate-500">
+          <span className="flex items-center gap-1">
+            <Type size={11} className="text-slate-600" />
+            {wordCount.words} words
+          </span>
+          <span className="text-slate-700">·</span>
+          <span>{wordCount.chars} chars</span>
+          <span className="text-slate-700">·</span>
+          <span>~{Math.max(1, Math.ceil(wordCount.words / 200))} min read</span>
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:h-[2px] [&::-webkit-scrollbar-thumb]:bg-slate-600">
           <button type="button" title="Print document (Ctrl+P)" onClick={handlePrint}
-            className="flex items-center gap-1 text-xs px-2 py-1.5 rounded border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-            <Printer size={13} /> Print
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 hover:border-slate-600 transition-all whitespace-nowrap">
+            <Printer size={12} /> Print
           </button>
           <button type="button" title="Download as .docx" onClick={() => void handleExportDocx()}
-            className="flex items-center gap-1 text-xs px-2 py-1.5 rounded border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-            <Download size={13} /> .docx
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 hover:border-slate-600 transition-all whitespace-nowrap">
+            <Download size={12} /> .docx
           </button>
           <button type="button" title="Download as PDF" onClick={handleExportPdf} disabled={isExporting}
-            className="flex items-center gap-1 text-xs px-2 py-1.5 rounded border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50">
-            <Download size={13} />
-            {isExporting ? 'Exporting…' : t('editor_export_pdf')}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 hover:border-slate-600 transition-all disabled:opacity-50 whitespace-nowrap">
+            <Download size={12} />
+            {isExporting ? 'Exporting…' : 'PDF'}
           </button>
           <button type="button" title="Download as plain text" onClick={handleExportTxt}
-            className="flex items-center gap-1 text-xs px-2 py-1.5 rounded border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-            <Download size={13} /> {t('editor_export_txt')}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 hover:border-slate-600 transition-all whitespace-nowrap">
+            <Download size={12} /> .txt
           </button>
           {onSave && (
             <button type="button" title="Save to Documents library" onClick={() => void handleSaveToDocuments()} disabled={isSaving}
-              className="flex items-center gap-1 text-xs px-2 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50">
-              <Save size={13} />
-              {isSaving ? 'Saving…' : t('editor_save_docs')}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-cyan-600 text-white hover:bg-cyan-500 transition-all disabled:opacity-50 shadow-sm shadow-cyan-500/20 whitespace-nowrap">
+              <Save size={12} />
+              {isSaving ? 'Saving…' : 'Save to Library'}
             </button>
           )}
         </div>
