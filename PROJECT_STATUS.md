@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 4100ee7 - ui: compact editor layout — title integrated into toolbar, 3-row design
+- **Last commit:** cef4db8 - fix: Ctrl+S downloads .docx instead of browser save-page dialog
 - **Last deployment:** 2026-06-04 - Cloudflare Pages (auto)
 
 ---
