@@ -7,7 +7,7 @@
 ## Current Branch
 
 - **Branch:** `cleanup/audit-2026-05-30`
-- **Last commit:** 9563e6d - fix: move exportDocxRef after handleExportDocx to avoid TDZ crash
+- **Last commit:** 1aea462 - fix: remove all as any casts after Supabase types regeneration
 - **Last deployment:** 2026-06-04 - Cloudflare Pages (auto)
 
 ---
