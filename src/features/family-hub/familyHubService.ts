@@ -1,8 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// Use untyped client for tables not yet in generated types
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -126,7 +123,7 @@ export const checklistService = {
   },
 
   async deleteTemplate(id: string): Promise<void> {
-    const { error } = await db.from("checklist_templates").delete().eq("id", id);
+    const { error } = await supabase.from("checklist_templates").delete().eq("id", id);
     if (error) throw error;
   },
 
@@ -216,7 +213,7 @@ export const homeworkService = {
   },
 
   async remove(id: string): Promise<void> {
-    const { error } = await db.from("child_homework").delete().eq("id", id);
+    const { error } = await supabase.from("child_homework").delete().eq("id", id);
     if (error) throw error;
   },
 };
@@ -266,12 +263,12 @@ export const examsService = {
   },
 
   async setGrade(id: string, grade: string): Promise<void> {
-    const { error } = await db.from("child_exams").update({ grade }).eq("id", id);
+    const { error } = await supabase.from("child_exams").update({ grade }).eq("id", id);
     if (error) throw error;
   },
 
   async remove(id: string): Promise<void> {
-    const { error } = await db.from("child_exams").delete().eq("id", id);
+    const { error } = await supabase.from("child_exams").delete().eq("id", id);
     if (error) throw error;
   },
 };

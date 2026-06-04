@@ -175,7 +175,7 @@ export function formatErrorForUser(
   let canRetry = true;
 
   if (error instanceof Error) {
-    const errorCode = (error as any).code;
+    const errorCode = 'code' in error ? (error as Error & { code: string }).code : undefined;
     const errorMsg = error.message.toLowerCase();
 
     // Check for API key errors first

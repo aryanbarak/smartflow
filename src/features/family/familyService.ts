@@ -56,8 +56,7 @@ export function ageToRole(age?: number): MemberRole {
 
 function mapRowToChild(row: FamilyChildRow): Child {
   const age = row.age ?? undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const storedRole = (row as any).role as MemberRole | undefined;
+  const storedRole = row.role as MemberRole | undefined;
   return {
     id: row.id,
     name: row.name,
@@ -105,7 +104,7 @@ export const familyService = {
       .single();
 
     if (error) throw error;
-    return mapRowToChild(data as FamilyChildRow);
+    return mapRowToChild(data);
   },
 
   async update(
@@ -133,7 +132,7 @@ export const familyService = {
       .single();
 
     if (error) throw error;
-    return mapRowToChild(data as FamilyChildRow);
+    return mapRowToChild(data);
   },
 
   async remove(userId: string, id: string): Promise<void> {
