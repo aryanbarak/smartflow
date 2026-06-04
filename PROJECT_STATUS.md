@@ -7,7 +7,7 @@ Last updated: 2026-06-04 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** 627dc6d - docs: fix PROJECT_STATUS.md format + update CI regex
+- **Last commit:** 4a671e9 - chore: add react-markdown dependency
 - **Last deployment:** 2026-06-04 - Cloudflare Pages (auto)
 
 ---
