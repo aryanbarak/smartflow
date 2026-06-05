@@ -7,7 +7,7 @@ Last updated: 2026-06-05 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** 4f4f728 - fix: show tasks in calendar day detail panel even when no calendar events
+- **Last commit:** 31ee1f7 - feat: AI memory system — user context stored in DB, injected into AI conversations
 - **Last deployment:** 2026-06-05 - Cloudflare Pages (auto)
 
 ---
