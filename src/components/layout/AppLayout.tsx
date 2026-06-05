@@ -1,11 +1,21 @@
+import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
 import { OfflineBadge } from "@/components/OfflineBadge";
 import { MiniPlayer } from "@/components/music/MiniPlayer";
 import { GlobalSearch } from "@/features/search/GlobalSearch";
+import { useAlarms } from "@/features/calendar/useAlarms";
 
 export function AppLayout() {
+  useAlarms();
+
+  useEffect(() => {
+    if ('Notification' in globalThis && Notification.permission === 'default') {
+      const timer = setTimeout(() => { void Notification.requestPermission(); }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
   return (
     <div className="min-h-screen bg-background">
       <OfflineBadge />
