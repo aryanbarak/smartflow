@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AlarmPicker } from "@/features/calendar/components/AlarmPicker";
 import { motion } from "framer-motion";
 import { Plus, Calendar, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -230,11 +231,19 @@ export default function TasksPage() {
                   <p className={cn("text-sm font-medium", task.completed && "line-through text-muted-foreground")}>
                     {task.title}
                   </p>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       {dueLabel(task)}
                     </span>
+                    {task.dueDate && !task.completed && (
+                      <AlarmPicker
+                        sourceType="task"
+                        sourceId={task.id}
+                        sourceTitle={task.title}
+                        eventAt={`${task.dueDate}T09:00:00`}
+                      />
+                    )}
                   </div>
                 </div>
                 <Badge variant="outline" className={cn("text-xs shrink-0", task.completed && "border-muted")}>

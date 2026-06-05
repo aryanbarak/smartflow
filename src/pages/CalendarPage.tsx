@@ -21,6 +21,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarEvent, calendarService } from "@/features/calendar/calendarService";
 import { CalendarFormDialog } from "@/features/calendar/CalendarFormDialog";
 import { loadCalendarUiState, saveCalendarUiState } from "@/features/calendar/calendarUiState";
+import { AlarmPicker } from "@/features/calendar/components/AlarmPicker";
+import { getTasksAsEvents, type TaskAsEvent } from "@/features/tasks/taskCalendarBridge";
 import { formatDateTime, toDateOnly } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
@@ -219,6 +221,22 @@ export default function CalendarPage() {
     },
     staleTime: 60_000,
   });
+
+  const { data: taskEvents = [] } = useQuery<TaskAsEvent[]>({
+    queryKey: ["taskEvents", monthWindowStart.toISOString(), monthWindowEnd.toISOString()],
+    queryFn: () => getTasksAsEvents(
+      monthWindowStart.toISOString().slice(0, 10),
+      monthWindowEnd.toISOString().slice(0, 10),
+    ),
+    staleTime: 60_000,
+  });
+
+  const tasksByDay = useMemo(() => {
+    return taskEvents.reduce<Record<string, TaskAsEvent[]>>((acc, task) => {
+      acc[task.date] = acc[task.date] ? [...acc[task.date], task] : [task];
+      return acc;
+    }, {});
+  }, [taskEvents]);
 
   const sortedRangeEvents = useMemo(() => {
     return [...rangeEvents].sort(
@@ -602,6 +620,8 @@ export default function CalendarPage() {
             {monthGridDays.map((day) => {
               const key = formatDayKey(day);
               const count = monthEventsByDay[key]?.length ?? 0;
+              const taskCount = tasksByDay[key]?.length ?? 0;
+              const hasOverdue = tasksByDay[key]?.some(t => t.isOverdue) ?? false;
               const isSelected = selectedDay === key;
               const isToday = key === formatDayKey(new Date());
               const isCurrentMonth = day.getMonth() === viewAnchorDate.getMonth();
@@ -610,18 +630,24 @@ export default function CalendarPage() {
                   key={key}
                   variant={isSelected ? "default" : "secondary"}
                   className={cn(
-                    "h-9 items-start justify-between px-1 py-1 text-left",
+                    "h-11 flex-col items-start justify-start px-1 py-1 text-left gap-0.5",
                     !isCurrentMonth && "opacity-60",
                     isToday && !isSelected && "border border-primary",
                   )}
                   onClick={() => handleSelectDay(day)}
                 >
                   <span className="text-xs font-semibold">{day.getDate()}</span>
-                  {count > 0 && (
-                    <Badge variant="secondary" className="rounded-full px-1.5 text-[10px]">
-                      {count}
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-0.5 flex-wrap">
+                    {count > 0 && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    )}
+                    {taskCount > 0 && (
+                      <span className={cn(
+                        "w-1.5 h-1.5 rounded-full",
+                        hasOverdue ? "bg-red-500" : "bg-amber-400",
+                      )} />
+                    )}
+                  </div>
                 </Button>
               );
             })}
@@ -712,6 +738,25 @@ export default function CalendarPage() {
                   </Badge>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {(tasksByDay[dayKey] ?? []).map(task => (
+                    <div key={task.id} className={cn(
+                      "flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm",
+                      task.isOverdue ? "border-red-500/30 bg-red-500/5" : "border-amber-500/30 bg-amber-500/5",
+                    )}>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={cn("text-xs font-semibold", task.isOverdue ? "text-red-400" : "text-amber-400")}>
+                          ✓ Task
+                        </span>
+                        <span className="truncate">{task.title}</span>
+                      </div>
+                      <AlarmPicker
+                        sourceType="task"
+                        sourceId={task.id}
+                        sourceTitle={task.title}
+                        eventAt={`${task.date}T09:00:00`}
+                      />
+                    </div>
+                  ))}
                   {dayScopedEvents[dayKey].map((event) => {
                     const { start, end } = getEventWindow(event);
                     const isTodayEvent = start ? isSameDay(start, now) : false;
@@ -786,6 +831,12 @@ export default function CalendarPage() {
                             )}
                           </div>
                         )}
+                        <AlarmPicker
+                          sourceType="calendar_event"
+                          sourceId={event.id}
+                          sourceTitle={event.title}
+                          eventAt={event.dateTimeStart}
+                        />
                       </div>
                     );
                   })}
