@@ -7,7 +7,7 @@ Last updated: 2026-06-05 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** ace3ae7 - feat: add AI bank statement import (PDF → transactions)
+- **Last commit:** b70eead - feat: duplicate detection in bank PDF import
 - **Last deployment:** 2026-06-05 - Cloudflare Pages (auto)
 
 ---
