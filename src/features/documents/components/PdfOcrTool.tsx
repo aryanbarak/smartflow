@@ -7,8 +7,9 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useT } from '@/i18n';
 import type { TranslateLang } from '../translationService';
 
-const OCR_URL = (import.meta.env.VITE_AI_AGENT_URL as string | undefined)
-  ?.replace('/analyze', '/ocr') ?? 'https://api.barakzai.cloud/ocr';
+const BASE_URL = (import.meta.env.VITE_AI_AGENT_URL as string | undefined)
+  ?.replace('/analyze', '') ?? 'https://api.barakzai.cloud';
+const OCR_URL = `${BASE_URL}/ocr`;
 
 const LANGUAGES: { code: TranslateLang; label: string; flag: string }[] = [
   { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
