@@ -11,7 +11,9 @@ import {
   ChevronRight,
   Download,
   Upload,
+  FileBarChart,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -57,6 +59,11 @@ import {
 import { BudgetGoalsWidget } from "@/features/finance/components/BudgetGoalsWidget";
 import { CsvImportExport } from "@/features/finance/components/CsvImportExport";
 import { BankImportTool } from "@/features/finance/components/BankImportTool";
+import { BudgetLimitsWidget } from "@/features/finance/components/BudgetLimitsWidget";
+import { SavingsGoalsWidget } from "@/features/finance/components/SavingsGoalsWidget";
+import { FinanceCharts } from "@/features/finance/components/FinanceCharts";
+import { RecurringTransactions } from "@/features/finance/components/RecurringTransactions";
+import { generateMonthlyReport } from "@/features/finance/reportService";
 import { cn } from "@/lib/utils";
 
 const categories = ["Food", "Transport", "Rent", "Health", "Other"];
@@ -292,6 +299,29 @@ export default function FinancePage() {
   const hasFilteredResults = filteredTransactions.length > 0;
   const isInitialLoading = isLoading && !transactions.length;
 
+  const currentMonthStr = `${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, "0")}`;
+
+  const currentMonthTransactions = useMemo(
+    () => transactions.filter((tx) => isSameMonth(toLocalDate(tx.date), selectedMonth)),
+    [transactions, selectedMonth],
+  );
+
+  const last6Months = useMemo(() => {
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - (5 - i));
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleDateString("en", { month: "short" });
+      const income = transactions
+        .filter((t) => t.date?.startsWith(key) && t.type === "income")
+        .reduce((s, t) => s + Number(t.amount), 0);
+      const expenses = transactions
+        .filter((t) => t.date?.startsWith(key) && t.type === "expense")
+        .reduce((s, t) => s + Number(t.amount), 0);
+      return { month: label, income, expenses };
+    });
+  }, [transactions]);
+
   const monthLabel =
     filter === "all" ? "All time" : formatMonthYear(selectedMonth);
 
@@ -475,6 +505,45 @@ export default function FinancePage() {
     win.document.close();
   };
 
+  // ---------- Monthly PDF report ----------
+
+  const handleExportReport = async () => {
+    const byCategory = Object.entries(
+      filteredTransactions
+        .filter((t) => t.type === "expense")
+        .reduce((acc, t) => {
+          acc[t.category] = (acc[t.category] ?? 0) + Number(t.amount);
+          return acc;
+        }, {} as Record<string, number>),
+    )
+      .map(([category, amount]) => ({ category, amount }))
+      .sort((a, b) => b.amount - a.amount);
+
+    const bytes = await generateMonthlyReport({
+      month: currentMonthStr,
+      totalIncome: totals.income,
+      totalExpenses: totals.expense,
+      balance: totals.net,
+      byCategory,
+      transactions: filteredTransactions.map((t) => ({
+        date: t.date,
+        type: t.type,
+        category: t.category,
+        amount: Number(t.amount),
+        notes: t.notes ?? null,
+      })),
+    });
+
+    const blob = new Blob([bytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `finance-report-${currentMonthStr}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Monthly report downloaded");
+  };
+
   // ---------- Simple bar chart data ----------
 
   const chartGroups = groups;
@@ -516,6 +585,16 @@ export default function FinancePage() {
           >
             <Download className="w-4 h-4" />
             Export PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            onClick={() => void handleExportReport()}
+            disabled={!hasFilteredResults}
+          >
+            <FileBarChart className="w-4 h-4" />
+            Monthly Report
           </Button>
           <Button
             variant="outline"
@@ -1047,9 +1126,31 @@ export default function FinancePage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Budget Goals */}
+      {/* Charts */}
       <div className="mt-6">
+        <FinanceCharts
+          transactions={filteredTransactions}
+          months={last6Months}
+        />
+      </div>
+
+      {/* Budget Goals */}
+      <div className="mt-4">
         <BudgetGoalsWidget />
+      </div>
+
+      {/* Budget Limits + Savings Goals */}
+      <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <BudgetLimitsWidget
+          currentMonth={currentMonthStr}
+          transactions={currentMonthTransactions}
+        />
+        <SavingsGoalsWidget />
+      </div>
+
+      {/* Recurring Transactions */}
+      <div className="mt-4">
+        <RecurringTransactions onApplied={refresh} />
       </div>
 
       <AnimatePresence>
