@@ -3,29 +3,21 @@ import { RefreshCw, Plus, Trash2, Check, X, Play } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-
-const STORAGE_KEY = 'dailyflow:recurring-transactions';
+import {
+  recurringTransactionsDbService,
+  type RecurringTransaction,
+} from '../recurringTransactionsDbService';
 
 const CATEGORIES = [
   'Food', 'Rent', 'Transport', 'Health', 'Insurance',
   'Utilities', 'Shopping', 'Entertainment', 'Salary', 'Other',
 ];
 
-interface RecurringTransaction {
-  id: string;
-  title: string;
-  amount: number;
-  type: 'income' | 'expense';
-  category: string;
-  dayOfMonth: number;
-  lastApplied?: string;
-}
-
 interface RecurringTransactionsProps {
   onApplied: () => void;
 }
 
-export function RecurringTransactions({ onApplied }: RecurringTransactionsProps) {
+export function RecurringTransactions({ onApplied }: Readonly<RecurringTransactionsProps>) {
   const [items, setItems] = useState<RecurringTransaction[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({
@@ -35,14 +27,10 @@ export function RecurringTransactions({ onApplied }: RecurringTransactionsProps)
   const [isApplying, setIsApplying] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) setItems(JSON.parse(stored) as RecurringTransaction[]);
+    recurringTransactionsDbService.getAll()
+      .then(setItems)
+      .catch(err => console.error('[Recurring] load error', err));
   }, []);
-
-  const saveItems = (next: RecurringTransaction[]) => {
-    setItems(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  };
 
   const applyItems = useCallback(async (
     toApply: RecurringTransaction[],
@@ -68,11 +56,13 @@ export function RecurringTransactions({ onApplied }: RecurringTransactionsProps)
       const { error } = await supabase.from('finance_transactions').insert(rows);
       if (error) throw error;
 
-      const updated = allItems.map(i =>
-        toApply.find(a => a.id === i.id) ? { ...i, lastApplied: month } : i,
+      await Promise.all(
+        toApply.map(item => recurringTransactionsDbService.updateLastApplied(item.id, month)),
       );
-      setItems(updated);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+      setItems(allItems.map(i =>
+        toApply.some(a => a.id === i.id) ? { ...i, lastApplied: month } : i,
+      ));
 
       if (!silent) {
         toast.success(`Applied ${rows.length} recurring transactions`);
@@ -96,24 +86,32 @@ export function RecurringTransactions({ onApplied }: RecurringTransactionsProps)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // only on mount
 
-  const addItem = () => {
+  const addItem = async () => {
     if (!form.title || !form.amount) return;
-    const item: RecurringTransaction = {
-      id: crypto.randomUUID(),
-      title: form.title,
-      amount: Number(form.amount),
-      type: form.type,
-      category: form.category,
-      dayOfMonth: Number(form.dayOfMonth),
-    };
-    saveItems([...items, item]);
-    setForm({ title: '', amount: '', type: 'expense', category: 'Rent', dayOfMonth: '1' });
-    setShowAdd(false);
-    toast.success(`Recurring transaction "${form.title}" added`);
+    try {
+      const created = await recurringTransactionsDbService.create({
+        title: form.title,
+        amount: Number(form.amount),
+        type: form.type,
+        category: form.category,
+        dayOfMonth: Number(form.dayOfMonth),
+      });
+      setItems(prev => [...prev, created]);
+      setForm({ title: '', amount: '', type: 'expense', category: 'Rent', dayOfMonth: '1' });
+      setShowAdd(false);
+      toast.success(`Recurring transaction "${form.title}" added`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save');
+    }
   };
 
-  const removeItem = (id: string) => {
-    saveItems(items.filter(i => i.id !== id));
+  const removeItem = async (id: string) => {
+    try {
+      await recurringTransactionsDbService.remove(id);
+      setItems(prev => prev.filter(i => i.id !== id));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove');
+    }
   };
 
   const currentMonth = new Date().toISOString().slice(0, 7);
@@ -174,7 +172,7 @@ export function RecurringTransactions({ onApplied }: RecurringTransactionsProps)
             </select>
           </div>
           <div className="flex gap-2">
-            <button onClick={addItem}
+            <button onClick={() => void addItem()}
               className="flex-1 text-xs py-1.5 rounded bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-1">
               <Check className="w-3 h-3" /> Save
             </button>
@@ -206,7 +204,7 @@ export function RecurringTransactions({ onApplied }: RecurringTransactionsProps)
               {item.lastApplied === currentMonth && (
                 <span className="text-green-400"><Check className="w-3.5 h-3.5" /></span>
               )}
-              <button onClick={() => removeItem(item.id)}
+              <button onClick={() => void removeItem(item.id)}
                 className="text-muted-foreground hover:text-destructive">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>

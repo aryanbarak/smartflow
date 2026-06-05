@@ -2,17 +2,7 @@ import { useState, useEffect } from 'react';
 import { PiggyBank, Plus, Trash2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-
-const STORAGE_KEY = 'dailyflow:savings-goals';
-
-interface SavingsGoal {
-  id: string;
-  name: string;
-  target: number;
-  saved: number;
-  color: string;
-  deadline?: string;
-}
+import { savingsGoalsDbService, type SavingsGoal } from '../savingsGoalsDbService';
 
 const COLORS = ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899'];
 
@@ -23,37 +13,49 @@ export function SavingsGoalsWidget() {
   const [colorIdx, setColorIdx] = useState(0);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) setGoals(JSON.parse(stored) as SavingsGoal[]);
+    savingsGoalsDbService.getAll()
+      .then(setGoals)
+      .catch(err => console.error('[SavingsGoals] load error', err));
   }, []);
 
-  const saveGoals = (g: SavingsGoal[]) => {
-    setGoals(g);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(g));
-  };
-
-  const addGoal = () => {
+  const addGoal = async () => {
     if (!form.name || !form.target) return;
-    const goal: SavingsGoal = {
-      id: crypto.randomUUID(),
-      name: form.name,
-      target: Number(form.target),
-      saved: Number(form.saved) || 0,
-      color: COLORS[colorIdx],
-      deadline: form.deadline || undefined,
-    };
-    saveGoals([...goals, goal]);
-    setForm({ name: '', target: '', saved: '', deadline: '' });
-    setShowAdd(false);
-    toast.success(`Savings goal "${form.name}" created`);
+    try {
+      const created = await savingsGoalsDbService.create({
+        name: form.name,
+        targetAmount: Number(form.target),
+        savedAmount: Number(form.saved) || 0,
+        color: COLORS[colorIdx],
+        deadline: form.deadline || undefined,
+      });
+      setGoals(prev => [...prev, created]);
+      setForm({ name: '', target: '', saved: '', deadline: '' });
+      setShowAdd(false);
+      toast.success(`Savings goal "${form.name}" created`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save');
+    }
   };
 
-  const updateSaved = (id: string, delta: number) => {
-    saveGoals(goals.map(g => g.id === id ? { ...g, saved: Math.max(0, g.saved + delta) } : g));
+  const updateSaved = async (id: string, delta: number) => {
+    const goal = goals.find(g => g.id === id);
+    if (!goal) return;
+    const newSaved = Math.max(0, goal.savedAmount + delta);
+    try {
+      await savingsGoalsDbService.updateSaved(id, newSaved);
+      setGoals(prev => prev.map(g => g.id === id ? { ...g, savedAmount: newSaved } : g));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update');
+    }
   };
 
-  const removeGoal = (id: string) => {
-    saveGoals(goals.filter(g => g.id !== id));
+  const removeGoal = async (id: string) => {
+    try {
+      await savingsGoalsDbService.remove(id);
+      setGoals(prev => prev.filter(g => g.id !== id));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove');
+    }
   };
 
   return (
@@ -92,7 +94,7 @@ export function SavingsGoalsWidget() {
             ))}
           </div>
           <div className="flex gap-2">
-            <button onClick={addGoal}
+            <button onClick={() => void addGoal()}
               className="flex-1 text-xs py-1.5 rounded bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-1">
               <Check className="w-3 h-3" /> Save
             </button>
@@ -110,9 +112,9 @@ export function SavingsGoalsWidget() {
 
       <div className="space-y-4">
         {goals.map(goal => {
-          const pct = Math.min((goal.saved / goal.target) * 100, 100);
-          const remaining = Math.max(0, goal.target - goal.saved);
-          const isComplete = goal.saved >= goal.target;
+          const pct = Math.min((goal.savedAmount / goal.targetAmount) * 100, 100);
+          const remaining = Math.max(0, goal.targetAmount - goal.savedAmount);
+          const isComplete = goal.savedAmount >= goal.targetAmount;
 
           return (
             <div key={goal.id} className="space-y-2">
@@ -124,7 +126,7 @@ export function SavingsGoalsWidget() {
                     <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400">Done! 🎉</span>
                   )}
                 </div>
-                <button onClick={() => removeGoal(goal.id)} className="text-muted-foreground hover:text-destructive">
+                <button onClick={() => void removeGoal(goal.id)} className="text-muted-foreground hover:text-destructive">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -135,7 +137,7 @@ export function SavingsGoalsWidget() {
               </div>
 
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>€{goal.saved.toFixed(0)} saved</span>
+                <span>€{goal.savedAmount.toFixed(0)} saved</span>
                 <span>{pct.toFixed(0)}%</span>
                 <span>€{remaining.toFixed(0)} to go</span>
               </div>
@@ -149,12 +151,12 @@ export function SavingsGoalsWidget() {
               {!isComplete && (
                 <div className="flex gap-1.5">
                   {[10, 50, 100].map(amt => (
-                    <button key={amt} onClick={() => updateSaved(goal.id, amt)}
+                    <button key={amt} onClick={() => void updateSaved(goal.id, amt)}
                       className="text-xs px-2 py-1 rounded border border-border hover:bg-muted transition-colors">
                       +€{amt}
                     </button>
                   ))}
-                  <button onClick={() => updateSaved(goal.id, -10)}
+                  <button onClick={() => void updateSaved(goal.id, -10)}
                     className="text-xs px-2 py-1 rounded border border-border hover:bg-muted transition-colors text-muted-foreground">
                     -€10
                   </button>

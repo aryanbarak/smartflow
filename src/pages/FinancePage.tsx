@@ -64,6 +64,7 @@ import { SavingsGoalsWidget } from "@/features/finance/components/SavingsGoalsWi
 import { FinanceCharts } from "@/features/finance/components/FinanceCharts";
 import { RecurringTransactions } from "@/features/finance/components/RecurringTransactions";
 import { generateMonthlyReport } from "@/features/finance/reportService";
+import { migrateLocalStorageToDb } from "@/features/finance/migrateLocalStorage";
 import { cn } from "@/lib/utils";
 
 const categories = ["Food", "Transport", "Rent", "Health", "Other"];
@@ -161,6 +162,9 @@ export default function FinancePage() {
   const [groupBy, setGroupBy] = useState<GroupBy>("day");
 
   const [showImport, setShowImport] = useState(false);
+
+  // One-time migration of localStorage data to DB
+  useEffect(() => { void migrateLocalStorageToDb(); }, []);
 
   // ---------- Scope + month navigation ----------
 
