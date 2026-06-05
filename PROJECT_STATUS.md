@@ -1,14 +1,14 @@
 # dailyFlow — PROJECT STATUS
 
-Last updated: 2026-06-04 — Keep this file under 2 pages, update after every session.
+Last updated: 2026-06-05 — Keep this file under 2 pages, update after every session.
 
 ---
 
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** 4a671e9 - chore: add react-markdown dependency
-- **Last deployment:** 2026-06-04 - Cloudflare Pages (auto)
+- **Last commit:** ace3ae7 - feat: add AI bank statement import (PDF → transactions)
+- **Last deployment:** 2026-06-05 - Cloudflare Pages (auto)
 
 ---
 
