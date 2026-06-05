@@ -7,7 +7,7 @@ Last updated: 2026-06-05 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** a4ec26b - feat: Calendar-Tasks bridge + Alarm system
+- **Last commit:** f5c120f - feat: show tasks on calendar grid, AlarmPicker on events and tasks
 - **Last deployment:** 2026-06-05 - Cloudflare Pages (auto)
 
 ---
