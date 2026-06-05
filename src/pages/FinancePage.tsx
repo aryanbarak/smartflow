@@ -545,16 +545,6 @@ export default function FinancePage() {
     toast.success("Monthly report downloaded");
   };
 
-  // ---------- Simple bar chart data ----------
-
-  const chartGroups = groups;
-  const maxValue = useMemo(() => {
-    let max = 0;
-    for (const g of chartGroups) {
-      max = Math.max(max, g.income, g.expense);
-    }
-    return max || 1;
-  }, [chartGroups]);
 
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
@@ -897,98 +887,6 @@ export default function FinancePage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Simple bar chart */}
-      {isInitialLoading ? (
-        <Card className="mb-6">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              <SkeletonBlock className="h-4 w-40" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {Array.from({ length: 4 }).map((_, idx) => (
-                <SkeletonBlock key={idx} className="h-8 w-full" />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ) : !hasFilteredResults ? (
-        <StatePanel
-          variant="empty"
-          title="No data for chart"
-          description="Adjust your filters to see chart data."
-        />
-      ) : (
-        <Card className="mb-6">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              {groupBy === "week"
-                ? "Weekly income vs expenses"
-                : groupBy === "day"
-                ? "Daily income vs expenses"
-                : "Income vs expenses"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
-              {chartGroups.map((g) => (
-                <div key={g.key} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium truncate max-w-[60%]">
-                      {g.label}
-                    </span>
-                    <span className="text-muted-foreground">
-                      Net:{" "}
-                      <span
-                        className={cn(
-                          g.net >= 0 ? "text-success" : "text-destructive"
-                        )}
-                      >
-                        {g.net >= 0 ? "+" : "-"}
-                        {formatCurrency(Math.abs(g.net))}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="space-y-1 text-[10px]">
-                    <div className="flex items-center gap-2">
-                      <span className="w-10 text-muted-foreground">Income</span>
-                      <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-emerald-500"
-                          style={{
-                            width: `${(g.income / maxValue) * 100}%`,
-                          }}
-                        />
-                      </div>
-                      <span className="w-16 text-right">
-                        {formatCurrency(g.income)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-10 text-muted-foreground">
-                        Expense
-                      </span>
-                      <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-red-500"
-                          style={{
-                            width: `${(g.expense / maxValue) * 100}%`,
-                          }}
-                        />
-                      </div>
-                      <span className="w-16 text-right">
-                        {formatCurrency(g.expense)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Grouped list + empty states */}
       {isInitialLoading ? (
