@@ -7,7 +7,7 @@ Last updated: 2026-06-05 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** 0cefaac - feat: migrate budget-limits, savings-goals, recurring-transactions from localStorage to Supabase DB
+- **Last commit:** 6e5a854 - fix: add missing useEffect import to FinancePage
 - **Last deployment:** 2026-06-05 - Cloudflare Pages (auto)
 
 ---
