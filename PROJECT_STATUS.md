@@ -7,7 +7,7 @@ Last updated: 2026-06-05 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** 9f53bbf - feat: habits-mood correlation widget, mood on HabitsPage, habits on JournalPage
+- **Last commit:** da01100 - fix: correct OCR URL construction from VITE_AI_AGENT_URL
 - **Last deployment:** 2026-06-05 - Cloudflare Pages (auto)
 
 ---
