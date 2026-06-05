@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Flame, Bell } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useHabits, useToggleHabit, useDeleteHabit } from '@/features/habits/useHabits';
@@ -6,9 +6,18 @@ import { HabitCard } from '@/features/habits/components/HabitCard';
 import { AddHabitModal } from '@/features/habits/components/AddHabitModal';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useT } from '@/i18n';
+import { getThisWeekMoodSummary } from '@/features/habits/habitMoodService';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function HabitsPage() {
   const [showAdd, setShowAdd] = useState(false);
+  const { user } = useAuth();
+  const [weekMood, setWeekMood] = useState<{ avgMood: number; entries: number; emoji: string } | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    getThisWeekMoodSummary(user.id).then(setWeekMood).catch(console.error);
+  }, [user]);
   const { data: habits = [], isLoading } = useHabits();
   const { mutate: toggle } = useToggleHabit();
   const { mutate: remove } = useDeleteHabit();
@@ -95,6 +104,22 @@ export default function HabitsPage() {
               animate={{ width: `${progressPct}%` }}
               transition={{ duration: 0.8, ease: 'easeOut' }}
             />
+          </div>
+        </div>
+      )}
+
+      {weekMood && weekMood.entries > 0 && (
+        <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-4">
+          <div className="text-3xl">{weekMood.emoji}</div>
+          <div>
+            <p className="text-sm font-medium">{t('habits_mood_this_week')}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Avg. {weekMood.avgMood.toFixed(1)}/5 · {weekMood.entries} {weekMood.entries === 1 ? 'entry' : 'entries'}
+            </p>
+          </div>
+          <div className="ml-auto text-right">
+            <p className="text-2xl font-semibold">{weekMood.avgMood.toFixed(1)}</p>
+            <p className="text-xs text-muted-foreground">/ 5</p>
           </div>
         </div>
       )}
