@@ -131,6 +131,7 @@ export default function FinancePage() {
     removeTransaction,
     isLoading,
     error: financeError,
+    refresh,
   } = useFinance();
 
   // This Month / All
