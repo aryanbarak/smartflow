@@ -7,7 +7,7 @@ Last updated: 2026-06-05 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** b70eead - feat: duplicate detection in bank PDF import
+- **Last commit:** 7b338bd - feat: budget limits, savings goals, finance charts, recurring transactions, monthly PDF report
 - **Last deployment:** 2026-06-05 - Cloudflare Pages (auto)
 
 ---
