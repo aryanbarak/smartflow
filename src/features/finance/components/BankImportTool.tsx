@@ -24,6 +24,7 @@ interface ImportedTransaction {
   type: 'income' | 'expense';
   category: string;
   selected: boolean;
+  isDuplicate?: boolean;
 }
 
 interface BankImportToolProps {
@@ -40,6 +41,34 @@ export function BankImportTool({ onImportComplete, onClose }: BankImportToolProp
   const [meta, setMeta] = useState<{ period?: string; provider?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  async function checkDuplicates(
+    txs: ImportedTransaction[],
+    userId: string,
+  ): Promise<ImportedTransaction[]> {
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const fromDate = sixMonthsAgo.toISOString().slice(0, 10);
+
+    const { data: existing } = await supabase
+      .from('finance_transactions')
+      .select('date, amount, notes')
+      .eq('user_id', userId)
+      .gte('date', fromDate);
+
+    if (!existing?.length) return txs;
+
+    return txs.map(tx => {
+      const isDuplicate = existing.some(ex => {
+        const sameDate = ex.date === tx.date;
+        const sameAmount = Math.abs(Number(ex.amount) - Math.abs(tx.amount)) < 0.01;
+        const sameDesc = ex.notes && tx.description &&
+          ex.notes.slice(0, 30).toLowerCase() === tx.description.slice(0, 30).toLowerCase();
+        return sameDate && sameAmount && sameDesc;
+      });
+      return { ...tx, isDuplicate };
+    });
+  }
 
   const handleFile = (f: File) => {
     if (!f.type.includes('pdf') && !f.name.endsWith('.pdf')) {
@@ -80,9 +109,29 @@ export function BankImportTool({ onImportComplete, onClose }: BankImportToolProp
         provider?: string;
       };
 
-      setTransactions(data.transactions.map(tx => ({ ...tx, selected: true })));
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const withDuplicates = await checkDuplicates(
+        data.transactions.map(tx => ({ ...tx, selected: true })),
+        user.id,
+      );
+
+      const finalTransactions = withDuplicates.map(tx => ({
+        ...tx,
+        selected: !tx.isDuplicate,
+      }));
+
+      setTransactions(finalTransactions);
       setMeta({ period: data.statement_period, provider: data.provider });
-      toast.success(`Found ${data.transactions.length} transactions`);
+
+      const dupCount = finalTransactions.filter(tx => tx.isDuplicate).length;
+      if (dupCount > 0) {
+        toast.warning(`${dupCount} possible duplicate(s) — deselected automatically`);
+        toast.success(`Found ${data.transactions.length} transactions (${dupCount} duplicates)`);
+      } else {
+        toast.success(`Found ${data.transactions.length} transactions — no duplicates`);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Analysis failed';
       setError(msg);
@@ -231,7 +280,7 @@ export function BankImportTool({ onImportComplete, onClose }: BankImportToolProp
           {transactions.length > 0 && (
             <div className="space-y-3">
               {/* Summary */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 <div className="bg-slate-800 rounded-lg p-3 text-center">
                   <p className="text-xs text-slate-400">Selected</p>
                   <p className="text-lg font-semibold text-white">{selectedCount}/{transactions.length}</p>
@@ -243,6 +292,12 @@ export function BankImportTool({ onImportComplete, onClose }: BankImportToolProp
                 <div className="bg-slate-800 rounded-lg p-3 text-center">
                   <p className="text-xs text-slate-400">Total Income</p>
                   <p className="text-lg font-semibold text-green-400">+{totalIncome.toFixed(2)} €</p>
+                </div>
+                <div className="bg-slate-800 rounded-lg p-3 text-center">
+                  <p className="text-xs text-slate-400">Duplicates</p>
+                  <p className="text-lg font-semibold text-yellow-400">
+                    {transactions.filter(tx => tx.isDuplicate).length}
+                  </p>
                 </div>
               </div>
 
@@ -272,9 +327,9 @@ export function BankImportTool({ onImportComplete, onClose }: BankImportToolProp
                     key={i}
                     className={cn(
                       'flex items-center gap-3 p-3 rounded-lg border transition-colors',
-                      tx.selected
-                        ? 'bg-slate-800 border-slate-700'
-                        : 'bg-slate-900 border-slate-800 opacity-50',
+                      tx.isDuplicate && 'bg-yellow-500/5 border-yellow-500/20',
+                      !tx.isDuplicate && tx.selected && 'bg-slate-800 border-slate-700',
+                      !tx.isDuplicate && !tx.selected && 'bg-slate-900 border-slate-800 opacity-50',
                     )}
                   >
                     <input
@@ -287,6 +342,11 @@ export function BankImportTool({ onImportComplete, onClose }: BankImportToolProp
                     />
                     <span className="text-xs text-slate-400 w-20 flex-shrink-0">{tx.date}</span>
                     <span className="text-sm text-white flex-1 truncate">{tx.description}</span>
+                    {tx.isDuplicate && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 flex-shrink-0 whitespace-nowrap">
+                        Duplicate
+                      </span>
+                    )}
                     <select
                       value={tx.category}
                       onChange={e => setTransactions(prev => prev.map((t, j) =>
