@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, ShoppingCart, X, CheckCheck } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart, X, CheckCheck, TrendingDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   useShoppingList,
@@ -8,8 +8,49 @@ import {
   useDeleteShoppingItem,
   useClearChecked,
 } from './useShoppingList';
-import { SHOPPING_CATEGORIES } from './shoppingService';
+import { SHOPPING_CATEGORIES, type ShoppingItem } from './shoppingService';
 import { useT } from '@/i18n';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+const CATEGORY_TO_FINANCE: Record<string, string> = {
+  Produce: 'Food',
+  Dairy: 'Food',
+  Meat: 'Food',
+  Bakery: 'Food',
+  Frozen: 'Food',
+  Drinks: 'Food',
+  Snacks: 'Food',
+  Cleaning: 'Utilities',
+  'Personal Care': 'Health',
+  Other: 'Shopping',
+};
+
+async function logShoppingToFinance(item: ShoppingItem, label: string, amountLabel: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const financeCategory = CATEGORY_TO_FINANCE[item.category] ?? 'Shopping';
+  const description = item.quantity != null
+    ? `${item.name} (${item.quantity}${item.unit ? ` ${item.unit}` : ''})`
+    : item.name;
+
+  const { error } = await supabase.from('finance_transactions').insert({
+    user_id: user.id,
+    type: 'expense',
+    amount: 0,
+    category: financeCategory,
+    notes: description,
+    date: new Date().toISOString().slice(0, 10),
+  });
+
+  if (error) {
+    console.error('[Shopping] Failed to log to finance:', error);
+    return;
+  }
+
+  toast.success(`"${item.name}" ${label}`, { description: amountLabel });
+}
 
 function AddItemForm({ onClose }: { onClose: () => void }) {
   const { mutate: add, isPending } = useAddShoppingItem();
@@ -102,6 +143,27 @@ export function ShoppingList() {
     return acc;
   }, {});
 
+  const handleToggle = (item: ShoppingItem) => {
+    const beingPurchased = !item.checked;
+    toggle({ id: item.id, checked: beingPurchased });
+    if (beingPurchased) {
+      toast(`"${item.name}" purchased!`, {
+        action: {
+          label: t('shopping_log_finance'),
+          onClick: () => void logShoppingToFinance(item, t('shopping_logged'), t('shopping_amount_zero')),
+        },
+        duration: 5000,
+      });
+    }
+  };
+
+  const handleLogAll = async () => {
+    for (const item of checked) {
+      await logShoppingToFinance(item, t('shopping_logged'), t('shopping_amount_zero'));
+    }
+    toast.success(`${checked.length} items ${t('shopping_logged')}`);
+  };
+
   if (isLoading) {
     return <div className="text-center text-sm text-muted-foreground py-8">{t('loading')}</div>;
   }
@@ -114,7 +176,17 @@ export function ShoppingList() {
           <span className="text-sm font-semibold">{t('shopping_title')}</span>
           <span className="text-xs text-muted-foreground">({unchecked.length})</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {checked.length > 0 && (
+            <button
+              type="button"
+              onClick={() => void handleLogAll()}
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+            >
+              <TrendingDown size={12} />
+              {t('shopping_log_all').replace('{n}', String(checked.length))}
+            </button>
+          )}
           {checked.length > 0 && (
             <button
               type="button"
@@ -155,7 +227,7 @@ export function ShoppingList() {
               <button
                 type="button"
                 aria-label={item.checked ? t('done') : t('shopping_add_item')}
-                onClick={() => toggle({ id: item.id, checked: !item.checked })}
+                onClick={() => handleToggle(item)}
                 className={cn(
                   'w-4 h-4 rounded border flex-shrink-0 transition-colors',
                   item.checked ? 'bg-primary border-primary' : 'border-muted-foreground',

@@ -176,6 +176,10 @@ const en = {
   shopping_item_added: 'Item added',
   shopping_item_deleted: 'Item removed',
   shopping_done_section: 'Done',
+  shopping_log_finance: 'Log to Finance',
+  shopping_logged: 'logged to Finance',
+  shopping_log_all: 'Log {n} purchased → Finance',
+  shopping_amount_zero: 'Amount set to €0 — tap to edit',
 
   // Documents
   documents_title: 'Documents',
@@ -544,6 +548,10 @@ const de: TranslationDict = {
   shopping_item_added: 'Artikel hinzugefuegt',
   shopping_item_deleted: 'Artikel entfernt',
   shopping_done_section: 'Erledigt',
+  shopping_log_finance: 'In Finanzen erfassen',
+  shopping_logged: 'in Finanzen erfasst',
+  shopping_log_all: '{n} Gekaufte → Finanzen',
+  shopping_amount_zero: 'Betrag auf €0 gesetzt — zum Bearbeiten tippen',
 
   documents_title: 'Dokumente',
   documents_upload: 'Hochladen',
@@ -898,6 +906,10 @@ const fa: TranslationDict = {
   shopping_item_added: 'مورد اضافه شد',
   shopping_item_deleted: 'مورد حذف شد',
   shopping_done_section: 'انجام شده',
+  shopping_log_finance: 'ثبت در مالی',
+  shopping_logged: 'در مالی ثبت شد',
+  shopping_log_all: '{n} خریداری شده → مالی',
+  shopping_amount_zero: 'مبلغ €0 تنظیم شد — برای ویرایش بزنید',
 
   documents_title: 'اسناد',
   documents_upload: 'بارگذاری',
