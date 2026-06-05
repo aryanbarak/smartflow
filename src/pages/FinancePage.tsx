@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
   TrendingUp,
@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +56,7 @@ import {
 } from "@/features/finance/financeService";
 import { BudgetGoalsWidget } from "@/features/finance/components/BudgetGoalsWidget";
 import { CsvImportExport } from "@/features/finance/components/CsvImportExport";
+import { BankImportTool } from "@/features/finance/components/BankImportTool";
 import { cn } from "@/lib/utils";
 
 const categories = ["Food", "Transport", "Rent", "Health", "Other"];
@@ -149,6 +151,8 @@ export default function FinancePage() {
 
   // Grouping for list + chart
   const [groupBy, setGroupBy] = useState<GroupBy>("day");
+
+  const [showImport, setShowImport] = useState(false);
 
   // ---------- Scope + month navigation ----------
 
@@ -512,6 +516,15 @@ export default function FinancePage() {
           >
             <Download className="w-4 h-4" />
             Export PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            onClick={() => setShowImport(true)}
+          >
+            <Upload className="w-4 h-4" />
+            Import PDF
           </Button>
           <CsvImportExport
             transactions={transactions}
@@ -1038,6 +1051,15 @@ export default function FinancePage() {
       <div className="mt-6">
         <BudgetGoalsWidget />
       </div>
+
+      <AnimatePresence>
+        {showImport && (
+          <BankImportTool
+            onImportComplete={() => { /* transactions reload automatically via useFinance subscription */ }}
+            onClose={() => setShowImport(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
