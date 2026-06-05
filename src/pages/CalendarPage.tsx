@@ -436,17 +436,25 @@ export default function CalendarPage() {
 
   const dayScopedEvents = useMemo(() => {
     if (!selectedDay) return eventsByDay;
-    return monthEventsByDay[selectedDay]
-      ? { [selectedDay]: monthEventsByDay[selectedDay] }
-      : {};
-  }, [eventsByDay, monthEventsByDay, selectedDay]);
+    if (monthEventsByDay[selectedDay]) {
+      return { [selectedDay]: monthEventsByDay[selectedDay] };
+    }
+    // Day has tasks but no calendar events — include it with an empty events array
+    // so the day card renders and tasks are shown.
+    if (tasksByDay[selectedDay]?.length) {
+      return { [selectedDay]: [] as typeof monthEventsByDay[string] };
+    }
+    return {};
+  }, [eventsByDay, monthEventsByDay, selectedDay, tasksByDay]);
 
   const orderedDays = Object.keys(dayScopedEvents).sort();
   const hasAnyEvents = selectedDay ? monthEvents.length > 0 : rangeEvents.length > 0;
   const isFiltering = !!searchQuery.trim() || hasLocationOnly || hasNotesOnly;
   const selectedDayKey = selectedDay ?? formatDayKey(new Date());
   const now = new Date();
-  const selectedDayHasEvents = !!(selectedDay && monthEventsByDay[selectedDay]?.length);
+  const selectedDayHasEvents = !!(selectedDay && (
+    monthEventsByDay[selectedDay]?.length || tasksByDay[selectedDay]?.length
+  ));
 
   const weekStripDays = useMemo(() => {
     const anchor = weekStart;
@@ -733,8 +741,11 @@ export default function CalendarPage() {
                       day: "numeric",
                     })}
                   </CardTitle>
-                  <Badge variant={dayScopedEvents[dayKey].length >= 3 ? "default" : "secondary"}>
-                    {dayScopedEvents[dayKey].length} event(s)
+                  <Badge variant={(dayScopedEvents[dayKey].length + (tasksByDay[dayKey]?.length ?? 0)) >= 3 ? "default" : "secondary"}>
+                    {dayScopedEvents[dayKey].length > 0 && `${dayScopedEvents[dayKey].length} event(s)`}
+                    {dayScopedEvents[dayKey].length > 0 && (tasksByDay[dayKey]?.length ?? 0) > 0 && " · "}
+                    {(tasksByDay[dayKey]?.length ?? 0) > 0 && `${tasksByDay[dayKey].length} task(s)`}
+                    {dayScopedEvents[dayKey].length === 0 && (tasksByDay[dayKey]?.length ?? 0) === 0 && "0 event(s)"}
                   </Badge>
                 </CardHeader>
                 <CardContent className="space-y-3">
