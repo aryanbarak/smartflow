@@ -20,10 +20,11 @@ import { dataExportService } from '@/features/settings/dataExportService';
 import { supabase } from '@/integrations/supabase/client';
 import { safeGet, safeSet, storageKey } from '@/lib/storage';
 import type { LearnAIMode, LearnAILanguage } from '@/features/learn-ai/types';
+import { AiMemoryTab } from '@/features/ai-memory/AiMemoryTab';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type Tab = 'profile' | 'security' | 'appearance' | 'notifications' | 'data';
+type Tab = 'profile' | 'security' | 'appearance' | 'notifications' | 'data' | 'ai-memory';
 
 const TABS: { id: Tab; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
   { id: 'profile',       label: 'Profile',       icon: User      },
@@ -31,6 +32,7 @@ const TABS: { id: Tab; label: string; icon: React.ComponentType<{ size?: number 
   { id: 'appearance',    label: 'Appearance',     icon: Palette   },
   { id: 'notifications', label: 'Notifications',  icon: Bell      },
   { id: 'data',          label: 'Data',           icon: Database  },
+  { id: 'ai-memory',     label: 'AI Memory',      icon: Brain     },
 ];
 
 type AiDefaults = { mode: LearnAIMode; language: LearnAILanguage };
@@ -840,6 +842,7 @@ export default function SettingsPage() {
     appearance:    <AppearanceTab />,
     notifications: <NotificationsTab />,
     data:          <DataTab />,
+    'ai-memory':   <AiMemoryTab />,
   };
 
   return (

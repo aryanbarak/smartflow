@@ -10,6 +10,7 @@ type AskInput = {
   history: HistoryItem[];
   mode?: string;
   language?: string;
+  memoryContext?: string;
 };
 
 export type AIResult = { answer: string };
@@ -37,6 +38,7 @@ export async function askLearnAI(input: AskInput): Promise<AIResult> {
         history: input.history,
         mode: input.mode,
         language: input.language,
+        memoryContext: input.memoryContext,
       }),
     });
   } catch (err) {

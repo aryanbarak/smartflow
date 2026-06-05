@@ -7,6 +7,7 @@ import type {
   LearnAIMessage,
 } from "@/features/learn-ai/types";
 import { insertMessage, listHistory } from "@/features/learn-ai/learnAiService";
+import { aiMemoryService } from "@/features/ai-memory/aiMemoryService";
 
 const DEFAULT_MODE: LearnAIMode = "fiae_algorithms";
 const DEFAULT_LANGUAGE: LearnAILanguage = "de";
@@ -95,7 +96,8 @@ export function useLearnAI() {
       let answer: string;
       let aiError: AIError | null = null;
       try {
-        const result = await askLearnAI({ message: trimmed, history, mode, language });
+        const memoryContext = await aiMemoryService.getAsPromptContext();
+        const result = await askLearnAI({ message: trimmed, history, mode, language, memoryContext });
         answer = result.answer;
       } catch (err) {
         console.error("[LearnAI] Error getting AI response:", err);

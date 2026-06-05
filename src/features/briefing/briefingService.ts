@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { aiMemoryService } from '../ai-memory/aiMemoryService';
 
 const WORKER_BASE = (import.meta.env.VITE_AI_AGENT_URL as string | undefined)
   ?.replace('/analyze', '') ?? 'https://api.barakzai.cloud';
@@ -111,13 +112,15 @@ export async function generateBriefing(
   language: string,
   accessToken: string,
 ): Promise<BriefingResult> {
+  const memoryContext = await aiMemoryService.getAsPromptContext();
+
   const res = await fetch(`${WORKER_BASE}/briefing`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({ data, language }),
+    body: JSON.stringify({ data, language, memoryContext }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({})) as { error?: string };

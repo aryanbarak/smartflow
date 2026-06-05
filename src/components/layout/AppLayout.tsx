@@ -6,6 +6,7 @@ import { OfflineBadge } from "@/components/OfflineBadge";
 import { MiniPlayer } from "@/components/music/MiniPlayer";
 import { GlobalSearch } from "@/features/search/GlobalSearch";
 import { useAlarms } from "@/features/calendar/useAlarms";
+import { aiMemoryService } from "@/features/ai-memory/aiMemoryService";
 
 export function AppLayout() {
   useAlarms();
@@ -15,6 +16,13 @@ export function AppLayout() {
       const timer = setTimeout(() => { void Notification.requestPermission(); }, 3000);
       return () => clearTimeout(timer);
     }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      aiMemoryService.autoDetectAndSave().catch(console.error);
+    }, 5000);
+    return () => clearTimeout(timer);
   }, []);
   return (
     <div className="min-h-screen bg-background">
