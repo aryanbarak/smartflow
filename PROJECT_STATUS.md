@@ -7,7 +7,7 @@ Last updated: 2026-06-05 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** c6dbc39 - fix: destructure refresh from useFinance in FinancePage
+- **Last commit:** 3f58513 - refactor: remove old bar chart, replaced by FinanceCharts
 - **Last deployment:** 2026-06-05 - Cloudflare Pages (auto)
 
 ---
