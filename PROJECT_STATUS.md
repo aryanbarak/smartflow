@@ -7,7 +7,7 @@ Last updated: 2026-06-05 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** 6e5a854 - fix: add missing useEffect import to FinancePage
+- **Last commit:** 4c50163 - feat: log shopping purchases to Finance with one tap
 - **Last deployment:** 2026-06-05 - Cloudflare Pages (auto)
 
 ---
