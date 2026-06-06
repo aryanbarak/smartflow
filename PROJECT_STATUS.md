@@ -7,7 +7,7 @@ Last updated: 2026-06-06 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** 5fa9bd7 - feat: Document Intelligence — OCR + AI Summary + Action Items → Tasks
+- **Last commit:** 324526e - chore: remove Family Hub — keeping Family page only
 - **Last deployment:** 2026-06-06 - Cloudflare Pages (auto)
 
 ---
