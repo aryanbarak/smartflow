@@ -11,7 +11,6 @@ import CalendarPage from "./pages/CalendarPage";
 import TasksPage from "./pages/TasksPage";
 import FinancePage from "./pages/FinancePage";
 import FamilyPage from "./pages/FamilyPage";
-import FamilyHubPage from "./pages/FamilyHubPage";
 import LinksPage from "./pages/LinksPage";
 import SettingsPage from "./pages/SettingsPage";
 import HabitsPage from "./pages/HabitsPage";
@@ -79,7 +78,6 @@ const App = () => (
               <Route path="/tasks" element={<TasksPage />} />
               <Route path="/finance" element={<FinancePage />} />
               <Route path="/family" element={<FamilyPage />} />
-              <Route path="/family-hub" element={<FamilyHubPage />} />
               <Route path="/documents" element={<Suspense fallback={<AppLoader />}><DocumentsPage /></Suspense>} />
               <Route path="/music"     element={<Suspense fallback={<AppLoader />}><MusicPage /></Suspense>} />
               <Route path="/photos"   element={<Suspense fallback={<AppLoader />}><PhotosPage /></Suspense>} />

@@ -18,7 +18,6 @@ const en = {
   nav_flashcards: 'Flashcards',
   nav_settings: 'Settings',
   nav_more: 'More',
-  nav_family_hub: 'Family Hub',
   nav_tutor_app: 'Tutor App',
   nav_briefing: 'Weekly Briefing',
 
@@ -409,7 +408,6 @@ const de: TranslationDict = {
   nav_flashcards: 'Lernkarten',
   nav_settings: 'Einstellungen',
   nav_more: 'Mehr',
-  nav_family_hub: 'Familien-Hub',
   nav_tutor_app: 'Tutor-App',
   nav_briefing: 'Wöchentliches Briefing',
 
@@ -778,7 +776,6 @@ const fa: TranslationDict = {
   nav_flashcards: 'فلش‌کارت',
   nav_settings: 'تنظیمات',
   nav_more: 'بیشتر',
-  nav_family_hub: 'مرکز خانواده',
   nav_tutor_app: 'اپ مدرس',
   nav_briefing: 'گزارش هفتگی',
 

@@ -85,8 +85,8 @@ export function PdfOcrTool({ onSave }: Props) {
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({})) as { error?: string };
-        throw new Error(err.error ?? `Server error ${response.status}`);
+        const err = await response.json().catch(() => ({})) as { error?: string; detail?: string };
+        throw new Error(err.detail || err.error || `Server error ${response.status}`);
       }
 
       return response.json() as Promise<{
