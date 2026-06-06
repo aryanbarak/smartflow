@@ -114,22 +114,14 @@ export async function uploadToStorage(
     .slice(0, 40) || 'document';
   const safeName = `${base}_${ts}.${ext}`;
   const storagePath = `${userId}/${safeName}`;
-
-  console.log('[uploadToStorage] START', { storagePath, type: file.type, size: file.size });
-
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from(DOCUMENTS_BUCKET)
     .upload(storagePath, file, {
       upsert: true,
       contentType: file.type || 'application/octet-stream',
     });
 
-  if (error) {
-    console.error('[uploadToStorage] FAILED', error);
-    throw new Error(`Storage upload failed: ${error.message}`);
-  }
-
-  console.log('[uploadToStorage] SUCCESS', data);
+  if (error) throw new Error(`Storage upload failed: ${error.message}`);
   return { storagePath, fileName: safeName };
 }
 

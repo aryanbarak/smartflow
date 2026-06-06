@@ -385,7 +385,7 @@ export default function DocumentsPage() {
         onValueChange={setActiveTab}
       >
         {/* Scrollable tab list for 7 tabs */}
-        <div className="overflow-x-auto pb-1">
+        <div className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 pb-1">
           <TabsList className="flex w-max gap-0.5 h-auto p-1">
             <TabsTrigger
               value="library"

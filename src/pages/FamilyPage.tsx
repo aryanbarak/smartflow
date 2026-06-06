@@ -311,7 +311,7 @@ export default function FamilyPage() {
   const isInitialLoading = isLoading && !children.length;
 
   return (
-    <div className="p-6 lg:p-8 max-w-6xl mx-auto">
+    <div className="p-4 lg:p-8 max-w-6xl mx-auto">
       {/* Error banner */}
       {error && (
         <div className="mb-4">
@@ -329,9 +329,9 @@ export default function FamilyPage() {
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center justify-between mb-8 gap-3 flex-wrap"
       >
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-semibold mb-1">Family</h1>
-          <p className="text-muted-foreground">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold truncate">Family</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">
             Manage your kids&apos; activities and notes
           </p>
         </div>

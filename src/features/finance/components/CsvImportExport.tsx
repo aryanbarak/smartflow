@@ -41,7 +41,7 @@ export function CsvImportExport({ transactions, onImport }: Props) {
         onClick={() => exportToCsv(transactions)}
       >
         <Download size={14} />
-        Export CSV
+        <span className="hidden sm:inline">Export CSV</span>
       </Button>
       <Button
         type="button"
@@ -52,7 +52,7 @@ export function CsvImportExport({ transactions, onImport }: Props) {
         onClick={() => fileRef.current?.click()}
       >
         <Upload size={14} />
-        {importing ? 'Importing…' : 'Import CSV'}
+        <span className="hidden sm:inline">{importing ? 'Importing…' : 'Import CSV'}</span>
       </Button>
       <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleFile} />
       {error && <p className="text-xs text-destructive">{error}</p>}

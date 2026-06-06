@@ -551,7 +551,7 @@ export default function FinancePage() {
 
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+    <div className="p-4 lg:p-8 max-w-5xl mx-auto">
       {financeError && (
         <div className="mb-4">
           <StatePanel
@@ -579,7 +579,7 @@ export default function FinancePage() {
             disabled={!hasFilteredResults}
           >
             <Download className="w-4 h-4" />
-            Export PDF
+            <span className="hidden sm:inline">Export PDF</span>
           </Button>
           <Button
             variant="outline"
@@ -589,7 +589,7 @@ export default function FinancePage() {
             disabled={!hasFilteredResults}
           >
             <FileBarChart className="w-4 h-4" />
-            Monthly Report
+            <span className="hidden sm:inline">Monthly Report</span>
           </Button>
           <Button
             variant="outline"
@@ -598,7 +598,7 @@ export default function FinancePage() {
             onClick={() => setShowImport(true)}
           >
             <Upload className="w-4 h-4" />
-            Import PDF
+            <span className="hidden sm:inline">Import PDF</span>
           </Button>
           <CsvImportExport
             transactions={transactions}
@@ -612,7 +612,7 @@ export default function FinancePage() {
             <DialogTrigger asChild>
               <Button className="gap-2 shadow-glow" onClick={openNew}>
                 <Plus className="w-4 h-4" />
-                Add Entry
+                <span className="hidden sm:inline">Add Entry</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
