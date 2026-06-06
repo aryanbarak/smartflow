@@ -1,14 +1,14 @@
 # dailyFlow — PROJECT STATUS
 
-Last updated: 2026-06-05 — Keep this file under 2 pages, update after every session.
+Last updated: 2026-06-06 — Keep this file under 2 pages, update after every session.
 
 ---
 
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** da01100 - fix: correct OCR URL construction from VITE_AI_AGENT_URL
-- **Last deployment:** 2026-06-05 - Cloudflare Pages (auto)
+- **Last commit:** 5fa9bd7 - feat: Document Intelligence — OCR + AI Summary + Action Items → Tasks
+- **Last deployment:** 2026-06-06 - Cloudflare Pages (auto)
 
 ---
 
