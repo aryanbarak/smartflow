@@ -1,14 +1,14 @@
 # dailyFlow — PROJECT STATUS
 
-Last updated: 2026-06-06 — Keep this file under 2 pages, update after every session.
+Last updated: 2026-06-07 — Keep this file under 2 pages, update after every session.
 
 ---
 
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** 90aa57c - fix: mobile layout — padding, tab scroll, finance button labels
-- **Last deployment:** 2026-06-06 - Cloudflare Pages (auto)
+- **Last commit:** b22f5ef - feat: replace logo with ABA circuit-board design
+- **Last deployment:** 2026-06-07 - Cloudflare Pages (auto)
 
 ---
 
