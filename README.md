@@ -201,7 +201,7 @@ Active development with session-based changelog. See [PROJECT_STATUS.md](./PROJE
 Fachinformatiker Anwendungsentwicklung (IHK) · Germany
 
 [![GitHub](https://img.shields.io/badge/GitHub-aryanbarak-181717?style=flat&logo=github)](https://github.com/aryanbarak)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Aryan_Barakzai-0A66C2?style=flat&logo=linkedin)](https://linkedin.com/in/aryanbarak)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Aryan_Barakzai-0A66C2?style=flat&logo=linkedin)](https://www.linkedin.com/in/aryan-barakzai/)
 
 ---
 
