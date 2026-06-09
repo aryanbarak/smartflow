@@ -1,14 +1,14 @@
 # dailyFlow — PROJECT STATUS
 
-Last updated: 2026-06-07 — Keep this file under 2 pages, update after every session.
+Last updated: 2026-06-09 — Keep this file under 2 pages, update after every session.
 
 ---
 
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** b22f5ef - feat: replace logo with ABA circuit-board design
-- **Last deployment:** 2026-06-07 - Cloudflare Pages (auto)
+- **Last commit:** ddc66f3 - docs: add dailyflow screenshots
+- **Last deployment:** 2026-06-09 - Cloudflare Pages (auto)
 
 ---
 
