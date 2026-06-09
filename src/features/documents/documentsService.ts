@@ -101,28 +101,15 @@ export async function deleteDocument(id: string): Promise<void> {
   if (deleteError) throw deleteError;
 }
 
-export async function uploadToStorage(
-  userId: string,
-  file: File,
-): Promise<{ storagePath: string; fileName: string }> {
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin';
-  const ts = Date.now();
-  const base = file.name
-    .replace(/\.[^.]+$/, '')
-    .replace(/\s+/g, '_')
-    .replace(/[^a-zA-Z0-9_-]/g, '')
-    .slice(0, 40) || 'document';
-  const safeName = `${base}_${ts}.${ext}`;
+export async function uploadToStorage(userId: string, file: File) {
+  const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, "_");
   const storagePath = `${userId}/${safeName}`;
-  const { error } = await supabase.storage
-    .from(DOCUMENTS_BUCKET)
-    .upload(storagePath, file, {
-      upsert: true,
-      contentType: file.type || 'application/octet-stream',
-    });
-
-  if (error) throw new Error(`Storage upload failed: ${error.message}`);
-  return { storagePath, fileName: safeName };
+  const { error } = await supabase.storage.from(DOCUMENTS_BUCKET).upload(storagePath, file, { upsert: true });
+  if (error) throw error;
+  return {
+    storagePath,
+    fileName: safeName,
+  };
 }
 
 export async function downloadDocument(storagePath: string): Promise<Blob> {
@@ -130,4 +117,3 @@ export async function downloadDocument(storagePath: string): Promise<Blob> {
   if (error || !data) throw error ?? new Error("Failed to download file");
   return data;
 }
-
