@@ -33,7 +33,7 @@ Last updated: 2026-06-10 — Keep this file under 2 pages, update after every se
 | 1 | learn_ai_messages grows unbounded | Low | Open |
 | 2 | Family JSONB arrays grow unbounded | Low | Open |
 | 3 | No optimistic rollback on write failure | Medium | Open |
-| 4 | Single Gemini model — no fallback | Medium | Open |
+| 4 | Single Gemini model — no fallback | Medium | Fixed (callGeminiWithFallback) |
 | 5 | Short signed URL lifetime for documents | Low | Open |
 | 6 | No error tracking (Sentry) | Low | Open |
 
@@ -55,6 +55,26 @@ Last updated: 2026-06-10 — Keep this file under 2 pages, update after every se
 | --- | --- | --- |
 | Continue.dev local AI | Ollama crash on Windows/Intel Arc | Use Claude.ai instead |
 | Optimistic rollback | Needs architecture planning | Affects all mutation hooks |
+
+---
+
+## Completed This Session (2026-06-10)
+
+### AI Worker — /analyze upgrade
+
+- ✅ File attachment support: PDF, PNG, JPEG, WebP, TXT via `fileData { base64, mimeType, name }`
+- ✅ `requireAuth` added (JWT check, same as other endpoints)
+- ✅ Rate limit raised to 30/hour per user
+- ✅ Switched to `callGeminiWithFallback` — fixes Bug #4 (gemini-2.5 → 2.0 fallback)
+- ✅ `system_instruction` sent as separate field (correct Gemini API format)
+- ✅ CI/CD workflow: `.github/workflows/deploy-worker.yml` — auto-deploy on push to main
+
+### Learn AI — File attachment UI
+
+- ✅ Paperclip button opens file picker (PDF, PNG, JPEG, WebP, TXT, max 10 MB)
+- ✅ File preview badge with name, size, × remove
+- ✅ `useLearnAI`: `attachFile()` validates mime/size, converts to base64 before send
+- ✅ Ctrl+Enter to send, "Processing file…" indicator
 
 ---
 
