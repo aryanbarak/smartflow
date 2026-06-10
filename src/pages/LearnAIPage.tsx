@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Brain, Sparkles, Send } from "lucide-react";
+import { Brain, Sparkles, Send, Paperclip, X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +23,8 @@ const LANGUAGE_OPTIONS: { value: LearnAILanguage; label: string }[] = [
   { value: "en", label: "EN" },
 ];
 
+const ACCEPTED_EXTENSIONS = ".pdf,.png,.jpg,.jpeg,.webp,.txt";
+
 export default function LearnAIPage() {
   const {
     messages,
@@ -33,11 +35,16 @@ export default function LearnAIPage() {
     setMode,
     setLanguage,
     sendMessage,
+    attachedFile,
+    attachFile,
+    isProcessingFile,
   } = useLearnAI();
+
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const highlightTimerRef = useRef<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const historyItems = useMemo(
     () => messages.filter((item) => item.role === "user").slice(-20).reverse(),
@@ -45,17 +52,27 @@ export default function LearnAIPage() {
   );
 
   const handleSend = async () => {
-    if (!draft.trim()) return;
+    if (!draft.trim() && !attachedFile) return;
     setIsSending(true);
     try {
       await sendMessage(draft);
       setDraft("");
     } catch (err) {
-      console.error('[LearnAI] Unexpected error in handleSend:', err);
-      // Error is already handled in useLearnAI hook
+      console.error("[LearnAI] Unexpected error in handleSend:", err);
     } finally {
       setIsSending(false);
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    attachFile(file);
+    // Reset input so the same file can be re-attached if removed
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleRemoveFile = () => {
+    attachFile(null);
   };
 
   const handleHistoryClick = (id: string) => {
@@ -80,6 +97,8 @@ export default function LearnAIPage() {
     };
   }, []);
 
+  const canSend = (draft.trim().length > 0 || attachedFile !== null) && !isSending && !isProcessingFile;
+
   return (
     <ErrorBoundary>
       <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
@@ -98,208 +117,263 @@ export default function LearnAIPage() {
           </div>
         </motion.div>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <Card className="min-h-[360px]">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              Chat
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4 flex flex-col gap-4">
-            {isLoading && messages.length === 0 ? (
-              <StatePanel
-                variant="loading"
-                title="Loading learning history..."
-                description="Fetching your recent questions."
-              />
-            ) : error && messages.length === 0 ? (
-              <StatePanel
-                variant="error"
-                title="Learning history failed to load"
-                description={typeof error === 'string' ? error : error.message}
-              />
-            ) : messages.length === 0 ? (
-              <StatePanel
-                variant="empty"
-                title="Ask your first question to start learning."
-                description="Your AI tutor is ready when you are."
-              />
-            ) : (
-              <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
-                {messages.map((message) => {
-                  const messageLanguage =
-                    "language" in message && message.language
-                      ? message.language
-                      : language;
-                  const isRtl = messageLanguage === "fa";
-
-                  return (
-                    <div
-                      key={message.id}
-                      className={cn(
-                        "flex",
-                        message.role === "user" ? "justify-end" : "justify-start"
-                      )}
-                    >
-                      <div
-                        id={`learnai-msg-${message.id}`}
-                        dir={isRtl ? "rtl" : "ltr"}
-                        lang={isRtl ? "fa" : (messageLanguage || "de")}
-                        className={cn(
-                          "max-w-[85%] rounded-lg px-3 py-2 text-sm transition-shadow",
-                          message.role === "user"
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-secondary text-foreground",
-                          isRtl
-                            ? "text-right font-fa leading-7 whitespace-pre-wrap break-words"
-                            : "text-left leading-7 whitespace-pre-wrap break-words",
-                          highlightedId === message.id
-                            ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-background"
-                            : "ring-0"
-                        )}
-                      >
-                        {message.content}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {error && messages.length > 0 && (
-              <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
-                <p className="text-xs text-destructive font-medium">
-                  {typeof error === 'string' ? error : error.message || 'خطایی رخ داده است'}
-                </p>
-              </div>
-            )}
-
-            {isSending && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                <span>در حال ارسال پیام...</span>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Textarea
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                placeholder="Ask about data structures, networks, or anything else..."
-                rows={3}
-                disabled={isSending}
-              />
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => void handleSend()}
-                  disabled={isSending || !draft.trim()}
-                >
-                  <Send className="w-4 h-4" />
-                  {isSending ? "Sending..." : "Send"}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader className="pb-2">
+        <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+          <Card className="min-h-[360px]">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Brain className="w-4 h-4 text-primary" />
-                Learning mode
+                <Sparkles className="w-4 h-4 text-primary" />
+                Chat
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {MODE_OPTIONS.map((option) => (
-                  <Button
-                    key={option.value}
-                    size="sm"
-                    variant={mode === option.value ? "secondary" : "outline"}
-                    onClick={() => setMode(option.value)}
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {LANGUAGE_OPTIONS.map((option) => (
-                  <Button
-                    key={option.value}
-                    size="sm"
-                    variant={language === option.value ? "secondary" : "outline"}
-                    onClick={() => setLanguage(option.value)}
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="min-h-[180px]">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">History</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
+            <CardContent className="pt-4 flex flex-col gap-4">
               {isLoading && messages.length === 0 ? (
                 <StatePanel
                   variant="loading"
                   title="Loading learning history..."
-                  description="Fetching your recent prompts."
+                  description="Fetching your recent questions."
                 />
               ) : error && messages.length === 0 ? (
                 <StatePanel
                   variant="error"
-                  title="History failed to load"
-                  description={typeof error === 'string' ? error : error.message}
+                  title="Learning history failed to load"
+                  description={typeof error === "string" ? error : error.message}
                 />
-              ) : historyItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Your learning history will appear here.
-                </p>
+              ) : messages.length === 0 ? (
+                <StatePanel
+                  variant="empty"
+                  title="Ask your first question to start learning."
+                  description="Your AI tutor is ready when you are."
+                />
               ) : (
-                <div className="max-h-[320px] overflow-y-auto pr-1">
-                  <ul className="space-y-2">
-                    {historyItems.map((item) => {
-                      const itemLanguage =
-                        "language" in item && item.language
-                          ? item.language
-                          : language;
-                      const isRtl = itemLanguage === "fa";
+                <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+                  {messages.map((message) => {
+                    const messageLanguage =
+                      "language" in message && message.language
+                        ? message.language
+                        : language;
+                    const isRtl = messageLanguage === "fa";
 
-                      return (
-                        <li key={item.id}>
-                          <button
-                            type="button"
-                            dir={isRtl ? "rtl" : "ltr"}
-                            lang={isRtl ? "fa" : (itemLanguage || "de")}
-                            aria-label={`Go to message: ${item.content}`}
-                            onClick={() => handleHistoryClick(item.id)}
-                            className={cn(
-                              "w-full rounded-lg border border-border/60 bg-secondary/40 px-3 py-2 text-xs transition-colors hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                              isRtl
-                                ? "text-right font-fa leading-7 whitespace-pre-wrap break-words"
-                                : "text-left leading-7 whitespace-pre-wrap break-words"
-                            )}
-                          >
-                            {item.content}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                    return (
+                      <div
+                        key={message.id}
+                        className={cn(
+                          "flex",
+                          message.role === "user" ? "justify-end" : "justify-start"
+                        )}
+                      >
+                        <div
+                          id={`learnai-msg-${message.id}`}
+                          dir={isRtl ? "rtl" : "ltr"}
+                          lang={isRtl ? "fa" : messageLanguage || "de"}
+                          className={cn(
+                            "max-w-[85%] rounded-lg px-3 py-2 text-sm transition-shadow",
+                            message.role === "user"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-secondary text-foreground",
+                            isRtl
+                              ? "text-right font-fa leading-7 whitespace-pre-wrap break-words"
+                              : "text-left leading-7 whitespace-pre-wrap break-words",
+                            highlightedId === message.id
+                              ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-background"
+                              : "ring-0"
+                          )}
+                        >
+                          {message.content}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
+
+              {error && messages.length > 0 && (
+                <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
+                  <p className="text-xs text-destructive font-medium">
+                    {typeof error === "string" ? error : error.message || "خطایی رخ داده است"}
+                  </p>
+                </div>
+              )}
+
+              {(isSending || isProcessingFile) && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  <span>
+                    {isProcessingFile ? "Processing file..." : "در حال ارسال پیام..."}
+                  </span>
+                </div>
+              )}
+
+              {/* Input area */}
+              <div className="space-y-2">
+                {/* File preview badge */}
+                {attachedFile && (
+                  <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2 text-xs">
+                    <FileText className="w-3.5 h-3.5 shrink-0 text-primary" />
+                    <span className="truncate flex-1 text-foreground">{attachedFile.name}</span>
+                    <span className="text-muted-foreground shrink-0">
+                      ({(attachedFile.size / 1024).toFixed(0)} KB)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveFile}
+                      className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
+                      aria-label="Remove file"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                <Textarea
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                      e.preventDefault();
+                      void handleSend();
+                    }
+                  }}
+                  placeholder="Ask about data structures, networks, or anything else..."
+                  rows={3}
+                  disabled={isSending || isProcessingFile}
+                />
+
+                <div className="flex items-center justify-between">
+                  {/* File attach button */}
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept={ACCEPTED_EXTENSIONS}
+                      className="hidden"
+                      onChange={handleFileChange}
+                      disabled={isSending || isProcessingFile}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isSending || isProcessingFile}
+                    >
+                      <Paperclip className="w-4 h-4" />
+                      {attachedFile ? "Change file" : "Attach file"}
+                    </Button>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      PDF, PNG, JPEG, WebP, TXT — max 10 MB
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => void handleSend()}
+                    disabled={!canSend}
+                  >
+                    <Send className="w-4 h-4" />
+                    {isSending ? "Sending..." : "Send"}
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
+
+          <div className="space-y-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-primary" />
+                  Learning mode
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {MODE_OPTIONS.map((option) => (
+                    <Button
+                      key={option.value}
+                      size="sm"
+                      variant={mode === option.value ? "secondary" : "outline"}
+                      onClick={() => setMode(option.value)}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {LANGUAGE_OPTIONS.map((option) => (
+                    <Button
+                      key={option.value}
+                      size="sm"
+                      variant={language === option.value ? "secondary" : "outline"}
+                      onClick={() => setLanguage(option.value)}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="min-h-[180px]">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">History</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {isLoading && messages.length === 0 ? (
+                  <StatePanel
+                    variant="loading"
+                    title="Loading learning history..."
+                    description="Fetching your recent prompts."
+                  />
+                ) : error && messages.length === 0 ? (
+                  <StatePanel
+                    variant="error"
+                    title="History failed to load"
+                    description={typeof error === "string" ? error : error.message}
+                  />
+                ) : historyItems.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Your learning history will appear here.
+                  </p>
+                ) : (
+                  <div className="max-h-[320px] overflow-y-auto pr-1">
+                    <ul className="space-y-2">
+                      {historyItems.map((item) => {
+                        const itemLanguage =
+                          "language" in item && item.language
+                            ? item.language
+                            : language;
+                        const isRtl = itemLanguage === "fa";
+
+                        return (
+                          <li key={item.id}>
+                            <button
+                              type="button"
+                              dir={isRtl ? "rtl" : "ltr"}
+                              lang={isRtl ? "fa" : itemLanguage || "de"}
+                              aria-label={`Go to message: ${item.content}`}
+                              onClick={() => handleHistoryClick(item.id)}
+                              className={cn(
+                                "w-full rounded-lg border border-border/60 bg-secondary/40 px-3 py-2 text-xs transition-colors hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                                isRtl
+                                  ? "text-right font-fa leading-7 whitespace-pre-wrap break-words"
+                                  : "text-left leading-7 whitespace-pre-wrap break-words"
+                              )}
+                            >
+                              {item.content}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
       </div>
     </ErrorBoundary>
   );

@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { askLearnAI, formatError, type AIError } from "@/features/learn-ai/aiService";
+import {
+  askLearnAI,
+  fileToFileData,
+  formatError,
+  type AIError,
+  type FileData,
+} from "@/features/learn-ai/aiService";
 import type {
   LearnAIMode,
   LearnAILanguage,
@@ -28,6 +34,15 @@ function getFallbackAnswer(lang: LearnAILanguage): string {
   return "Entschuldigung, ich konnte keine Antwort generieren. Bitte versuchen Sie es erneut.";
 }
 
+// Accepted file types
+const ACCEPTED_MIME_TYPES = [
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "text/plain",
+];
+
 export function useLearnAI() {
   const { user } = useAuth();
   const [messages, setMessages] = useState<LearnAIMessage[]>([]);
@@ -35,7 +50,8 @@ export function useLearnAI() {
   const [error, setError] = useState<AIError | null>(null);
   const [mode, setMode] = useState<LearnAIMode>(DEFAULT_MODE);
   const [language, setLanguage] = useState<LearnAILanguage>(DEFAULT_LANGUAGE);
-  // Ref keeps history fresh inside sendMessage without adding messages to useCallback deps
+  const [attachedFile, setAttachedFile] = useState<File | null>(null); // ← new
+  const [isProcessingFile, setIsProcessingFile] = useState(false);    // ← new
   const messagesRef = useRef<LearnAIMessage[]>([]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
@@ -64,6 +80,32 @@ export function useLearnAI() {
     setMessages([]);
   }, []);
 
+  // ← new: validate and attach a file
+  const attachFile = useCallback((file: File | null) => {
+    if (!file) {
+      setAttachedFile(null);
+      return;
+    }
+    if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
+      setError({
+        title: "Unsupported file type",
+        message: "Please attach a PDF, image (PNG/JPEG/WebP) or text file.",
+        canRetry: false,
+      });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) { // 10 MB limit
+      setError({
+        title: "File too large",
+        message: "Maximum file size is 10 MB.",
+        canRetry: false,
+      });
+      return;
+    }
+    setError(null);
+    setAttachedFile(file);
+  }, []);
+
   const sendMessage = useCallback(
     async (content: string) => {
       if (!user) {
@@ -72,11 +114,27 @@ export function useLearnAI() {
       }
 
       const trimmed = content.trim();
-      if (!trimmed) return;
+      if (!trimmed && !attachedFile) return;
 
       setError(null);
 
-      // Snapshot history before the optimistic update so the current message isn't duplicated
+      // Convert file to base64 before doing anything else
+      let fileData: FileData | undefined;
+      if (attachedFile) {
+        setIsProcessingFile(true);
+        try {
+          fileData = await fileToFileData(attachedFile);
+        } catch (err) {
+          setError(formatError(err, language));
+          setIsProcessingFile(false);
+          return;
+        } finally {
+          setIsProcessingFile(false);
+        }
+      }
+
+      const messageContent = trimmed || `[File: ${attachedFile?.name ?? "attachment"}]`;
+
       const history = messagesRef.current.map((m) => ({
         role: m.role,
         content: m.content,
@@ -84,11 +142,20 @@ export function useLearnAI() {
 
       setMessages((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), role: "user", content: trimmed, createdAt: new Date().toISOString(), language },
+        {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: messageContent,
+          createdAt: new Date().toISOString(),
+          language,
+        },
       ]);
 
+      // Clear file after attaching to the message
+      setAttachedFile(null);
+
       try {
-        await insertMessage({ userId: user.id, mode, language, role: "user", content: trimmed });
+        await insertMessage({ userId: user.id, mode, language, role: "user", content: messageContent });
       } catch (err) {
         setError(formatError(err, language));
       }
@@ -97,7 +164,14 @@ export function useLearnAI() {
       let aiError: AIError | null = null;
       try {
         const memoryContext = await aiMemoryService.getAsPromptContext();
-        const result = await askLearnAI({ message: trimmed, history, mode, language, memoryContext });
+        const result = await askLearnAI({
+          message: messageContent,
+          history,
+          mode,
+          language,
+          memoryContext,
+          fileData, // ← new
+        });
         answer = result.answer;
       } catch (err) {
         console.error("[LearnAI] Error getting AI response:", err);
@@ -108,7 +182,13 @@ export function useLearnAI() {
 
       setMessages((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), role: "assistant", content: answer, createdAt: new Date().toISOString(), language },
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: answer,
+          createdAt: new Date().toISOString(),
+          language,
+        },
       ]);
 
       try {
@@ -120,7 +200,7 @@ export function useLearnAI() {
         }
       }
     },
-    [language, mode, user]
+    [language, mode, user, attachedFile]
   );
 
   return {
@@ -134,5 +214,8 @@ export function useLearnAI() {
     sendMessage,
     clearLocalView,
     reload,
+    attachedFile,   // ← new
+    attachFile,     // ← new
+    isProcessingFile, // ← new
   };
 }
