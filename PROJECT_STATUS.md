@@ -7,7 +7,7 @@ Last updated: 2026-06-12 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** c6319cc - feat: add TTS page (DE/FA) and MEP questions to Ergaenzungspruefung
+- **Last commit:** cae1dcf - feat: add Sprachausgabe tab to Ergaenzungspruefung page
 - **Last deployment:** 2026-06-12 - Cloudflare Pages (auto)
 
 ---
