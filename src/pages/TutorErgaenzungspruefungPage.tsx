@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type TabId = "ueberblick" | "themen" | "vorbereitung" | "beispielfragen";
+type TabId = "ueberblick" | "themen" | "vorbereitung" | "beispielfragen" | "sprachausgabe";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -387,11 +387,41 @@ export default function TutorErgaenzungspruefungPage() {
   const [offeneFrage, setOffeneFrage] = useState<string | null>(null);
   const { playingKey, speak, stop, supported, germanVoices, selectedVoiceName, setSelectedVoiceName } = useTTS();
 
+  // Sprachausgabe tab state
+  const [saText, setSaText] = useState("");
+  const [saRate, setSaRate] = useState(0.9);
+  const [saPitch, setSaPitch] = useState(1.0);
+  const [saPlaying, setSaPlaying] = useState(false);
+  const saUtterRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const saPlay = useCallback(() => {
+    if (!saText.trim()) return;
+    globalThis.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(saText.trim());
+    utter.lang = "de-DE";
+    utter.rate = saRate;
+    utter.pitch = saPitch;
+    const voice = globalThis.speechSynthesis.getVoices().find((v) => v.name === selectedVoiceName)
+      ?? pickGermanVoice();
+    if (voice) utter.voice = voice;
+    utter.onend = () => setSaPlaying(false);
+    utter.onerror = () => setSaPlaying(false);
+    saUtterRef.current = utter;
+    setSaPlaying(true);
+    globalThis.speechSynthesis.speak(utter);
+  }, [saText, saRate, saPitch, selectedVoiceName]);
+
+  const saStop = useCallback(() => {
+    globalThis.speechSynthesis.cancel();
+    setSaPlaying(false);
+  }, []);
+
   const tabs: { id: TabId; label: string }[] = [
     { id: "ueberblick", label: "Überblick" },
     { id: "themen", label: "Themen" },
     { id: "vorbereitung", label: "Vorbereitung" },
     { id: "beispielfragen", label: "Beispielfragen" },
+    { id: "sprachausgabe", label: "🔊 Sprachausgabe" },
   ];
 
   return (
@@ -686,6 +716,120 @@ export default function TutorErgaenzungspruefungPage() {
               })}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ─── Sprachausgabe ───────────────────────────────────── */}
+      {tab === "sprachausgabe" && (
+        <div className="space-y-5 max-w-2xl">
+          {/* Voice selector */}
+          {supported && germanVoices.length > 0 && (
+            <div className="space-y-1.5">
+              <label htmlFor="sa-voice" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Stimme
+              </label>
+              <select
+                id="sa-voice"
+                title="Deutsche Stimme auswählen"
+                value={selectedVoiceName}
+                onChange={(e) => setSelectedVoiceName(e.target.value)}
+                className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
+              >
+                {germanVoices.map((v) => (
+                  <option key={v.name} value={v.name}>
+                    {v.name} ({v.lang})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Text area */}
+          <div className="space-y-1.5">
+            <label htmlFor="sa-text" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Text eingeben
+            </label>
+            <textarea
+              id="sa-text"
+              value={saText}
+              onChange={(e) => setSaText(e.target.value.slice(0, 3000))}
+              placeholder="Deutschen Text hier eingeben und vorlesen lassen…"
+              rows={10}
+              className="w-full rounded-lg border border-slate-700 bg-slate-900/60 p-4 text-sm resize-none placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+            />
+            <div className="flex justify-end">
+              <span className={saText.length > 2700 ? "text-xs text-amber-400" : "text-xs text-muted-foreground"}>
+                {saText.length} / 3000
+              </span>
+            </div>
+          </div>
+
+          {/* Rate & Pitch sliders */}
+          <div className="grid gap-4 sm:grid-cols-2 rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="sa-rate" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Geschwindigkeit</label>
+                <span className="font-mono text-xs text-slate-300">{saRate.toFixed(2)}×</span>
+              </div>
+              <input id="sa-rate" type="range" min={0.5} max={2} step={0.05} value={saRate}
+                title="Geschwindigkeit"
+                onChange={(e) => setSaRate(Number(e.target.value))}
+                className="w-full accent-amber-400" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>0.5×</span><span>1.0×</span><span>2.0×</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="sa-pitch" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tonhöhe</label>
+                <span className="font-mono text-xs text-slate-300">{saPitch.toFixed(1)}</span>
+              </div>
+              <input id="sa-pitch" type="range" min={0.5} max={2} step={0.1} value={saPitch}
+                title="Tonhöhe"
+                onChange={(e) => setSaPitch(Number(e.target.value))}
+                className="w-full accent-amber-400" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Tief</span><span>Normal</span><span>Hoch</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Play / Stop */}
+          <div className="flex gap-3">
+            <Button size="lg" onClick={saPlay}
+              disabled={!supported || !saText.trim() || saPlaying || germanVoices.length === 0}
+              className="flex-1 gap-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              Vorlesen
+            </Button>
+            <Button size="lg" variant="outline" onClick={saStop} disabled={!saPlaying}
+              className="gap-2 border-rose-500/40 text-rose-400 hover:bg-rose-500/10 disabled:opacity-30">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="5" width="4" height="14" rx="1" />
+                <rect x="14" y="5" width="4" height="14" rx="1" />
+              </svg>
+              Stopp
+            </Button>
+          </div>
+
+          {/* Playing indicator */}
+          {saPlaying && (
+            <div className="flex items-center gap-2 text-sm text-amber-400">
+              <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-400" />
+              </span>
+              <span>Wird vorgelesen…</span>
+            </div>
+          )}
+
+          {!supported && (
+            <p className="text-sm text-amber-400">
+              Ihr Browser unterstützt keine Text-to-Speech-Funktion.
+            </p>
+          )}
         </div>
       )}
     </div>
