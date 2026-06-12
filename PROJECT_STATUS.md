@@ -7,7 +7,7 @@ Last updated: 2026-06-13 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** 11a39b7 - fix(tts): fa-AF flag, refactor play complexity, fix diagnostics
+- **Last commit:** 85e3355 - docs: update PROJECT_STATUS for 2026-06-13 TTS session
 - **Last deployment:** 2026-06-13 - Cloudflare Pages (auto)
 
 ---
@@ -16,13 +16,15 @@ Last updated: 2026-06-13 — Keep this file under 2 pages, update after every se
 
 | Date | Decision | Reason |
 | --- | --- | --- |
+| 2026-06-12 | Azure Neural TTS via Cloudflare Worker (not direct) | CORS + key security; Supabase JWT auth gates cost |
+| 2026-06-12 | Text chunking 1500 chars (Azure) / 180 chars (Web Speech) | Web Speech API cuts off beyond ~200 chars |
+| 2026-06-12 | Persian locale fa-AF (Dari) not fa-IR | User preference; flag 🇦🇫 |
 | 2026-06-04 | TextEditorTool → forwardRef + loadFromLibrary | Props + key remount had unfixable timing race |
 | 2026-06-04 | Move ToolCard to module scope | Defined inside DocumentsPage → remounted editor on every re-render |
 | 2026-06-04 | StarterKit.configure({ link: false, underline: false }) | TipTap v3 includes Link+Underline in StarterKit |
 | 2026-06-04 | Ctrl+S → export .docx | Browser was intercepting Ctrl+S and opening Save Page dialog |
 | 2026-06-04 | Rate limit by user_id from JWT (IP fallback) | Shared NAT would block multiple users |
 | 2026-05-30 | Audit-first before new features | Found 19 unused files, 1,625 lines of dead code |
-| 2026-05-30 | Use kb-load + Claude.ai as primary workflow | Most reliable, largest context window |
 
 ---
 
@@ -32,20 +34,20 @@ Last updated: 2026-06-13 — Keep this file under 2 pages, update after every se
 | --- | --- | --- | --- |
 | 1 | learn_ai_messages grows unbounded | Low | Open |
 | 2 | Family JSONB arrays grow unbounded | Low | Open |
-| 3 | No optimistic rollback on write failure | Medium | Open |
-| 4 | Single Gemini model — no fallback | Medium | Fixed (callGeminiWithFallback) |
+| 3 | No optimistic rollback on write failure | Medium | **Fixed** (all 4 hooks) |
+| 4 | Single Gemini model — no fallback | Medium | **Fixed** (callGeminiWithFallback) |
 | 5 | Short signed URL lifetime for documents | Low | Open |
 | 6 | No error tracking (Sentry) | Low | Open |
+| 7 | Persian TTS requires Azure (no Web Speech fa-AF on Windows) | Medium | Azure configured |
 
 ---
 
 ## Next Priorities
 
-1. **Gemini → Ollama fallback** in Worker (Bug #4)
-2. **Optimistic rollback** — affects all mutation hooks
-3. **Prune learn_ai_messages** — DB trigger or scheduled function (Bug #1)
-4. **Phase 3** — AI Gateway + provider routing
-5. **Mobile layout** — Finance and Family pages
+1. **Prune learn_ai_messages** — DB trigger or scheduled function (Bug #1)
+2. **Phase 3** — AI Gateway + provider routing
+3. **Azure TTS key security** — move from Plaintext → Secret in Cloudflare
+4. **Ergänzungsprüfung** — add OOP, DB, Network, Software-Eng question sets
 
 ---
 
@@ -53,107 +55,98 @@ Last updated: 2026-06-13 — Keep this file under 2 pages, update after every se
 
 | Task | Blocked by | Notes |
 | --- | --- | --- |
+| Persian TTS (fa-AF) | Azure key + region must be set in Cloudflare | AZURE_TTS_KEY ✅, AZURE_TTS_REGION ✅ |
 | Continue.dev local AI | Ollama crash on Windows/Intel Arc | Use Claude.ai instead |
-| Optimistic rollback | Needs architecture planning | Affects all mutation hooks |
 
 ---
 
 ## Completed This Session (2026-06-12/13)
 
-### TTS — Text-to-Speech System (new)
+### TTS — Text-to-Speech System (new feature)
 
-- ✅ `/tts` page (`TTSPage.tsx`): language selector de/af, textarea, rate/pitch sliders, progress bar
-- ✅ `useAzureTTS` hook: tries Azure (Supabase JWT auth) → falls back to Web Speech chunking
+- ✅ `/tts` page (`TTSPage.tsx`): language selector de🇩🇪/fa🇦🇫, textarea, rate/pitch sliders, progress bar, engine badge
+- ✅ `useAzureTTS` hook: gets Supabase JWT → tries Azure → falls back to Web Speech per chunk
 - ✅ Text chunking: 1500 chars/chunk Azure, 180 chars Web Speech (split at sentence boundaries)
 - ✅ Nav: `Volume2` icon + `nav_tts` added to Sidebar, MobileNav, i18n (en/de/fa)
-- ✅ Persian flag: 🇦🇫 (AF), locale `fa-AF`, voice `fa-AF-FatimahNeural`
+- ✅ Persian flag 🇦🇫, locale `fa-AF`, voice `fa-AF-FatimahNeural`; Persian install guide in UI
 
-### TutorErgaenzungspruefungPage — Sprachausgabe tab upgrade
+### TutorErgaenzungspruefungPage (new page)
 
-- ✅ Migrated from plain Web Speech → `useAzureTTS` (chunking + Azure + fallback)
-- ✅ Language selector (de/fa) with flag buttons added
-- ✅ `dir="rtl"` + `text-right` on textarea for Persian; no character limit
-- ✅ Progress indicator + engine badge; Persian install guide when no local fa voices
+- ✅ Full page: Überblick, Themen, Vorbereitung, Beispielfragen, 🔊 Sprachausgabe (5 tabs)
+- ✅ Überblick: 6 info cards (definition, Zulassung, Dauer, Bewertung, Rechtsgrundlage, Tipp) + AP2 Prüfungsbereiche table
+- ✅ Themen: 5 topic blocks (Algorithmen, OOP, DB, Netzwerke, SW-Entwicklung) with Prüfungsfallen boxes
+- ✅ Vorbereitung: 6 tip cards + 10-Tage-Plan table
+- ✅ Beispielfragen: 25 MEP Algorithmen Q&A from PDF + OOP, DB, Netzwerke questions — accordion + TTS per item
+- ✅ MEP questions also shown as accordion at bottom of Themen tab
+- ✅ `pickGermanVoice()`: priority order Katja → Conrad → Google Deutsch → Anna → any de-DE
+- ✅ Voice selector dropdown in Beispielfragen toolbar
+- ✅ Sprachausgabe tab: migrated to `useAzureTTS`, language selector de/fa, no char limit, progress bar
+- ✅ Nav: accessible from TutorAppPage and TutorWisoPage breadcrumb
 
 ### AI Worker — Azure TTS endpoint
 
-- ✅ `POST /tts-azure`: `handleTtsAzure()` with `de-DE-KatjaNeural` / `fa-AF-FatimahNeural`
-- ✅ Auth: requires Supabase JWT; returns 503 if env vars missing
-- ✅ Router refactored: if-chain → `ROUTES` dispatch table (fixes S3776)
-- ✅ `/tts-azure` route added to `wrangler.toml`; worker auto-deployed via CI/CD
+- ✅ `POST /tts-azure`: `handleTtsAzure()` — voices `de-DE-KatjaNeural` / `fa-AF-FatimahNeural`
+- ✅ Auth: requires Supabase JWT; 503 if env vars missing; SSML with XML escaping
+- ✅ Router refactored: if-chain → `ROUTES` dispatch table (fixes S3776 complexity)
+- ✅ `/tts-azure` route added to `wrangler.toml`; auto-deployed via CI/CD
 
-### SonarJS Diagnostics Fixed
+### Optimistic Rollback (Bug #3 fixed)
 
-- ✅ S3776: `play()` refactored via `speakChunk()` at module level
-- ✅ S7721: `getEngineLabel` moved to module scope
-- ✅ S4325: `token!` removed — replaced with `if (token !== null)` narrowing
-- ✅ S7735: multiple negated conditions fixed (ternary direction, `!x` → `x === 0`)
-- ✅ S3735 / S3358 / S7748: void operator, nested ternary, zero fraction
+- ✅ `useTasks`: snapshot before mutate, revert + toast on failure; temp ID replaced by server ID on add
+- ✅ `useFinance`: same pattern for transactions
+- ✅ `useFamily`: same pattern for family members
+- ✅ `useEvents`: same pattern for calendar events
+
+### Mobile Layout Fixes
+
+- ✅ `FinancePage`: controls split to 2 rows on mobile (Tabs+month / GroupBy); icons shrink; date label hidden
+- ✅ `FamilyPage`: children list → horizontal scroll on mobile; TabsList uses `grid-cols-4` on small screens
+
+### SonarJS Diagnostics Fixed (this session)
+
+- ✅ S3776 Cognitive Complexity: `play()` → extracted `speakChunk()` at module level; router → ROUTES table
+- ✅ S7721 Inner function: `getEngineLabel` moved to module scope
+- ✅ S4325 Unnecessary assertion: `token!` → `if (token !== null)` narrowing
+- ✅ S7735 Negated conditions: `!x` → `x === 0`; ternary directions flipped
+- ✅ S3735 / S3358 / S7748 / S6759 / S7741 / S7764: void, nested ternary, zero fraction, readonly props, typeof window, window→globalThis
 
 ---
 
-## Completed This Session (2026-06-10)
+## Completed Previously (2026-06-10)
 
 ### AI Worker — /analyze upgrade
 
 - ✅ File attachment support: PDF, PNG, JPEG, WebP, TXT via `fileData { base64, mimeType, name }`
-- ✅ `requireAuth` added (JWT check, same as other endpoints)
-- ✅ Rate limit raised to 30/hour per user
-- ✅ Switched to `callGeminiWithFallback` — fixes Bug #4 (gemini-2.5 → 2.0 fallback)
-- ✅ `system_instruction` sent as separate field (correct Gemini API format)
-- ✅ CI/CD workflow: `.github/workflows/deploy-worker.yml` — auto-deploy on push to main
+- ✅ `requireAuth` added (JWT check); rate limit raised to 30/hour per user
+- ✅ `callGeminiWithFallback`: gemini-2.5-flash → 2.0-flash → Workers AI llama-3.1-8b
+- ✅ Cloudflare AI Gateway routing when `CF_ACCOUNT_ID` + `CF_GATEWAY_NAME` set
+- ✅ CI/CD: `.github/workflows/deploy-worker.yml` — auto-deploy on push to main
 
 ### Learn AI — File attachment UI
 
-- ✅ Paperclip button opens file picker (PDF, PNG, JPEG, WebP, TXT, max 10 MB)
-- ✅ File preview badge with name, size, × remove
-- ✅ `useLearnAI`: `attachFile()` validates mime/size, converts to base64 before send
-- ✅ Ctrl+Enter to send, "Processing file…" indicator
+- ✅ Paperclip button: PDF, PNG, JPEG, WebP, TXT, max 10 MB; base64 before send
+- ✅ File preview badge with name, size, × remove; Ctrl+Enter to send
 
 ---
 
-## Completed This Session (2026-06-04)
+## Completed Previously (2026-06-04)
 
-### Documents Feature — Major fixes
+### Documents Feature
 
-- ✅ HTML files now appear in Library (filter was PDF-only)
-- ✅ Edit button loads file content — forwardRef + useImperativeHandle + loadFromLibrary
-- ✅ Root cause: ToolCard inside DocumentsPage remounted editor on every re-render
-- ✅ TipTap v3 duplicate extension warning fixed (StarterKit v3 includes Link + Underline)
-- ✅ View button renders HTML with proper styling in new window
-- ✅ Download uses clean filename (doc.title, no timestamp suffix)
-- ✅ Upload: unique filename + upsert: true on Supabase Storage
+- ✅ HTML files in Library; Edit loads content via forwardRef + useImperativeHandle
+- ✅ TipTap v3 duplicate extension fixed; View, Download, Upload all fixed
 
 ### Text Editor UI
 
-- ✅ Title integrated into toolbar Row 1 (compact 4-row layout, no wasted space)
-- ✅ Toolbar rows horizontally scrollable on mobile
-- ✅ Editor uses full page width (max-w-6xl removed when editor tab active)
-- ✅ Ctrl+S exports .docx (global keydown listener, latest-ref pattern)
-- ✅ Warmer page background (#eeeae4), ring on paper, my-8 spacing
-- ✅ Library doc actions: icon-only on mobile, text on desktop
+- ✅ Title in toolbar; rows scrollable on mobile; full-width; Ctrl+S → .docx
 
 ### AI Worker
 
-- ✅ Rate limiting: user_id from JWT sub (IP fallback) — per endpoint, 1h window
-- ✅ Deployed via wrangler deploy
+- ✅ Rate limiting by JWT sub (IP fallback); deployed via wrangler
 
 ### TypeScript
 
-- ✅ All as any casts removed (familyService, familyHubService, errorMessages, tasksService)
-
----
-
-## Completed Previously (2026-05-28 → 2026-06-03)
-
-- ✅ All core features (Tasks, Calendar, Finance, Family, Documents, Music, Photos, Links, AI, Habits, Journal, Flashcards, Settings)
-- ✅ i18n (en/de/fa — RTL for Farsi), PWA (installable + offline badge)
-- ✅ Project Audit & Cleanup (19 files, 1,625 lines deleted)
-- ✅ PDF tools (Merge, Split, Compress, OCR, Image→PDF)
-- ✅ DeepL Translation + ElevenLabs TTS + Photo AI tagging via Cloudflare Worker
-- ✅ Rate limiting on AI Worker (KV-based, per user)
-- ✅ Supabase types regenerated — all as any casts eliminated
-- ✅ MASTER_CONTEXT.md created (architecture, patterns, critical rules)
+- ✅ All `as any` casts removed (familyService, familyHubService, errorMessages, tasksService)
 
 ---
 
