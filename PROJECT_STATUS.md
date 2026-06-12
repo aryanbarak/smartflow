@@ -1,14 +1,14 @@
 # dailyFlow — PROJECT STATUS
 
-Last updated: 2026-06-10 — Keep this file under 2 pages, update after every session.
+Last updated: 2026-06-12 — Keep this file under 2 pages, update after every session.
 
 ---
 
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** fb7a661 - feat: file attachment in Learn AI chat (PDF, image, text)
-- **Last deployment:** 2026-06-10 - Cloudflare Pages (auto)
+- **Last commit:** 835cac3 - feat(hooks): optimistic rollback on all mutation hooks
+- **Last deployment:** 2026-06-12 - Cloudflare Pages (auto)
 
 ---
 
