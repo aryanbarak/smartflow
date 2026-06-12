@@ -7,7 +7,7 @@ Last updated: 2026-06-12 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** 97f4c27 - fix: Persian TTS audio issue
+- **Last commit:** 11a39b7 - fix(tts): fa-AF flag, refactor play complexity, fix diagnostics
 - **Last deployment:** 2026-06-12 - Cloudflare Pages (auto)
 
 ---
