@@ -55,11 +55,16 @@ export function useFinance() {
   const addTransaction = useCallback(
     async (input: NewTransaction) => {
       if (!user) return null;
+      const now = new Date().toISOString();
+      const tempId = `__temp_${now}`;
+      const tempItem: Transaction = { id: tempId, ...input, createdAt: now, updatedAt: now };
+      setTransactions((prev) => [tempItem, ...prev]);
       try {
         const created = await financeService.createTransaction(user.id, input);
-        setTransactions((prev) => [created, ...prev]);
+        setTransactions((prev) => prev.map((tx) => (tx.id === tempId ? created : tx)));
         return created;
       } catch (err) {
+        setTransactions((prev) => prev.filter((tx) => tx.id !== tempId));
         const message = getErrorMessage(err);
         console.error("[useFinance] add error", err);
         toast({
@@ -85,17 +90,16 @@ export function useFinance() {
       },
     ) => {
       if (!user) return null;
+      const snapshot = transactions;
+      setTransactions((prev) =>
+        prev.map((tx) => (tx.id === id ? { ...tx, ...updates } : tx)),
+      );
       try {
-        const updated = await financeService.updateTransaction(
-          user.id,
-          id,
-          updates,
-        );
-        setTransactions((prev) =>
-          prev.map((tx) => (tx.id === id ? updated : tx)),
-        );
+        const updated = await financeService.updateTransaction(user.id, id, updates);
+        setTransactions((prev) => prev.map((tx) => (tx.id === id ? updated : tx)));
         return updated;
       } catch (err) {
+        setTransactions(snapshot);
         const message = getErrorMessage(err);
         console.error("[useFinance] update error", err);
         toast({
@@ -106,19 +110,20 @@ export function useFinance() {
         throw err;
       }
     },
-    [user, toast],
+    [user, transactions, toast],
   );
 
   const removeTransaction = useCallback(
     async (id: string) => {
       if (!user) return false;
+      const snapshot = transactions;
+      setTransactions((prev) => prev.filter((tx) => tx.id !== id));
       try {
         const ok = await financeService.deleteTransaction(user.id, id);
-        if (ok) {
-          setTransactions((prev) => prev.filter((tx) => tx.id !== id));
-        }
+        if (!ok) setTransactions(snapshot);
         return ok;
       } catch (err) {
+        setTransactions(snapshot);
         const message = getErrorMessage(err);
         console.error("[useFinance] delete error", err);
         toast({
@@ -129,7 +134,7 @@ export function useFinance() {
         throw err;
       }
     },
-    [user, toast],
+    [user, transactions, toast],
   );
 
   return {

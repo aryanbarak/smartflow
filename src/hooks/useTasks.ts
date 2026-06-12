@@ -46,11 +46,24 @@ export function useTasks() {
         toast({ variant: "destructive", title: "You must be signed in" });
         return null;
       }
+      const now = new Date().toISOString();
+      const tempId = `__temp_${now}`;
+      const tempTask: Task = {
+        id: tempId,
+        title: payload.title,
+        notes: payload.notes,
+        dueDate: payload.dueDate,
+        completed: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      setTasks((prev) => [tempTask, ...prev]);
       try {
         const created = await tasksService.createTask(user.id, payload);
-        setTasks((prev) => [created, ...prev]);
+        setTasks((prev) => prev.map((t) => (t.id === tempId ? created : t)));
         return created;
       } catch (err) {
+        setTasks((prev) => prev.filter((t) => t.id !== tempId));
         const message = getErrorMessage(err);
         console.error("Failed to create task", err);
         toast({
@@ -73,11 +86,14 @@ export function useTasks() {
         toast({ variant: "destructive", title: "You must be signed in" });
         return null;
       }
+      const snapshot = tasks;
+      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
       try {
         const updated = await tasksService.updateTask(user.id, id, patch);
-        setTasks((prev) => prev.map((task) => (task.id === id ? updated : task)));
+        setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));
         return updated;
       } catch (err) {
+        setTasks(snapshot);
         const message = getErrorMessage(err);
         console.error("Failed to update task", err);
         toast({
@@ -88,7 +104,7 @@ export function useTasks() {
         return null;
       }
     },
-    [user, toast],
+    [user, tasks, toast],
   );
 
   const toggleTaskCompleted = useCallback(
@@ -97,14 +113,17 @@ export function useTasks() {
         toast({ variant: "destructive", title: "You must be signed in" });
         return null;
       }
-      const current = tasks.find((task) => task.id === id);
+      const current = tasks.find((t) => t.id === id);
       if (!current) return null;
+      const snapshot = tasks;
       const nextCompleted = !current.completed;
+      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, completed: nextCompleted } : t)));
       try {
         const updated = await tasksService.toggleTaskCompleted(user.id, id, nextCompleted);
-        setTasks((prev) => prev.map((task) => (task.id === id ? updated : task)));
+        setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));
         return updated;
       } catch (err) {
+        setTasks(snapshot);
         const message = getErrorMessage(err);
         console.error("Failed to toggle task", err);
         toast({
@@ -124,11 +143,13 @@ export function useTasks() {
         toast({ variant: "destructive", title: "You must be signed in" });
         return false;
       }
+      const snapshot = tasks;
+      setTasks((prev) => prev.filter((t) => t.id !== id));
       try {
         await tasksService.deleteTask(user.id, id);
-        setTasks((prev) => prev.filter((task) => task.id !== id));
         return true;
       } catch (err) {
+        setTasks(snapshot);
         const message = getErrorMessage(err);
         console.error("Failed to delete task", err);
         toast({
@@ -139,7 +160,7 @@ export function useTasks() {
         return false;
       }
     },
-    [user, toast],
+    [user, tasks, toast],
   );
 
   return {
