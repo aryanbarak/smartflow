@@ -1,6 +1,6 @@
 # dailyFlow — PROJECT STATUS
 
-Last updated: 2026-06-12 — Keep this file under 2 pages, update after every session.
+Last updated: 2026-06-13 — Keep this file under 2 pages, update after every session.
 
 ---
 
@@ -8,7 +8,7 @@ Last updated: 2026-06-12 — Keep this file under 2 pages, update after every se
 
 - **Branch:** `main`
 - **Last commit:** 11a39b7 - fix(tts): fa-AF flag, refactor play complexity, fix diagnostics
-- **Last deployment:** 2026-06-12 - Cloudflare Pages (auto)
+- **Last deployment:** 2026-06-13 - Cloudflare Pages (auto)
 
 ---
 
@@ -55,6 +55,40 @@ Last updated: 2026-06-12 — Keep this file under 2 pages, update after every se
 | --- | --- | --- |
 | Continue.dev local AI | Ollama crash on Windows/Intel Arc | Use Claude.ai instead |
 | Optimistic rollback | Needs architecture planning | Affects all mutation hooks |
+
+---
+
+## Completed This Session (2026-06-12/13)
+
+### TTS — Text-to-Speech System (new)
+
+- ✅ `/tts` page (`TTSPage.tsx`): language selector de/af, textarea, rate/pitch sliders, progress bar
+- ✅ `useAzureTTS` hook: tries Azure (Supabase JWT auth) → falls back to Web Speech chunking
+- ✅ Text chunking: 1500 chars/chunk Azure, 180 chars Web Speech (split at sentence boundaries)
+- ✅ Nav: `Volume2` icon + `nav_tts` added to Sidebar, MobileNav, i18n (en/de/fa)
+- ✅ Persian flag: 🇦🇫 (AF), locale `fa-AF`, voice `fa-AF-FatimahNeural`
+
+### TutorErgaenzungspruefungPage — Sprachausgabe tab upgrade
+
+- ✅ Migrated from plain Web Speech → `useAzureTTS` (chunking + Azure + fallback)
+- ✅ Language selector (de/fa) with flag buttons added
+- ✅ `dir="rtl"` + `text-right` on textarea for Persian; no character limit
+- ✅ Progress indicator + engine badge; Persian install guide when no local fa voices
+
+### AI Worker — Azure TTS endpoint
+
+- ✅ `POST /tts-azure`: `handleTtsAzure()` with `de-DE-KatjaNeural` / `fa-AF-FatimahNeural`
+- ✅ Auth: requires Supabase JWT; returns 503 if env vars missing
+- ✅ Router refactored: if-chain → `ROUTES` dispatch table (fixes S3776)
+- ✅ `/tts-azure` route added to `wrangler.toml`; worker auto-deployed via CI/CD
+
+### SonarJS Diagnostics Fixed
+
+- ✅ S3776: `play()` refactored via `speakChunk()` at module level
+- ✅ S7721: `getEngineLabel` moved to module scope
+- ✅ S4325: `token!` removed — replaced with `if (token !== null)` narrowing
+- ✅ S7735: multiple negated conditions fixed (ternary direction, `!x` → `x === 0`)
+- ✅ S3735 / S3358 / S7748: void operator, nested ternary, zero fraction
 
 ---
 
