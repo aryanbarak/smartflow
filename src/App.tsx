@@ -44,6 +44,7 @@ const BriefingPage = lazy(() => import("./pages/BriefingPage"));
 const TutorPage = lazy(() => import("./pages/TutorPage"));
 const TutorAppPage = lazy(() => import("./pages/TutorAppPage"));
 const TutorWisoPage = lazy(() => import("./pages/TutorWisoPage"));
+const TutorErgaenzungspruefungPage = lazy(() => import("./pages/TutorErgaenzungspruefungPage"));
 
 const ProtectedRoute = () => {
   const { session, isLoading } = useAuth();
@@ -104,6 +105,14 @@ const App = () => (
                 element={
                   <Suspense fallback={<AppLoader />}>
                     <TutorWisoPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/tutor/ergaenzungspruefung"
+                element={
+                  <Suspense fallback={<AppLoader />}>
+                    <TutorErgaenzungspruefungPage />
                   </Suspense>
                 }
               />

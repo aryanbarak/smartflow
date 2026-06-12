@@ -197,6 +197,9 @@ export default function TutorWisoPage() {
         <Link to="/tutor/wiso" className="rounded border border-slate-400 bg-slate-900 px-3 py-1.5 text-sm font-medium">
           WISO
         </Link>
+        <Link to="/tutor/ergaenzungspruefung" className="rounded border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm font-medium hover:bg-slate-800">
+          Ergänzungsprüfung
+        </Link>
       </div>
 
       <div className="flex items-center gap-3">
