@@ -732,7 +732,7 @@ export default function TutorErgaenzungspruefungPage() {
                     : "border-slate-700 bg-slate-900 hover:bg-slate-800 text-muted-foreground",
                 )}
               >
-                <span className="text-lg">{l === "de" ? "🇩🇪" : "🇮🇷"}</span>
+                <span className="text-lg">{l === "de" ? "🇩🇪" : "🇦🇫"}</span>
                 {l === "de" ? "Deutsch" : "فارسی"}
               </button>
             ))}

@@ -28,7 +28,7 @@ function getEngineLabel(engine: string | undefined): string | null {
 
 const LANG_CONFIG: Record<TtsLang, { label: string; flag: string; dir: "ltr" | "rtl"; placeholder: string }> = {
   de: { label: "Deutsch", flag: "🇩🇪", dir: "ltr", placeholder: "Deutschen Text hier eingeben…" },
-  fa: { label: "فارسی",  flag: "🇮🇷", dir: "rtl", placeholder: "متن فارسی را اینجا بنویسید…" },
+  fa: { label: "فارسی",  flag: "🇦🇫", dir: "rtl", placeholder: "متن فارسی را اینجا بنویسید…" },
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -119,7 +119,7 @@ export default function TTSPage() {
             {text.length > 0 && (
               <>
                 {text.length.toLocaleString()} Zeichen ·{" "}
-                {Math.ceil(text.length / 1500)} Abschnitt{Math.ceil(text.length / 1500) !== 1 ? "e" : ""}
+                {Math.ceil(text.length / 1500)} Abschnitt{Math.ceil(text.length / 1500) === 1 ? "" : "e"}
               </>
             )}
           </span>

@@ -13,7 +13,7 @@ const WORKER_BASE =
   (import.meta.env.VITE_AI_AGENT_URL as string | undefined)?.replace("/analyze", "") ??
   "https://api.barakzai.cloud";
 
-const AZURE_LOCALES: Record<TtsLang, string> = { de: "de-DE", fa: "fa-IR" };
+const AZURE_LOCALES: Record<TtsLang, string> = { de: "de-DE", fa: "fa-AF" };
 
 // ─── Text chunking ────────────────────────────────────────────────────────────
 // Splits at sentence endings; guarantees every chunk ≤ maxLen chars.
@@ -101,6 +101,28 @@ function webSpeechChunk(
   });
 }
 
+// ─── Per-chunk speaker (module-level to avoid S7721 / S3776 inside hook) ──────
+async function speakChunk(
+  chunk: string,
+  lang: TtsLang,
+  token: string | null,
+  webSpeechVoiceName: string | undefined,
+  rate: number,
+  pitch: number,
+  audioRef: React.MutableRefObject<HTMLAudioElement | null>,
+): Promise<void> {
+  if (token !== null) {
+    const buffer = await fetchAzureChunk(chunk, lang, token);
+    if (buffer) {
+      await playBuffer(buffer, audioRef);
+      return;
+    }
+  }
+  if ("speechSynthesis" in globalThis) {
+    await webSpeechChunk(chunk, lang, webSpeechVoiceName, rate, pitch);
+  }
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 export interface AzureTTSOptions {
   lang: TtsLang;
@@ -129,37 +151,24 @@ export function useAzureTTS() {
   const play = useCallback(
     async (text: string, opts: AzureTTSOptions) => {
       const { lang, rate = 1, pitch = 1, webSpeechVoiceName } = opts;
-      if (!text.trim()) return;
+      if (text.trim().length === 0) return;
 
       stop();
       abortRef.current = false;
       setIsPlaying(true);
 
-      // Try to get Supabase session token for Azure
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token ?? null;
 
-      const azureChunkSize = 1500;
-      const wsChunkSize = 180;
-      const useAzure = token !== null;
-      const chunks = chunkText(text, useAzure ? azureChunkSize : wsChunkSize);
-      const engine: TtsProgress["engine"] = useAzure ? "azure" : "webspeech";
+      const chunkSize = token === null ? 180 : 1500;
+      const chunks = chunkText(text, chunkSize);
+      const engine: TtsProgress["engine"] = token === null ? "webspeech" : "azure";
 
       for (let i = 0; i < chunks.length; i++) {
         if (abortRef.current) break;
         setProgress({ current: i + 1, total: chunks.length, engine });
-
-        if (useAzure) {
-          const buffer = await fetchAzureChunk(chunks[i], lang, token!);
-          if (buffer && !abortRef.current) {
-            await playBuffer(buffer, audioRef);
-          } else if (!buffer && !abortRef.current && "speechSynthesis" in globalThis) {
-            // Azure chunk failed — fall back to Web Speech for this chunk
-            await webSpeechChunk(chunks[i], lang, webSpeechVoiceName, rate, pitch);
-          }
-        } else if ("speechSynthesis" in globalThis) {
-          await webSpeechChunk(chunks[i], lang, webSpeechVoiceName, rate, pitch);
-        }
+        await speakChunk(chunks[i], lang, token, webSpeechVoiceName, rate, pitch, audioRef);
+        if (abortRef.current) break;
       }
 
       if (!abortRef.current) {
