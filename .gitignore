@@ -38,3 +38,5 @@ dist-ssr
 # .knowledge/*.py
 # .knowledge/*.ps1
 # .knowledge/راهنما.md
+
+supabase/.temp/
