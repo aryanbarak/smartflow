@@ -7,7 +7,7 @@ Last updated: 2026-06-12 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** ffbda9f - chore: ignore supabase temp files
+- **Last commit:** 9d48358 - feat: Ergaenzungspruefung Themen page
 - **Last deployment:** 2026-06-12 - Cloudflare Pages (auto)
 
 ---
