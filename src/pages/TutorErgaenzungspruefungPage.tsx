@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAzureTTS, type TtsLang } from "@/hooks/useAzureTTS";
 
 type TabId = "ueberblick" | "themen" | "vorbereitung" | "beispielfragen" | "sprachausgabe";
 
@@ -390,31 +391,26 @@ export default function TutorErgaenzungspruefungPage() {
   // Sprachausgabe tab state
   const [saText, setSaText] = useState("");
   const [saRate, setSaRate] = useState(0.9);
-  const [saPitch, setSaPitch] = useState(1.0);
-  const [saPlaying, setSaPlaying] = useState(false);
-  const saUtterRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [saPitch, setSaPitch] = useState(1);
+  const [saLang, setSaLang] = useState<TtsLang>("de");
+  const [saVoices, setSaVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [saVoiceName, setSaVoiceName] = useState("");
+  const { isPlaying: saPlaying, progress: saProgress, play: saPlayAzure, stop: saStop } = useAzureTTS();
 
-  const saPlay = useCallback(() => {
-    if (!saText.trim()) return;
-    globalThis.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(saText.trim());
-    utter.lang = "de-DE";
-    utter.rate = saRate;
-    utter.pitch = saPitch;
-    const voice = globalThis.speechSynthesis.getVoices().find((v) => v.name === selectedVoiceName)
-      ?? pickGermanVoice();
-    if (voice) utter.voice = voice;
-    utter.onend = () => setSaPlaying(false);
-    utter.onerror = () => setSaPlaying(false);
-    saUtterRef.current = utter;
-    setSaPlaying(true);
-    globalThis.speechSynthesis.speak(utter);
-  }, [saText, saRate, saPitch, selectedVoiceName]);
+  useEffect(() => {
+    const load = () => {
+      const filtered = (globalThis.speechSynthesis?.getVoices() ?? []).filter((v) => v.lang.startsWith(saLang));
+      setSaVoices(filtered);
+      setSaVoiceName(saLang === "de" ? (pickGermanVoice()?.name ?? filtered[0]?.name ?? "") : (filtered[0]?.name ?? ""));
+    };
+    load();
+    globalThis.speechSynthesis?.addEventListener("voiceschanged", load);
+    return () => { globalThis.speechSynthesis?.removeEventListener("voiceschanged", load); };
+  }, [saLang]);
 
-  const saStop = useCallback(() => {
-    globalThis.speechSynthesis.cancel();
-    setSaPlaying(false);
-  }, []);
+  const saPlay = useCallback(async () => {
+    await saPlayAzure(saText, { lang: saLang, rate: saRate, pitch: saPitch, webSpeechVoiceName: saVoiceName });
+  }, [saPlayAzure, saText, saLang, saRate, saPitch, saVoiceName]);
 
   const tabs: { id: TabId; label: string }[] = [
     { id: "ueberblick", label: "Überblick" },
@@ -722,45 +718,76 @@ export default function TutorErgaenzungspruefungPage() {
       {/* ─── Sprachausgabe ───────────────────────────────────── */}
       {tab === "sprachausgabe" && (
         <div className="space-y-5 max-w-2xl">
-          {/* Voice selector */}
-          {supported && germanVoices.length > 0 && (
+          {/* Language selector */}
+          <div className="flex gap-3">
+            {(["de", "fa"] as TtsLang[]).map((l) => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => { saStop(); setSaLang(l); }}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors",
+                  saLang === l
+                    ? "border-amber-500/60 bg-amber-500/10 text-amber-300"
+                    : "border-slate-700 bg-slate-900 hover:bg-slate-800 text-muted-foreground",
+                )}
+              >
+                <span className="text-lg">{l === "de" ? "🇩🇪" : "🇮🇷"}</span>
+                {l === "de" ? "Deutsch" : "فارسی"}
+              </button>
+            ))}
+          </div>
+
+          {/* Fallback voice selector */}
+          {supported && saVoices.length > 0 && (
             <div className="space-y-1.5">
               <label htmlFor="sa-voice" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Stimme
+                Fallback-Stimme (Web Speech)
               </label>
               <select
                 id="sa-voice"
-                title="Deutsche Stimme auswählen"
-                value={selectedVoiceName}
-                onChange={(e) => setSelectedVoiceName(e.target.value)}
+                title="Stimme auswählen"
+                value={saVoiceName}
+                onChange={(e) => setSaVoiceName(e.target.value)}
                 className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
               >
-                {germanVoices.map((v) => (
-                  <option key={v.name} value={v.name}>
-                    {v.name} ({v.lang})
-                  </option>
+                {saVoices.map((v) => (
+                  <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>
                 ))}
               </select>
+              <p className="text-xs text-muted-foreground">Wird nur verwendet, wenn Azure TTS nicht erreichbar ist.</p>
             </div>
           )}
 
           {/* Text area */}
           <div className="space-y-1.5">
             <label htmlFor="sa-text" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Text eingeben
+              Text eingeben / متن
             </label>
             <textarea
               id="sa-text"
+              dir={saLang === "fa" ? "rtl" : "ltr"}
               value={saText}
-              onChange={(e) => setSaText(e.target.value.slice(0, 3000))}
-              placeholder="Deutschen Text hier eingeben und vorlesen lassen…"
+              onChange={(e) => setSaText(e.target.value)}
+              placeholder={saLang === "de" ? "Deutschen Text hier eingeben…" : "متن فارسی را اینجا بنویسید…"}
               rows={10}
-              className="w-full rounded-lg border border-slate-700 bg-slate-900/60 p-4 text-sm resize-none placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+              className={cn(
+                "w-full rounded-lg border border-slate-700 bg-slate-900/60 p-4 text-sm resize-y",
+                "placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-amber-500/40",
+                saLang === "fa" && "text-right",
+              )}
             />
-            <div className="flex justify-end">
-              <span className={saText.length > 2700 ? "text-xs text-amber-400" : "text-xs text-muted-foreground"}>
-                {saText.length} / 3000
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                {saText.length > 0 && (
+                  <>{saText.length.toLocaleString()} Zeichen · {Math.ceil(saText.length / 1500)} Abschnitt{Math.ceil(saText.length / 1500) === 1 ? "" : "e"}</>
+                )}
               </span>
+              {saText.length > 0 && (
+                <button type="button" onClick={() => setSaText("")} className="hover:text-slate-200 transition-colors">
+                  Löschen
+                </button>
+              )}
             </div>
           </div>
 
@@ -768,7 +795,7 @@ export default function TutorErgaenzungspruefungPage() {
           <div className="grid gap-4 sm:grid-cols-2 rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label htmlFor="sa-rate" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Geschwindigkeit</label>
+                <label htmlFor="sa-rate" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Geschwindigkeit / سرعت</label>
                 <span className="font-mono text-xs text-slate-300">{saRate.toFixed(2)}×</span>
               </div>
               <input id="sa-rate" type="range" min={0.5} max={2} step={0.05} value={saRate}
@@ -781,7 +808,7 @@ export default function TutorErgaenzungspruefungPage() {
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label htmlFor="sa-pitch" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tonhöhe</label>
+                <label htmlFor="sa-pitch" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tonhöhe / زیر و بمی</label>
                 <span className="font-mono text-xs text-slate-300">{saPitch.toFixed(1)}</span>
               </div>
               <input id="sa-pitch" type="range" min={0.5} max={2} step={0.1} value={saPitch}
@@ -789,7 +816,7 @@ export default function TutorErgaenzungspruefungPage() {
                 onChange={(e) => setSaPitch(Number(e.target.value))}
                 className="w-full accent-amber-400" />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Tief</span><span>Normal</span><span>Hoch</span>
+                <span>بم / Tief</span><span>Normal</span><span>زیر / Hoch</span>
               </div>
             </div>
           </div>
@@ -797,12 +824,12 @@ export default function TutorErgaenzungspruefungPage() {
           {/* Play / Stop */}
           <div className="flex gap-3">
             <Button size="lg" onClick={saPlay}
-              disabled={!supported || !saText.trim() || saPlaying || germanVoices.length === 0}
+              disabled={saText.trim().length === 0 || saPlaying}
               className="flex-1 gap-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <polygon points="5 3 19 12 5 21 5 3" />
               </svg>
-              Vorlesen
+              {saLang === "de" ? "Vorlesen" : "پخش"}
             </Button>
             <Button size="lg" variant="outline" onClick={saStop} disabled={!saPlaying}
               className="gap-2 border-rose-500/40 text-rose-400 hover:bg-rose-500/10 disabled:opacity-30">
@@ -810,25 +837,47 @@ export default function TutorErgaenzungspruefungPage() {
                 <rect x="6" y="5" width="4" height="14" rx="1" />
                 <rect x="14" y="5" width="4" height="14" rx="1" />
               </svg>
-              Stopp
+              {saLang === "de" ? "Stopp" : "توقف"}
             </Button>
           </div>
 
-          {/* Playing indicator */}
-          {saPlaying && (
-            <div className="flex items-center gap-2 text-sm text-amber-400">
-              <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-400" />
-              </span>
-              <span>Wird vorgelesen…</span>
+          {/* Progress */}
+          {saProgress && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2 text-amber-400">
+                  <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-400" />
+                  </span>
+                  <span>{saLang === "de" ? "Abschnitt" : "بخش"} {saProgress.current} / {saProgress.total}</span>
+                </div>
+                <span className="text-xs text-muted-foreground rounded border border-slate-700 px-1.5 py-0.5">
+                  {saProgress.engine === "azure" ? "Azure Neural TTS" : "Web Speech API"}
+                </span>
+              </div>
+              <progress
+                value={saProgress.current}
+                max={saProgress.total}
+                className="w-full h-1.5 rounded-full [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-slate-800 [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-amber-400 [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-amber-400"
+              />
+            </div>
+          )}
+
+          {/* Persian voice install guide */}
+          {saLang === "fa" && saVoices.length === 0 && supported && (
+            <div className="rounded-md border border-slate-700/60 bg-slate-900/40 p-4 text-sm space-y-2">
+              <p className="font-medium text-slate-300">صدای فارسی برای Web Speech fallback یافت نشد</p>
+              <p className="text-muted-foreground text-xs">Azure TTS به‌صورت خودکار استفاده می‌شود. اگر Azure در دسترس نباشد:</p>
+              <ul className="space-y-1 text-xs text-muted-foreground list-disc list-inside">
+                <li>Windows: تنظیمات → زمان و زبان → گفتار → اضافه کردن صدا → فارسی</li>
+                <li>Mac: System Settings → Accessibility → Spoken Content → Manage Voices → Persian</li>
+              </ul>
             </div>
           )}
 
           {!supported && (
-            <p className="text-sm text-amber-400">
-              Ihr Browser unterstützt keine Text-to-Speech-Funktion.
-            </p>
+            <p className="text-sm text-amber-400">Ihr Browser unterstützt keine Text-to-Speech-Funktion.</p>
           )}
         </div>
       )}
