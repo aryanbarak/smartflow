@@ -7,7 +7,7 @@ Last updated: 2026-06-12 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** 835cac3 - feat(hooks): optimistic rollback on all mutation hooks
+- **Last commit:** 7e8ec6c - fix(mobile): responsive layout for Finance and Family pages
 - **Last deployment:** 2026-06-12 - Cloudflare Pages (auto)
 
 ---
