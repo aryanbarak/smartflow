@@ -45,6 +45,7 @@ const TutorPage = lazy(() => import("./pages/TutorPage"));
 const TutorAppPage = lazy(() => import("./pages/TutorAppPage"));
 const TutorWisoPage = lazy(() => import("./pages/TutorWisoPage"));
 const TutorErgaenzungspruefungPage = lazy(() => import("./pages/TutorErgaenzungspruefungPage"));
+const TTSPage = lazy(() => import("./pages/TTSPage"));
 
 const ProtectedRoute = () => {
   const { session, isLoading } = useAuth();
@@ -120,6 +121,7 @@ const App = () => (
               <Route path="/journal" element={<JournalPage />} />
               <Route path="/flashcards" element={<FlashcardsPage />} />
               <Route path="/briefing" element={<Suspense fallback={<AppLoader />}><BriefingPage /></Suspense>} />
+              <Route path="/tts" element={<Suspense fallback={<AppLoader />}><TTSPage /></Suspense>} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
             <Route path="/offline" element={<OfflinePage />} />

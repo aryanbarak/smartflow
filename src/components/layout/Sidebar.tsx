@@ -17,6 +17,7 @@ import {
   BookOpen,
   Layers,
   Sparkles,
+  Volume2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,6 +43,7 @@ const navItems: { icon: React.ElementType; key: TranslationKey; path: string }[]
   { icon: GraduationCap, key: 'nav_tutor', path: "/tutor" },
   { icon: Bot, key: 'nav_tutor_app', path: "/tutor/app" },
   { icon: Sparkles, key: 'nav_briefing', path: "/briefing" },
+  { icon: Volume2, key: 'nav_tts', path: "/tts" },
   { icon: Settings, key: 'nav_settings', path: "/settings" },
 ];
 

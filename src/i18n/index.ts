@@ -20,6 +20,7 @@ const en = {
   nav_more: 'More',
   nav_tutor_app: 'Tutor App',
   nav_briefing: 'Weekly Briefing',
+  nav_tts: 'Text to Speech',
 
   // Briefing
   briefing_title: 'Weekly Life Briefing',
@@ -410,6 +411,7 @@ const de: TranslationDict = {
   nav_more: 'Mehr',
   nav_tutor_app: 'Tutor-App',
   nav_briefing: 'Wöchentliches Briefing',
+  nav_tts: 'Text zu Sprache',
 
   // Briefing
   briefing_title: 'Wöchentliches Briefing',
@@ -778,6 +780,7 @@ const fa: TranslationDict = {
   nav_more: 'بیشتر',
   nav_tutor_app: 'اپ مدرس',
   nav_briefing: 'گزارش هفتگی',
+  nav_tts: 'متن به گفتار',
 
   // Briefing
   briefing_title: 'گزارش هفتگی',
