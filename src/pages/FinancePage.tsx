@@ -757,55 +757,59 @@ export default function FinancePage() {
       )}
 
       {/* Transactions header: tabs + month nav + group by */}
-      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-        <CardTitle className="text-lg">Transactions</CardTitle>
-        <div className="flex items-center gap-3 flex-wrap">
-          <Tabs
-            value={filter}
-            onValueChange={(value) =>
-              handleScopeChange(value as "month" | "all")
-            }
-          >
-            <TabsList className="bg-secondary">
-              <TabsTrigger value="month">This Month</TabsTrigger>
-              <TabsTrigger value="all">All</TabsTrigger>
-            </TabsList>
-          </Tabs>
+      <div className="mb-4 space-y-2">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <CardTitle className="text-lg">Transactions</CardTitle>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Tabs
+              value={filter}
+              onValueChange={(value) =>
+                handleScopeChange(value as "month" | "all")
+              }
+            >
+              <TabsList className="bg-secondary">
+                <TabsTrigger value="month" className="text-xs sm:text-sm">This Month</TabsTrigger>
+                <TabsTrigger value="all" className="text-xs sm:text-sm">All</TabsTrigger>
+              </TabsList>
+            </Tabs>
 
-          <div
-            className={cn(
-              "flex items-center gap-1 rounded-md border px-2 py-1 text-xs sm:text-sm",
-              filter === "all" && "opacity-60"
-            )}
-          >
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={handlePrevMonth}
-              disabled={filter === "all"}
+            <div
+              className={cn(
+                "flex items-center gap-1 rounded-md border px-1 py-1 text-xs sm:text-sm",
+                filter === "all" && "opacity-60"
+              )}
             >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="min-w-[120px] text-center font-medium">
-              {monthLabel}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={handleNextMonth}
-              disabled={filter === "all"}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={handlePrevMonth}
+                disabled={filter === "all"}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="min-w-[90px] sm:min-w-[120px] text-center font-medium text-xs sm:text-sm">
+                {monthLabel}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={handleNextMonth}
+                disabled={filter === "all"}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
+        </div>
 
+        <div className="flex justify-end">
           <Select
             value={groupBy}
             onValueChange={(v) => setGroupBy(v as GroupBy)}
           >
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[130px] sm:w-[140px] text-xs sm:text-sm">
               <SelectValue placeholder="Group by" />
             </SelectTrigger>
             <SelectContent>
@@ -947,29 +951,29 @@ export default function FinancePage() {
                   return (
                     <div
                       key={tx.id}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-secondary"
+                      className="flex items-center gap-2 sm:gap-3 p-3 rounded-lg bg-secondary"
                     >
                       <div
                         className={cn(
-                          "w-10 h-10 rounded-lg flex items-center justify-center",
+                          "w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg flex items-center justify-center",
                           tx.type === "income"
                             ? "bg-success/20"
                             : "bg-destructive/20"
                         )}
                       >
                         {tx.type === "income" ? (
-                          <TrendingUp className="w-5 h-5 text-success" />
+                          <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
                         ) : (
-                          <TrendingDown className="w-5 h-5 text-destructive" />
+                          <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
                         )}
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{tx.category}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {tx.notes || "No notes"}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{tx.category}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {tx.notes || dateLabel}
                         </p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <p
                           className={cn(
                             "text-sm font-medium",
@@ -978,29 +982,31 @@ export default function FinancePage() {
                               : "text-destructive"
                           )}
                         >
-                          {tx.type === "income" ? "+" : "-"}$
+                          {tx.type === "income" ? "+" : "-"}
                           {formatCurrency(tx.amount)}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground hidden sm:block">
                           {dateLabel}
                         </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-foreground"
-                        onClick={() => openEdit(tx)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleteTarget(tx)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => openEdit(tx)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => setDeleteTarget(tx)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}

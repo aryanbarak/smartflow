@@ -435,56 +435,59 @@ export default function FamilyPage() {
         />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[260px,1fr]">
-          {/* Left: children list */}
-          <Card>
+          {/* Left: children list — horizontal scroll on mobile, vertical on desktop */}
+          <Card className="lg:self-start">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">Kids</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              {children.map((child) => {
-                const isSelected = selectedChild?.id === child.id;
-                return (
-                  <button
-                    key={child.id}
-                    type="button"
-                    onClick={() => setSelectedChildId(child.id)}
-                    className={cn(
-                      "w-full flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition",
-                      isSelected
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:bg-muted/60"
-                    )}
-                  >
-                    <Avatar className="h-9 w-9">
-                      <AvatarFallback
-                        className={cn("text-xs text-white", child.color)}
-                      >
-                        {child.initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{child.name}</p>
-                      {child.age != null && (
-                        <p className="text-xs text-muted-foreground">
-                          Age {child.age}
-                        </p>
-                      )}
-                    </div>
-                    <Button
+            <CardContent className="p-3 lg:p-6 lg:pt-0">
+              <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-x-visible lg:space-y-2 lg:pb-0">
+                {children.map((child) => {
+                  const isSelected = selectedChild?.id === child.id;
+                  return (
+                    <button
+                      key={child.id}
                       type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleDeleteChild(child);
-                      }}
+                      onClick={() => setSelectedChildId(child.id)}
+                      className={cn(
+                        "flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-left transition",
+                        "lg:w-full lg:gap-3",
+                        isSelected
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:bg-muted/60"
+                      )}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </button>
-                );
-              })}
+                      <Avatar className="h-8 w-8 lg:h-9 lg:w-9 shrink-0">
+                        <AvatarFallback
+                          className={cn("text-xs text-white", child.color)}
+                        >
+                          {child.initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{child.name}</p>
+                        {child.age != null && (
+                          <p className="text-xs text-muted-foreground">
+                            Age {child.age}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleDeleteChild(child);
+                        }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </button>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
 
@@ -526,22 +529,22 @@ export default function FamilyPage() {
               </Card>
 
               <Tabs defaultValue="schedule">
-                <TabsList className="mb-3">
-                  <TabsTrigger value="schedule" className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    Schedule
+                <TabsList className="mb-3 grid grid-cols-4 w-full h-auto sm:flex sm:h-10">
+                  <TabsTrigger value="schedule" className="flex items-center gap-1 text-xs sm:text-sm py-1.5 sm:py-0">
+                    <Calendar className="w-3 h-3 shrink-0" />
+                    <span>Schedule</span>
                   </TabsTrigger>
-                  <TabsTrigger value="notes" className="flex items-center gap-1">
-                    <FileText className="w-3 h-3" />
-                    Notes
+                  <TabsTrigger value="notes" className="flex items-center gap-1 text-xs sm:text-sm py-1.5 sm:py-0">
+                    <FileText className="w-3 h-3 shrink-0" />
+                    <span>Notes</span>
                   </TabsTrigger>
-                  <TabsTrigger value="events" className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    Events
+                  <TabsTrigger value="events" className="flex items-center gap-1 text-xs sm:text-sm py-1.5 sm:py-0">
+                    <Calendar className="w-3 h-3 shrink-0" />
+                    <span>Events</span>
                   </TabsTrigger>
-                  <TabsTrigger value="shopping" className="flex items-center gap-1">
-                    <ShoppingCart className="w-3 h-3" />
-                    Shopping
+                  <TabsTrigger value="shopping" className="flex items-center gap-1 text-xs sm:text-sm py-1.5 sm:py-0">
+                    <ShoppingCart className="w-3 h-3 shrink-0" />
+                    <span>Shopping</span>
                   </TabsTrigger>
                 </TabsList>
 
