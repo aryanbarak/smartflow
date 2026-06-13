@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAzureTTS, type TtsLang } from "@/hooks/useAzureTTS";
+import { OOP_QUESTIONS } from "./oopQuestions";
 
 type TabId = "ueberblick" | "themen" | "vorbereitung" | "beispielfragen" | "sprachausgabe";
 
@@ -381,12 +382,60 @@ function SpeakButton({ text, ttsKey, playingKey, speak, supported }: Readonly<{
   );
 }
 
+// ─── Persian TTS Button ───────────────────────────────────────────────────────
+
+function FaPlayButton({ id, text, playingId, isAnyPlaying, onToggle }: Readonly<{
+  id: string;
+  text: string;
+  playingId: string | null;
+  isAnyPlaying: boolean;
+  onToggle: (id: string, text: string) => void;
+}>) {
+  const isThis = playingId === id && isAnyPlaying;
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(id, text)}
+      title={isThis ? "توقف" : "پخش به فارسی"}
+      className={cn(
+        "shrink-0 rounded border px-2 py-0.5 text-xs font-medium transition-colors",
+        isThis
+          ? "border-amber-500/40 bg-amber-500/20 text-amber-300"
+          : "border-slate-600 bg-slate-800 text-slate-400 hover:text-slate-200",
+      )}
+    >
+      {isThis ? "⏸" : "🔊"} FA
+    </button>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function TutorErgaenzungspruefungPage() {
   const [tab, setTab] = useState<TabId>("ueberblick");
   const [offeneFrage, setOffeneFrage] = useState<string | null>(null);
+  const [offeneOopFrage, setOffeneOopFrage] = useState<string | null>(null);
   const { playingKey, speak, stop, supported, germanVoices, selectedVoiceName, setSelectedVoiceName } = useTTS();
+
+  // Persian TTS for OOP explainFa
+  const { isPlaying: faIsPlaying, play: faPlay, stop: faStop } = useAzureTTS();
+  const [faPlayingId, setFaPlayingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!faIsPlaying) setFaPlayingId(null);
+  }, [faIsPlaying]);
+
+  const handleFaToggle = useCallback(async (id: string, text: string): Promise<void> => {
+    if (faPlayingId === id) {
+      faStop();
+      setFaPlayingId(null);
+      return;
+    }
+    faStop();
+    setFaPlayingId(id);
+    await faPlay(text, { lang: "fa", rate: 0.9, pitch: 1 });
+    setFaPlayingId(null);
+  }, [faPlayingId, faPlay, faStop]);
 
   // Sprachausgabe tab state
   const [saText, setSaText] = useState("");
@@ -488,27 +537,73 @@ export default function TutorErgaenzungspruefungPage() {
       {tab === "themen" && (
         <div className="space-y-4">
           {THEMEN.map((thema) => (
-            <div key={thema.titel} className={cn("rounded-md border p-4 space-y-3", thema.farbe)}>
-              <h3 className="text-xl font-semibold">{thema.titel}</h3>
-              <ul className="space-y-1.5">
-                {thema.punkte.map((punkt) => (
-                  <li key={punkt} className="flex items-start gap-2 text-sm">
-                    <span className="mt-0.5 shrink-0 text-emerald-400">✓</span>
-                    <span>{punkt}</span>
-                  </li>
-                ))}
-              </ul>
-              {thema.fallen.length > 0 && (
-                <div className="rounded-md border border-rose-500/30 bg-rose-500/10 p-3">
-                  <div className="font-medium text-sm text-rose-300 mb-2">Typische Prüfungsfallen</div>
-                  <ul className="space-y-1">
-                    {thema.fallen.map((falle) => (
-                      <li key={falle} className="text-sm text-muted-foreground">• {falle}</li>
-                    ))}
-                  </ul>
+            <Fragment key={thema.titel}>
+              <div className={cn("rounded-md border p-4 space-y-3", thema.farbe)}>
+                <h3 className="text-xl font-semibold">{thema.titel}</h3>
+                <ul className="space-y-1.5">
+                  {thema.punkte.map((punkt) => (
+                    <li key={punkt} className="flex items-start gap-2 text-sm">
+                      <span className="mt-0.5 shrink-0 text-emerald-400">✓</span>
+                      <span>{punkt}</span>
+                    </li>
+                  ))}
+                </ul>
+                {thema.fallen.length > 0 && (
+                  <div className="rounded-md border border-rose-500/30 bg-rose-500/10 p-3">
+                    <div className="font-medium text-sm text-rose-300 mb-2">Typische Prüfungsfallen</div>
+                    <ul className="space-y-1">
+                      {thema.fallen.map((falle) => (
+                        <li key={falle} className="text-sm text-muted-foreground">• {falle}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+              {thema.titel.includes("OOP") && (
+                <div className="space-y-2 pl-1">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-semibold text-violet-300">OOP Prüfungsfragen</h2>
+                    <span className="rounded border border-violet-500/40 bg-violet-500/20 px-1.5 py-0.5 text-xs font-semibold text-violet-300">
+                      {OOP_QUESTIONS.length} Fragen
+                    </span>
+                  </div>
+                  {OOP_QUESTIONS.map((item, idx) => {
+                    const oopKey = `themen-oop-${idx}`;
+                    const istOffen = offeneOopFrage === oopKey;
+                    const vollText = `Frage: ${item.question}. Antwort: ${item.answer}`;
+                    return (
+                      <div key={oopKey} className="rounded-md border border-slate-700/60 overflow-hidden">
+                        <div className="flex items-center gap-1 pr-2">
+                          <button
+                            type="button"
+                            onClick={() => setOffeneOopFrage(istOffen ? null : oopKey)}
+                            className="flex-1 text-left flex items-start justify-between gap-3 px-4 py-3 hover:bg-slate-800/40 transition-colors"
+                          >
+                            <span className="text-sm font-medium">
+                              <span className="mr-2 font-mono text-xs text-violet-400/70">{idx + 1}.</span>
+                              {item.question}
+                            </span>
+                            <span className="shrink-0 text-muted-foreground text-xs mt-0.5">{istOffen ? "▲" : "▼"}</span>
+                          </button>
+                          <SpeakButton text={vollText} ttsKey={`${oopKey}-voll`} playingKey={playingKey} speak={speak} supported={supported} />
+                        </div>
+                        {istOffen && (
+                          <div className="px-4 pb-4 pt-1 border-t border-slate-700/40">
+                            <div className="rounded-md border border-violet-500/30 bg-violet-500/10 p-3 mt-2">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-medium text-violet-400">Musterantwort</span>
+                                <SpeakButton text={item.answer} ttsKey={`${oopKey}-antwort`} playingKey={playingKey} speak={speak} supported={supported} />
+                              </div>
+                              <p className="text-sm leading-relaxed whitespace-pre-line">{item.answer}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
-            </div>
+            </Fragment>
           ))}
 
           {/* MEP Prüfungsfragen am Ende des Themen-Tabs */}
@@ -712,6 +807,63 @@ export default function TutorErgaenzungspruefungPage() {
               })}
             </div>
           ))}
+
+          {/* OOP (25 Fragen) mit explainFa */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-violet-300">OOP Prüfungsfragen (25 Fragen)</h3>
+              <span className="rounded border border-violet-500/40 bg-violet-500/20 px-1.5 py-0.5 text-xs font-semibold text-violet-300">OOP</span>
+            </div>
+            {OOP_QUESTIONS.map((item, idx) => {
+              const key = `bsp-oop-${item.id}`;
+              const istOffen = offeneFrage === key;
+              const vollText = `Frage: ${item.question}. Antwort: ${item.answer}`;
+              return (
+                <div key={key} className="rounded-md border border-slate-700/60 overflow-hidden">
+                  <div className="flex items-center gap-1 pr-2">
+                    <button
+                      type="button"
+                      onClick={() => setOffeneFrage(istOffen ? null : key)}
+                      className="flex-1 text-left flex items-start justify-between gap-3 px-4 py-3 hover:bg-slate-800/40 transition-colors"
+                    >
+                      <span className="text-sm font-medium">
+                        <span className="mr-2 font-mono text-xs text-violet-400/70">{idx + 1}.</span>
+                        {item.question}
+                      </span>
+                      <span className="shrink-0 text-muted-foreground text-xs mt-0.5">{istOffen ? "▲" : "▼"}</span>
+                    </button>
+                    <SpeakButton text={vollText} ttsKey={`${key}-voll`} playingKey={playingKey} speak={speak} supported={supported} />
+                  </div>
+                  {istOffen && (
+                    <div className="px-4 pb-4 pt-1 border-t border-slate-700/40 space-y-3">
+                      <div className="rounded-md border border-violet-500/30 bg-violet-500/10 p-3 mt-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-violet-400">Musterantwort</span>
+                          <SpeakButton text={item.answer} ttsKey={`${key}-antwort`} playingKey={playingKey} speak={speak} supported={supported} />
+                        </div>
+                        <p className="text-sm leading-relaxed whitespace-pre-line">{item.answer}</p>
+                      </div>
+                      <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-amber-400">توضیح فارسی</span>
+                          <FaPlayButton
+                            id={key}
+                            text={item.explainFa}
+                            playingId={faPlayingId}
+                            isAnyPlaying={faIsPlaying}
+                            onToggle={handleFaToggle}
+                          />
+                        </div>
+                        <p dir="rtl" className="font-fa text-sm leading-relaxed whitespace-pre-line text-right">
+                          {item.explainFa}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
