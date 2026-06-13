@@ -45,6 +45,7 @@ const TutorPage = lazy(() => import("./pages/TutorPage"));
 const TutorAppPage = lazy(() => import("./pages/TutorAppPage"));
 const TutorWisoPage = lazy(() => import("./pages/TutorWisoPage"));
 const TutorErgaenzungspruefungPage = lazy(() => import("./pages/TutorErgaenzungspruefungPage"));
+const MepSimulationPage = lazy(() => import("./pages/MepSimulationPage"));
 const TTSPage = lazy(() => import("./pages/TTSPage"));
 
 const ProtectedRoute = () => {
@@ -114,6 +115,14 @@ const App = () => (
                 element={
                   <Suspense fallback={<AppLoader />}>
                     <TutorErgaenzungspruefungPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/tutor/mep-simulation"
+                element={
+                  <Suspense fallback={<AppLoader />}>
+                    <MepSimulationPage />
                   </Suspense>
                 }
               />

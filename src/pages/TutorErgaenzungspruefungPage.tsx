@@ -480,6 +480,7 @@ export default function TutorErgaenzungspruefungPage() {
         <Link to="/tutor" className="rounded border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm font-medium hover:bg-slate-800">Exam Bank (AP2)</Link>
         <Link to="/tutor/wiso" className="rounded border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm font-medium hover:bg-slate-800">WISO</Link>
         <Link to="/tutor/ergaenzungspruefung" className="rounded border border-amber-400/60 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-300">Ergänzungsprüfung</Link>
+        <Link to="/tutor/mep-simulation" className="rounded border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-400 hover:bg-amber-500/20">MEP-Simulation</Link>
       </div>
 
       {/* Header */}
