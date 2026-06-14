@@ -1,14 +1,14 @@
 # dailyFlow — PROJECT STATUS
 
-Last updated: 2026-06-13 — Keep this file under 2 pages, update after every session.
+Last updated: 2026-06-14 — Keep this file under 2 pages, update after every session.
 
 ---
 
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** 40d4c53 - feat(tutor): add OOP question set (25 Q&A) to Ergaenzungspruefung page
-- **Last deployment:** 2026-06-13 - Cloudflare Pages (auto)
+- **Last commit:** 0e72d96 - feat(agent): add Daily Briefing card (Phase 1 AI agent) to Dashboard
+- **Last deployment:** 2026-06-14 - Cloudflare Pages (auto)
 
 ---
 
