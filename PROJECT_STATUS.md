@@ -60,6 +60,29 @@ Last updated: 2026-06-14 — Keep this file under 2 pages, update after every se
 
 ---
 
+## Completed This Session (2026-06-14)
+
+### Phase 1 AI Agent — Daily Briefing card ✅ live on production
+
+- ✅ Cloudflare Worker (`dailyflow-agent-worker`) — Gemini 2.5 Flash, cron 06:00 UTC + on-demand POST `/generate`
+- ✅ `agent_briefings` table + RLS + `language` column on `user_settings` (migration `20260613000000`)
+- ✅ `AgentBriefingCard` on Dashboard: fetches latest briefing, refresh button, language badge, shimmer loading
+- ✅ `context-builder.ts`: replaced raw SQL helper with direct Supabase `/rest/v1/` REST calls
+- ✅ `PageTitleContext` + `useSetPageTitle` hook — Dashboard title + date aligned with sidebar logo in one header bar
+- ✅ CORS: production origins (`barakzai.cloud`) + private-LAN regex (192.168.x.x, 10.x, 172.16-31.x, localhost) echoed back; no wildcard; `Vary: Origin`
+
+**Bugs fixed this session:**
+
+1. Wrong import path `@/lib/supabase` → `@/integrations/supabase/client`
+2. CORS blocked local LAN origin `http://192.168.2.106:8080` — fixed with private-IP regex allowlist
+3. `.single()` → `.maybeSingle()` to avoid 406 when `agent_briefings` table is empty for the user
+4. `maxOutputTokens: 200` truncated briefing mid-sentence — raised to `1024`; added `finishReason` + full-text logging
+5. `VITE_AGENT_WORKER_URL` missing from Cloudflare Pages production build — must be added to Pages → Settings → Environment variables
+
+> ⚠️ **Note:** `VITE_*` env vars are baked at build time by Vite. Setting them only in local `.env` has no effect on the production build. They must also be added in **Cloudflare Pages → Settings → Environment variables** (Production + Preview).
+
+---
+
 ## Completed This Session (2026-06-12/13)
 
 ### TTS — Text-to-Speech System (new feature)
