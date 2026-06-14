@@ -7,7 +7,7 @@ Last updated: 2026-06-14 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** 0e72d96 - feat(agent): add Daily Briefing card (Phase 1 AI agent) to Dashboard
+- **Last commit:** 2ea420a - chore: update PROJECT_STATUS — Phase 1 AI agent live, bugs fixed
 - **Last deployment:** 2026-06-14 - Cloudflare Pages (auto)
 
 ---
