@@ -9,9 +9,21 @@ export interface Env {
 
 export type Language = 'en' | 'de' | 'fa'
 
+export interface MemoryEntry {
+  key: string
+  value: string
+  source: 'manual' | 'auto' | 'ai' | 'agent'
+}
+
+export interface ExtractedFact {
+  key: string
+  value: string
+}
+
 export interface UserContext {
   userId: string
   language: Language
+  memory: MemoryEntry[]
   finance: FinanceContext
   calendar: CalendarContext
 }

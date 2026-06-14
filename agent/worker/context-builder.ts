@@ -1,4 +1,4 @@
-import type { Env, UserContext, FinanceContext, CalendarContext, Language, CalendarEvent } from './types'
+import type { Env, UserContext, FinanceContext, CalendarContext, Language, CalendarEvent, MemoryEntry } from './types'
 
 // =============================================
 // Generic REST helper — GET /rest/v1/<path>
@@ -18,6 +18,27 @@ async function supabaseGet<T>(env: Env, path: string): Promise<T> {
   }
 
   return res.json()
+}
+
+// =============================================
+// حافظه کاربر از user_context (read-only)
+// =============================================
+export async function fetchUserMemory(
+  userId: string,
+  env: Env
+): Promise<MemoryEntry[]> {
+  const rows = await supabaseGet<Array<{ key: string; value: string; source: string }>>(
+    env,
+    `user_context?user_id=eq.${userId}&select=key,value,source`
+  )
+
+  return rows
+    .filter(r => r.value?.trim())
+    .map(r => ({
+      key: r.key,
+      value: r.value.trim(),
+      source: r.source as MemoryEntry['source'],
+    }))
 }
 
 // =============================================
@@ -110,10 +131,11 @@ export async function buildUserContext(
   const language: Language = (settingsRows[0]?.language as Language) ?? 'en'
 
   // داده‌ها رو موازی بگیر
-  const [finance, calendar] = await Promise.all([
+  const [finance, calendar, memory] = await Promise.all([
     fetchFinanceContext(userId, env),
     fetchCalendarContext(userId, env),
+    fetchUserMemory(userId, env),
   ])
 
-  return { userId, language, finance, calendar }
+  return { userId, language, memory, finance, calendar }
 }

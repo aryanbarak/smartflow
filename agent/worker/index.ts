@@ -1,6 +1,10 @@
-import type { Env, AgentBriefing } from './types'
+import type { Env, AgentBriefing, ExtractedFact, UserContext } from './types'
 import { buildUserContext } from './context-builder'
-import { buildPrompt } from './prompt-builder'
+import { buildPrompt, buildExtractionPrompt, EXTRACTABLE_KEYS } from './prompt-builder'
+
+// Phase B: auto memory-write disabled — always returns [] and wastes a Gemini call.
+// Re-enable in Phase C when wiring memory extraction to the chat/advisory endpoint.
+const ENABLE_AUTO_MEMORY_WRITE = false
 
 export default {
   // =============================================
@@ -88,6 +92,13 @@ async function generateBriefing(
   // ۴. توی Supabase ذخیره کن
   await saveBriefing(userId, content, context.language, context, triggeredBy, env)
 
+  // ۵. حافظه بلندمدت — فعلاً غیرفعال است (Phase C)
+  if (ENABLE_AUTO_MEMORY_WRITE) {
+    await extractAndSaveMemory(userId, content, context, env).catch(err =>
+      console.error('[Memory] Unexpected extraction error:', err)
+    )
+  }
+
   return { content, language: context.language, context, triggered_by: triggeredBy }
 }
 
@@ -104,8 +115,10 @@ async function callGemini(system: string, user: string, env: Env): Promise<strin
         system_instruction: { parts: [{ text: system }] },
         contents: [{ parts: [{ text: user }] }],
         generationConfig: {
-          maxOutputTokens: 1024,
+          maxOutputTokens: 2048,
           temperature: 0.7,
+          // Disable thinking tokens — they count against maxOutputTokens in Gemini 2.5
+          thinkingConfig: { thinkingBudget: 0 },
         },
       }),
     }
@@ -160,6 +173,109 @@ async function saveBriefing(
 
   if (!res.ok) {
     console.error('Failed to save briefing:', await res.text())
+  }
+}
+
+// =============================================
+// Memory extraction — facts worth remembering
+// =============================================
+const EXTRACTABLE_KEY_SET = new Set<string>(EXTRACTABLE_KEYS)
+
+async function extractAndSaveMemory(
+  userId: string,
+  briefing: string,
+  ctx: UserContext,
+  env: Env
+): Promise<void> {
+  const { system, user } = buildExtractionPrompt(briefing, ctx)
+
+  let facts: ExtractedFact[] = []
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: system }] },
+          contents: [{ parts: [{ text: user }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  key:   { type: 'STRING' },
+                  value: { type: 'STRING' },
+                },
+                required: ['key', 'value'],
+              },
+            },
+            maxOutputTokens: 512,
+            temperature: 0.1,
+            thinkingConfig: { thinkingBudget: 0 },
+          },
+        }),
+      }
+    )
+
+    if (!res.ok) {
+      console.error('[Memory] Gemini extraction failed:', await res.text())
+      return
+    }
+
+    const data: unknown = await res.json()
+    const raw: string = (data as any)?.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]'
+    facts = JSON.parse(raw) as ExtractedFact[]
+  } catch (err) {
+    console.error('[Memory] Extraction parse error:', err)
+    return
+  }
+
+  // Guard: only keep valid keys with non-empty string values
+  const valid = facts.filter(
+    f =>
+      typeof f.key === 'string' &&
+      typeof f.value === 'string' &&
+      f.value.trim().length > 0 &&
+      EXTRACTABLE_KEY_SET.has(f.key)
+  )
+
+  if (valid.length === 0) {
+    console.log('[Memory] No durable facts extracted — nothing written.')
+    return
+  }
+
+  console.log(`[Memory] Extracted ${valid.length} fact(s):`, JSON.stringify(valid))
+
+  // Upsert each fact individually so each failure is logged separately
+  for (const fact of valid) {
+    const upsertRes = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/user_context?on_conflict=user_id,key`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': env.SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+          'Prefer': 'resolution=merge-duplicates,return=minimal',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          key: fact.key,
+          value: fact.value.trim(),
+          source: 'agent',
+        }),
+      }
+    )
+
+    if (upsertRes.ok) {
+      console.log(`[Memory] Wrote: ${fact.key} = "${fact.value.trim()}"`)
+    } else {
+      console.error(`[Memory] Upsert failed for key "${fact.key}":`, await upsertRes.text())
+    }
   }
 }
 
