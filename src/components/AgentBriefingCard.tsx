@@ -1,6 +1,8 @@
-import { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
+import './AgentBriefingCard.css'
 
 // =============================================
 // Types
@@ -14,8 +16,26 @@ interface Briefing {
 }
 
 // =============================================
+// Markdown renderer — converts • bullets to list items
+// =============================================
+function MdP({ children }: Readonly<{ children: React.ReactNode }>) {
+  return <p className="agent-briefing-card__text">{children}</p>
+}
+function MdUl({ children }: Readonly<{ children: React.ReactNode }>) {
+  return <ul className="agent-briefing-card__list">{children}</ul>
+}
+function MdLi({ children }: Readonly<{ children: React.ReactNode }>) {
+  return <li className="agent-briefing-card__list-item">{children}</li>
+}
+const MD_COMPONENTS = { p: MdP, ul: MdUl, li: MdLi } as const
+
+function BriefingContent({ content }: Readonly<{ content: string }>) {
+  const md = content.replace(/^•\s*/gm, '- ')
+  return <ReactMarkdown components={MD_COMPONENTS}>{md}</ReactMarkdown>
+}
+
+// =============================================
 // AgentBriefingCard
-// داشبورد — فضای خالی بالای "Good evening"
 // =============================================
 export function AgentBriefingCard() {
   const { user } = useAuth()
@@ -24,7 +44,6 @@ export function AgentBriefingCard() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // آخرین briefing رو از Supabase بگیر
   const fetchLatestBriefing = useCallback(async () => {
     if (!user?.id) return
 
@@ -34,12 +53,12 @@ export function AgentBriefingCard() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    if (err && err.code !== 'PGRST116') {
+    if (err) {
       setError('Could not load briefing.')
     } else {
-      setBriefing(data || null)
+      setBriefing(data ?? null)
     }
     setLoading(false)
   }, [user?.id])
@@ -48,7 +67,6 @@ export function AgentBriefingCard() {
     fetchLatestBriefing()
   }, [fetchLatestBriefing])
 
-  // On-demand — از Worker جدید بساز
   const handleRefresh = async () => {
     if (!user?.id) return
     setRefreshing(true)
@@ -59,17 +77,13 @@ export function AgentBriefingCard() {
       if (!session) throw new Error('No session')
 
       const workerUrl = import.meta.env.VITE_AGENT_WORKER_URL as string
-      const res = await fetch(
-        `${workerUrl}/generate`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        }
-      )
+      const res = await fetch(`${workerUrl}/generate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
 
       if (!res.ok) throw new Error('Worker error')
 
-      // یه ثانیه صبر کن تا Supabase آپدیت بشه
       await new Promise(r => setTimeout(r, 1000))
       await fetchLatestBriefing()
     } catch {
@@ -79,14 +93,12 @@ export function AgentBriefingCard() {
     }
   }
 
-  // چک کن briefing امروزه یا قدیمی
   const isToday = briefing
     ? new Date(briefing.created_at).toDateString() === new Date().toDateString()
     : false
 
-  const timeAgo = briefing
-    ? formatTimeAgo(new Date(briefing.created_at))
-    : null
+  const timeAgo = briefing ? formatTimeAgo(new Date(briefing.created_at)) : null
+  const staleClass = briefing && !isToday ? 'agent-briefing-card--stale' : ''
 
   // =============================================
   // Render
@@ -100,7 +112,7 @@ export function AgentBriefingCard() {
   }
 
   return (
-    <div className={`agent-briefing-card ${!isToday && briefing ? 'agent-briefing-card--stale' : ''}`}>
+    <div className={`agent-briefing-card ${staleClass}`}>
       {/* Header */}
       <div className="agent-briefing-card__header">
         <div className="agent-briefing-card__title">
@@ -113,6 +125,7 @@ export function AgentBriefingCard() {
           )}
         </div>
         <button
+          type="button"
           className="agent-briefing-card__refresh"
           onClick={handleRefresh}
           disabled={refreshing}
@@ -125,19 +138,18 @@ export function AgentBriefingCard() {
 
       {/* Content */}
       <div className="agent-briefing-card__content">
-        {error ? (
-          <p className="agent-briefing-card__error">{error}</p>
-        ) : briefing ? (
+        {error && <p className="agent-briefing-card__error">{error}</p>}
+        {!error && briefing && (
           <>
-            <p className="agent-briefing-card__text">{briefing.content}</p>
-            {timeAgo && (
-              <span className="agent-briefing-card__time">{timeAgo}</span>
-            )}
+            <BriefingContent content={briefing.content} />
+            {timeAgo && <span className="agent-briefing-card__time">{timeAgo}</span>}
           </>
-        ) : (
+        )}
+        {!error && !briefing && (
           <div className="agent-briefing-card__empty">
             <p>No briefing yet for today.</p>
             <button
+              type="button"
               className="agent-briefing-card__generate-btn"
               onClick={handleRefresh}
               disabled={refreshing}
@@ -147,17 +159,6 @@ export function AgentBriefingCard() {
           </div>
         )}
       </div>
-
-      {/* زبان نشانگر */}
-      {briefing && (
-        <div className="agent-briefing-card__footer">
-          <span className="agent-briefing-card__lang">
-            {briefing.language === 'fa' ? '🇮🇷 فارسی'
-              : briefing.language === 'de' ? '🇩🇪 Deutsch'
-              : '🇬🇧 English'}
-          </span>
-        </div>
-      )}
     </div>
   )
 }

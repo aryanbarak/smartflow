@@ -115,7 +115,7 @@ async function callGemini(system: string, user: string, env: Env): Promise<strin
         system_instruction: { parts: [{ text: system }] },
         contents: [{ parts: [{ text: user }] }],
         generationConfig: {
-          maxOutputTokens: 2048,
+          maxOutputTokens: 1024,
           temperature: 0.7,
           // Disable thinking tokens — they count against maxOutputTokens in Gemini 2.5
           thinkingConfig: { thinkingBudget: 0 },
