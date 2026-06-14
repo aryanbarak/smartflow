@@ -60,7 +60,7 @@ export function AgentBriefingCard() {
 
       const workerUrl = import.meta.env.VITE_AGENT_WORKER_URL as string
       const res = await fetch(
-        `${workerUrl}/generate?user_id=${user.id}`,
+        `${workerUrl}/generate`,
         {
           method: 'POST',
           headers: { Authorization: `Bearer ${session.access_token}` },

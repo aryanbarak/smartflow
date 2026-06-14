@@ -12,7 +12,7 @@ export default {
 
   // =============================================
   // HTTP Trigger — برای on-demand از UI
-  // POST /generate?user_id=xxx
+  // POST /generate  (Authorization: Bearer <supabase-jwt>)
   // =============================================
   async fetch(request: Request, env: Env): Promise<Response> {
     // CORS
@@ -25,17 +25,9 @@ export default {
       return json({ error: 'Method not allowed' }, 405, origin)
     }
 
-    const url = new URL(request.url)
-    const userId = url.searchParams.get('user_id')
-
-    if (!userId) {
-      return json({ error: 'user_id is required' }, 400, origin)
-    }
-
-    // Auth check — Bearer token باید Supabase JWT باشه
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return json({ error: 'Unauthorized' }, 401, origin)
+    const { userId, error: authError } = await requireAuth(request, env)
+    if (authError || !userId) {
+      return json({ error: authError ?? 'Unauthorized' }, 401, origin)
     }
 
     try {
@@ -169,6 +161,38 @@ async function saveBriefing(
   if (!res.ok) {
     console.error('Failed to save briefing:', await res.text())
   }
+}
+
+// =============================================
+// Auth — Supabase JWT verification
+// =============================================
+async function requireAuth(
+  request: Request,
+  env: Env
+): Promise<{ userId: string | null; error: string | null }> {
+  const auth = request.headers.get('Authorization') ?? ''
+  if (!auth.startsWith('Bearer ')) {
+    return { userId: null, error: 'Missing authorization token' }
+  }
+  const token = auth.slice(7)
+
+  const res = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'apikey': env.SUPABASE_ANON_KEY,
+    },
+  })
+
+  if (!res.ok) {
+    return { userId: null, error: 'Unauthorized' }
+  }
+
+  const user = await res.json() as { id?: string }
+  if (!user?.id) {
+    return { userId: null, error: 'Invalid token' }
+  }
+
+  return { userId: user.id, error: null }
 }
 
 // =============================================
