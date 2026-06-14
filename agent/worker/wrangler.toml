@@ -1,0 +1,14 @@
+name = "dailyflow-agent-worker"
+main = "index.ts"
+compatibility_date = "2024-01-01"
+
+[triggers]
+crons = ["0 6 * * *"]  # هر روز ساعت ۶ UTC = ۸ صبح آلمان
+
+[vars]
+GEMINI_MODEL = "gemini-2.5-flash"
+SUPABASE_URL = "https://taqxwnlwllbywaklwyno.supabase.co"
+
+# Secrets — با wrangler secret put تنظیم کن:
+# wrangler secret put SUPABASE_SERVICE_KEY
+# wrangler secret put GEMINI_API_KEY

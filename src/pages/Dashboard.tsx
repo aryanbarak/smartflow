@@ -1,5 +1,7 @@
 import { useEffect, useMemo } from "react";
-import { motion } from "framer-motion";
+import { AgentBriefingCard } from "@/components/AgentBriefingCard";
+import "@/components/AgentBriefingCard.css";
+import { useSetPageTitle } from "@/hooks/useSetPageTitle";
 import { Calendar, CheckSquare, Users, Wallet, Sparkles, RefreshCw } from "lucide-react";
 import { useBriefing } from "@/features/briefing/useBriefing";
 import { MoodWidget } from "@/features/mood/MoodWidget";
@@ -188,18 +190,11 @@ export default function Dashboard() {
   const { briefing: weeklyBriefing, isLoading: briefingLoading, generate: generateBriefing, loadFromCache } = useBriefing();
   useEffect(() => { loadFromCache(); }, [loadFromCache]);
 
+  useSetPageTitle("Dashboard", todayLabel);
+
   return (
-    <div className="p-6 lg:p-8 max-w-6xl mx-auto">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <h1 className="text-2xl sm:text-3xl font-semibold mb-1 font-display tracking-tight">
-          Dashboard
-        </h1>
-        <p className="text-muted-foreground">{todayLabel}</p>
-      </motion.div>
+    <div className="px-6 pt-6 pb-6 lg:px-8 lg:pb-8 max-w-6xl mx-auto">
+      <AgentBriefingCard />
 
       <Card className="mb-6 border-0 text-white hero-surface" style={{ border: "1px solid rgba(56,189,248,0.15)" }}>
         <CardContent className="pt-6">

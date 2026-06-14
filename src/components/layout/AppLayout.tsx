@@ -7,12 +7,34 @@ import { MiniPlayer } from "@/components/music/MiniPlayer";
 import { GlobalSearch } from "@/features/search/GlobalSearch";
 import { useAlarms } from "@/features/calendar/useAlarms";
 import { aiMemoryService } from "@/features/ai-memory/aiMemoryService";
+import { PageTitleProvider, usePageTitle } from "@/contexts/PageTitleContext";
 
-export function AppLayout() {
+function DesktopHeader() {
+  const { pageTitle } = usePageTitle();
+  return (
+    <div className="flex items-center justify-between px-6 py-6 border-b border-sidebar-border shrink-0">
+      {pageTitle ? (
+        <div>
+          <h1 className="text-lg font-semibold font-display leading-none">
+            {pageTitle.title}
+          </h1>
+          {pageTitle.subtitle && (
+            <p className="text-xs text-muted-foreground mt-0.5">{pageTitle.subtitle}</p>
+          )}
+        </div>
+      ) : (
+        <div />
+      )}
+      <GlobalSearch />
+    </div>
+  );
+}
+
+function AppLayoutInner() {
   useAlarms();
 
   useEffect(() => {
-    if ('Notification' in globalThis && Notification.permission === 'default') {
+    if ("Notification" in globalThis && Notification.permission === "default") {
       const timer = setTimeout(() => { void Notification.requestPermission(); }, 3000);
       return () => clearTimeout(timer);
     }
@@ -24,24 +46,22 @@ export function AppLayout() {
     }, 5000);
     return () => clearTimeout(timer);
   }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <OfflineBadge />
-      {/* Desktop Sidebar */}
+
+      {/* Desktop */}
       <div className="hidden lg:flex">
         <Sidebar />
-        <main className="flex-1 min-h-screen overflow-auto">
-          {/* Desktop search bar */}
-          <div className="flex justify-end px-6 pt-4">
-            <GlobalSearch />
-          </div>
+        <main className="flex-1 min-h-screen overflow-auto flex flex-col">
+          <DesktopHeader />
           <Outlet />
         </main>
       </div>
 
-      {/* Mobile Layout */}
+      {/* Mobile */}
       <div className="lg:hidden flex flex-col min-h-screen">
-        {/* Mobile search bar */}
         <div className="flex justify-end px-4 pt-3 pb-1">
           <GlobalSearch />
         </div>
@@ -51,8 +71,15 @@ export function AppLayout() {
         <MobileNav />
       </div>
 
-      {/* Global persistent mini player (fixed bottom bar) */}
       <MiniPlayer />
     </div>
+  );
+}
+
+export function AppLayout() {
+  return (
+    <PageTitleProvider>
+      <AppLayoutInner />
+    </PageTitleProvider>
   );
 }
