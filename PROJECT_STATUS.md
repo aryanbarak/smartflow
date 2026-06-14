@@ -1,14 +1,6 @@
 # dailyFlow — PROJECT STATUS
 
-Last updated: 2026-06-14 — Keep this file under 2 pages, update after every session.
-
----
-
-## Current Branch
-
-- **Branch:** `main`
-- **Last commit:** bd6dee0 - feat(agent): advisory briefing prompt + markdown bullet rendering, remove language badge
-- **Last deployment:** 2026-06-14 - Cloudflare Pages (auto)
+Keep this file under 2 pages; update after every session.
 
 ---
 
