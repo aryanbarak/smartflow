@@ -7,7 +7,7 @@ Last updated: 2026-06-14 — Keep this file under 2 pages, update after every se
 ## Current Branch
 
 - **Branch:** `main`
-- **Last commit:** d3fa877 - feat(agent): inject user memory + habits into briefing, fix maxOutputTokens, disable auto memory-write (Phase A)
+- **Last commit:** bd6dee0 - feat(agent): advisory briefing prompt + markdown bullet rendering, remove language badge
 - **Last deployment:** 2026-06-14 - Cloudflare Pages (auto)
 
 ---
