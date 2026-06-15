@@ -1,4 +1,4 @@
-import type { Env, AgentBriefing, ExtractedFact, UserContext } from './types'
+import type { Env, AgentBriefing, ExtractedFact, UserContext, BriefingMode } from './types'
 import { buildUserContext } from './context-builder'
 import { buildPrompt, buildExtractionPrompt, EXTRACTABLE_KEYS } from './prompt-builder'
 
@@ -34,8 +34,23 @@ export default {
       return json({ error: authError ?? 'Unauthorized' }, 401, origin)
     }
 
+    // Parse mode from query param first, then JSON body
+    const url = new URL(request.url)
+    const queryMode = url.searchParams.get('mode')
+    let mode: BriefingMode = 'daily'
+    if (queryMode === 'daily' || queryMode === 'weekly') {
+      mode = queryMode
+    } else {
+      try {
+        const body = await request.json() as { mode?: string }
+        if (body.mode === 'daily' || body.mode === 'weekly') mode = body.mode
+      } catch {
+        // no body or invalid JSON — keep default 'daily'
+      }
+    }
+
     try {
-      const briefing = await generateBriefing(userId, env, 'user')
+      const briefing = await generateBriefing(userId, env, 'user', mode)
       return json({ success: true, briefing: briefing.content }, 200, origin)
     } catch (err) {
       console.error('Agent error:', err)
@@ -78,20 +93,22 @@ async function runBriefingForAllUsers(env: Env, triggeredBy: 'cron' | 'user') {
 async function generateBriefing(
   userId: string,
   env: Env,
-  triggeredBy: 'cron' | 'user' | 'alert'
+  triggeredBy: 'cron' | 'user' | 'alert',
+  mode: BriefingMode = 'daily'
 ): Promise<AgentBriefing> {
   // ۱. داده‌ها رو جمع کن
-  const context = await buildUserContext(userId, env)
+  const context = await buildUserContext(userId, env, mode)
 
   // ۲. Prompt بساز
   const { system, user } = buildPrompt(context)
-  console.log(`[Briefing] language=${context.language} userId=${userId}`)
+  console.log(`[Briefing] language=${context.language} mode=${mode} userId=${userId}`)
 
-  // ۳. Gemini رو صدا بزن
-  const content = await callGemini(system, user, env)
+  // ۳. Gemini رو صدا بزن — weekly needs more tokens
+  const maxOutputTokens = mode === 'weekly' ? 1500 : 1024
+  const content = await callGemini(system, user, env, maxOutputTokens)
 
   // ۴. توی Supabase ذخیره کن
-  await saveBriefing(userId, content, context.language, context, triggeredBy, env)
+  await saveBriefing(userId, content, context.language, mode, context, triggeredBy, env)
 
   // ۵. حافظه بلندمدت — فعلاً غیرفعال است (Phase C)
   if (ENABLE_AUTO_MEMORY_WRITE) {
@@ -100,13 +117,13 @@ async function generateBriefing(
     )
   }
 
-  return { content, language: context.language, context, triggered_by: triggeredBy }
+  return { content, language: context.language, mode, context, triggered_by: triggeredBy }
 }
 
 // =============================================
 // Gemini API call
 // =============================================
-async function callGemini(system: string, user: string, env: Env): Promise<string> {
+async function callGemini(system: string, user: string, env: Env, maxOutputTokens = 1024): Promise<string> {
   console.log('[Gemini] system prompt (first 300 chars):', system.slice(0, 300))
   console.log('[Gemini] user prompt (first 500 chars):', user.slice(0, 500))
   const res = await fetch(
@@ -118,7 +135,7 @@ async function callGemini(system: string, user: string, env: Env): Promise<strin
         system_instruction: { parts: [{ text: system }] },
         contents: [{ parts: [{ text: user }] }],
         generationConfig: {
-          maxOutputTokens: 1024,
+          maxOutputTokens,
           temperature: 0.7,
           // Disable thinking tokens — they count against maxOutputTokens in Gemini 2.5
           thinkingConfig: { thinkingBudget: 0 },
@@ -153,6 +170,7 @@ async function saveBriefing(
   userId: string,
   content: string,
   language: string,
+  mode: string,
   context: any,
   triggeredBy: string,
   env: Env
@@ -169,6 +187,7 @@ async function saveBriefing(
       user_id: userId,
       content,
       language,
+      mode,
       context,
       triggered_by: triggeredBy,
     }),

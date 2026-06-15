@@ -7,6 +7,8 @@ import './AgentBriefingCard.css'
 // =============================================
 // Types
 // =============================================
+type Mode = 'daily' | 'weekly'
+
 interface Briefing {
   id: string
   content: string
@@ -39,53 +41,56 @@ function BriefingContent({ content }: Readonly<{ content: string }>) {
 // =============================================
 export function AgentBriefingCard() {
   const { user } = useAuth()
+  const [mode, setMode] = useState<Mode>('daily')
   const [briefing, setBriefing] = useState<Briefing | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchLatestBriefing = useCallback(async () => {
+  const fetchLatestBriefing = useCallback(async (m: Mode): Promise<void> => {
     if (!user?.id) return
-
     const { data, error: err } = await supabase
       .from('agent_briefings')
       .select('id, content, language, created_at, triggered_by')
       .eq('user_id', user.id)
+      .eq('mode', m)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
-
     if (err) {
       setError('Could not load briefing.')
     } else {
       setBriefing(data ?? null)
     }
-    setLoading(false)
   }, [user?.id])
 
+  // Re-fetch whenever mode changes (also covers initial load)
   useEffect(() => {
-    fetchLatestBriefing()
-  }, [fetchLatestBriefing])
+    let active = true
+    setLoading(true)
+    setBriefing(null)
+    setError(null)
+    fetchLatestBriefing(mode).finally(() => {
+      if (active) setLoading(false)
+    })
+    return () => { active = false }
+  }, [mode, fetchLatestBriefing])
 
   const handleRefresh = async () => {
     if (!user?.id) return
     setRefreshing(true)
     setError(null)
-
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No session')
-
       const workerUrl = import.meta.env.VITE_AGENT_WORKER_URL as string
-      const res = await fetch(`${workerUrl}/generate`, {
+      const res = await fetch(`${workerUrl}/generate?mode=${mode}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
-
       if (!res.ok) throw new Error('Worker error')
-
       await new Promise(r => setTimeout(r, 1000))
-      await fetchLatestBriefing()
+      await fetchLatestBriefing(mode)
     } catch {
       setError('Failed to generate briefing. Try again.')
     } finally {
@@ -96,9 +101,10 @@ export function AgentBriefingCard() {
   const isToday = briefing
     ? new Date(briefing.created_at).toDateString() === new Date().toDateString()
     : false
-
   const timeAgo = briefing ? formatTimeAgo(new Date(briefing.created_at)) : null
   const staleClass = briefing && !isToday ? 'agent-briefing-card--stale' : ''
+  const title = mode === 'daily' ? 'Daily Briefing' : 'Weekly Briefing'
+  const emptyText = mode === 'daily' ? 'No briefing yet for today.' : 'No weekly briefing yet.'
 
   // =============================================
   // Render
@@ -117,23 +123,43 @@ export function AgentBriefingCard() {
       <div className="agent-briefing-card__header">
         <div className="agent-briefing-card__title">
           <span className="agent-briefing-card__icon" aria-hidden="true">✦</span>
-          <span>Daily Briefing</span>
+          <span>{title}</span>
           {briefing && (
             <span className="agent-briefing-card__badge">
               {isToday ? 'Today' : 'Yesterday'}
             </span>
           )}
         </div>
-        <button
-          type="button"
-          className="agent-briefing-card__refresh"
-          onClick={handleRefresh}
-          disabled={refreshing}
-          title="Generate new briefing"
-          aria-label="Refresh briefing"
-        >
-          <span className={refreshing ? 'spinning' : ''}>↻</span>
-        </button>
+        <div className="agent-briefing-card__controls">
+          <div className="agent-briefing-card__mode-toggle">
+            <button
+              type="button"
+              className={`agent-briefing-card__mode-btn${mode === 'daily' ? ' agent-briefing-card__mode-btn--active' : ''}`}
+              onClick={() => setMode('daily')}
+              aria-pressed={mode === 'daily' ? 'true' : 'false'}
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              className={`agent-briefing-card__mode-btn${mode === 'weekly' ? ' agent-briefing-card__mode-btn--active' : ''}`}
+              onClick={() => setMode('weekly')}
+              aria-pressed={mode === 'weekly' ? 'true' : 'false'}
+            >
+              This Week
+            </button>
+          </div>
+          <button
+            type="button"
+            className="agent-briefing-card__refresh"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Generate new briefing"
+            aria-label="Refresh briefing"
+          >
+            <span className={refreshing ? 'spinning' : ''}>↻</span>
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -147,7 +173,7 @@ export function AgentBriefingCard() {
         )}
         {!error && !briefing && (
           <div className="agent-briefing-card__empty">
-            <p>No briefing yet for today.</p>
+            <p>{emptyText}</p>
             <button
               type="button"
               className="agent-briefing-card__generate-btn"

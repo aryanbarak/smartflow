@@ -40,7 +40,6 @@ function AccentColorInit() {
 }
 
 const queryClient = new QueryClient();
-const BriefingPage = lazy(() => import("./pages/BriefingPage"));
 const TutorPage = lazy(() => import("./pages/TutorPage"));
 const TutorAppPage = lazy(() => import("./pages/TutorAppPage"));
 const TutorWisoPage = lazy(() => import("./pages/TutorWisoPage"));
@@ -129,7 +128,6 @@ const App = () => (
               <Route path="/habits" element={<HabitsPage />} />
               <Route path="/journal" element={<JournalPage />} />
               <Route path="/flashcards" element={<FlashcardsPage />} />
-              <Route path="/briefing" element={<Suspense fallback={<AppLoader />}><BriefingPage /></Suspense>} />
               <Route path="/tts" element={<Suspense fallback={<AppLoader />}><TTSPage /></Suspense>} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>

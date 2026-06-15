@@ -75,8 +75,8 @@
 .agent-briefing-card__badge {
   font-size: 11px;
   font-weight: 400;
-  background: rgba(99, 102, 241, 0.15);
-  color: rgba(165, 160, 255, 0.8);
+  background: #3d3a6b;
+  color: #c8c5ff;
   padding: 2px 8px;
   border-radius: 100px;
 }
@@ -94,8 +94,8 @@
 }
 
 .agent-briefing-card__refresh:hover:not(:disabled) {
-  color: rgba(165, 160, 255, 0.9);
-  background: rgba(99, 102, 241, 0.12);
+  color: #c8c5ff;
+  background: #2d2a5a;
 }
 
 .agent-briefing-card__refresh:disabled {
@@ -156,6 +156,44 @@
   margin: 0;
 }
 
+/* Mode toggle */
+.agent-briefing-card__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-briefing-card__mode-toggle {
+  display: flex;
+  background: rgba(99, 102, 241, 0.10);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 1px;
+}
+
+.agent-briefing-card__mode-btn {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(165, 160, 255, 0.5);
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.agent-briefing-card__mode-btn--active {
+  color: #d0ceff;
+  background: #3a3770;
+}
+
+.agent-briefing-card__mode-btn:not(.agent-briefing-card__mode-btn--active):hover {
+  color: rgba(165, 160, 255, 0.8);
+}
+
 /* Empty state */
 .agent-briefing-card__empty {
   display: flex;
@@ -171,9 +209,9 @@
 
 .agent-briefing-card__generate-btn {
   font-size: 12px;
-  color: rgba(165, 160, 255, 0.9);
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #c8c5ff;
+  background: #2d2a5a;
+  border: 1px solid #4a4888;
   border-radius: 8px;
   padding: 5px 12px;
   cursor: pointer;

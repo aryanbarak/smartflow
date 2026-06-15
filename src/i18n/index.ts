@@ -19,19 +19,7 @@ const en = {
   nav_settings: 'Settings',
   nav_more: 'More',
   nav_tutor_app: 'Tutor App',
-  nav_briefing: 'Weekly Briefing',
   nav_tts: 'Text to Speech',
-
-  // Briefing
-  briefing_title: 'Weekly Life Briefing',
-  briefing_subtitle: 'AI-powered summary of your week',
-  briefing_refresh: 'Refresh',
-  briefing_generating: 'Generating…',
-  briefing_loading_message: 'Analyzing your week…',
-  briefing_empty: 'No briefing yet. Generate your first one!',
-  briefing_generate: 'Generate',
-  briefing_view_full: 'View full briefing',
-  briefing_read_more: 'read more',
 
   // Common
   save: 'Save',
@@ -410,19 +398,7 @@ const de: TranslationDict = {
   nav_settings: 'Einstellungen',
   nav_more: 'Mehr',
   nav_tutor_app: 'Tutor-App',
-  nav_briefing: 'Wöchentliches Briefing',
   nav_tts: 'Text zu Sprache',
-
-  // Briefing
-  briefing_title: 'Wöchentliches Briefing',
-  briefing_subtitle: 'KI-gestützte Zusammenfassung deiner Woche',
-  briefing_refresh: 'Aktualisieren',
-  briefing_generating: 'Wird erstellt…',
-  briefing_loading_message: 'Analysiere deine Woche…',
-  briefing_empty: 'Noch kein Briefing. Erstelle dein erstes!',
-  briefing_generate: 'Erstellen',
-  briefing_view_full: 'Vollständiges Briefing anzeigen',
-  briefing_read_more: 'mehr lesen',
 
   save: 'Speichern',
   cancel: 'Abbrechen',
@@ -779,19 +755,7 @@ const fa: TranslationDict = {
   nav_settings: 'تنظیمات',
   nav_more: 'بیشتر',
   nav_tutor_app: 'اپ مدرس',
-  nav_briefing: 'گزارش هفتگی',
   nav_tts: 'متن به گفتار',
-
-  // Briefing
-  briefing_title: 'گزارش هفتگی',
-  briefing_subtitle: 'خلاصه هفته شما با هوش مصنوعی',
-  briefing_refresh: 'بروزرسانی',
-  briefing_generating: 'در حال ساخت…',
-  briefing_loading_message: 'در حال تحلیل هفته شما…',
-  briefing_empty: 'هنوز گزارشی نیست. اولین گزارش را بسازید!',
-  briefing_generate: 'ساختن گزارش',
-  briefing_view_full: 'مشاهده گزارش کامل',
-  briefing_read_more: 'بیشتر بخوانید',
 
   save: 'ذخیره',
   cancel: 'لغو',

@@ -1,4 +1,8 @@
-import type { Env, UserContext, FinanceContext, CalendarContext, Language, CalendarEvent, MemoryEntry } from './types'
+import type {
+  Env, UserContext, FinanceContext, CalendarContext, Language,
+  CalendarEvent, MemoryEntry, BriefingMode, JournalContext, JournalEntry,
+  TaskSummary, HabitContext,
+} from './types'
 
 // =============================================
 // Generic REST helper — GET /rest/v1/<path>
@@ -42,6 +46,106 @@ export async function fetchUserMemory(
 }
 
 // =============================================
+// Journal — last 7 days (both modes)
+// =============================================
+export async function fetchJournalContext(
+  userId: string,
+  env: Env
+): Promise<JournalContext> {
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const dateStr = sevenDaysAgo.toISOString().slice(0, 10)
+
+  const rows = await supabaseGet<Array<{ date: string; mood: number | null; content: string | null }>>(
+    env,
+    `journal_entries?select=date,mood,content&user_id=eq.${userId}&date=gte.${dateStr}&order=date.desc&limit=7`
+  )
+
+  const moodEntries = rows.filter(r => r.mood !== null)
+  const averageMood = moodEntries.length > 0
+    ? Math.round((moodEntries.reduce((s, r) => s + (r.mood ?? 0), 0) / moodEntries.length) * 10) / 10
+    : null
+
+  const entries: JournalEntry[] = rows.map(r => ({
+    date: r.date,
+    mood: r.mood ?? null,
+    content: r.content ? r.content.slice(0, 200) : null,
+  }))
+
+  return { entries, entryCount: rows.length, averageMood }
+}
+
+// =============================================
+// Tasks — due this week + overdue (weekly mode)
+// =============================================
+export async function fetchTaskContext(
+  userId: string,
+  env: Env
+): Promise<TaskSummary[]> {
+  const now = new Date()
+  const today = now.toISOString().slice(0, 10)
+
+  // End of the current week (Sunday)
+  const weekEnd = new Date(now)
+  weekEnd.setDate(now.getDate() - now.getDay() + 7)
+  const weekEndStr = weekEnd.toISOString().slice(0, 10)
+
+  const rows = await supabaseGet<Array<{ title: string; due_date: string }>>(
+    env,
+    `tasks?select=title,due_date&user_id=eq.${userId}&completed=eq.false&due_date=lte.${weekEndStr}&order=due_date.asc&limit=15`
+  )
+
+  return rows
+    .filter(r => r.due_date)
+    .map(r => ({
+      title: r.title,
+      due_date: r.due_date,
+      overdue: r.due_date < today,
+    }))
+}
+
+// =============================================
+// Habits — completion rate this week (weekly)
+// =============================================
+export async function fetchHabitContext(
+  userId: string,
+  env: Env
+): Promise<HabitContext | null> {
+  const now = new Date()
+
+  // Monday of the current week
+  const weekStart = new Date(now)
+  weekStart.setDate(now.getDate() - now.getDay() + 1)
+  const weekStartStr = weekStart.toISOString().slice(0, 10)
+  const todayStr = now.toISOString().slice(0, 10)
+
+  const [habits, completions] = await Promise.all([
+    supabaseGet<Array<{ id: string }>>(
+      env,
+      `habits?select=id&user_id=eq.${userId}&is_active=eq.true`
+    ),
+    supabaseGet<Array<{ habit_id: string }>>(
+      env,
+      `habit_completions?select=habit_id&user_id=eq.${userId}&completed_date=gte.${weekStartStr}&completed_date=lte.${todayStr}`
+    ),
+  ])
+
+  if (habits.length === 0) return null
+
+  // Days elapsed this week (Mon=1 … Sun=7)
+  const rawDay = now.getDay()
+  const daysElapsed = rawDay === 0 ? 7 : rawDay
+
+  const totalPossible = habits.length * daysElapsed
+  const completedCount = completions.length
+  const completionRate = totalPossible > 0
+    ? Math.round((completedCount / totalPossible) * 100)
+    : 0
+
+  return { completedCount, totalPossible, completionRate }
+}
+
+// =============================================
 // داده‌های Finance ماه جاری
 // =============================================
 export async function fetchFinanceContext(
@@ -52,7 +156,6 @@ export async function fetchFinanceContext(
   const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
 
-  // ماه جاری — همه تراکنش‌ها
   const currentRows = await supabaseGet<Array<{ amount: number }>>(env,
     `finance_transactions?select=amount&user_id=eq.${userId}&date=gte.${firstOfMonth}`)
 
@@ -60,7 +163,6 @@ export async function fetchFinanceContext(
   const expenses = currentRows.filter(r => r.amount < 0).reduce((s, r) => s + Math.abs(r.amount), 0)
   const transactionCount = currentRows.length
 
-  // دسته‌بندی با بیشترین خرج — ماه جاری
   const catRows = await supabaseGet<Array<{ category: string; amount: number }>>(env,
     `finance_transactions?select=category,amount&user_id=eq.${userId}&amount=lt.0&date=gte.${firstOfMonth}`)
 
@@ -70,7 +172,6 @@ export async function fetchFinanceContext(
   }
   const topExpenseCategory = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'Unknown'
 
-  // ماه قبل برای مقایسه
   const lastMonthRows = await supabaseGet<Array<{ amount: number }>>(env,
     `finance_transactions?select=amount&user_id=eq.${userId}&amount=lt.0&date=gte.${firstOfLastMonth}&date=lt.${firstOfMonth}`)
   const lastMonthExpenses = lastMonthRows.reduce((s, r) => s + Math.abs(r.amount), 0)
@@ -99,7 +200,7 @@ export async function fetchCalendarContext(
 ): Promise<CalendarContext> {
   const now = new Date()
   const weekStart = new Date(now)
-  weekStart.setDate(now.getDate() - now.getDay() + 1) // دوشنبه
+  weekStart.setDate(now.getDate() - now.getDay() + 1) // Monday
   weekStart.setHours(0, 0, 0, 0)
 
   const weekEnd = new Date(weekStart)
@@ -123,21 +224,32 @@ export async function fetchCalendarContext(
 // =============================================
 export async function buildUserContext(
   userId: string,
-  env: Env
+  env: Env,
+  mode: BriefingMode = 'daily'
 ): Promise<UserContext> {
-  // زبان کاربر
   const settingsRows = await supabaseGet<Array<{ language: string }>>(env,
     `user_settings?select=language&user_id=eq.${userId}&limit=1`)
   const rawLang = settingsRows[0]?.language ?? null
   const language: Language = (rawLang === 'de' || rawLang === 'fa') ? rawLang : 'en'
-  console.log(`[Context] userId=${userId} settingsRows=${JSON.stringify(settingsRows)} rawLang=${rawLang} resolvedLanguage=${language}`)
+  console.log(`[Context] userId=${userId} rawLang=${rawLang} resolvedLanguage=${language} mode=${mode}`)
 
-  // داده‌ها رو موازی بگیر
-  const [finance, calendar, memory] = await Promise.all([
+  if (mode === 'weekly') {
+    const [finance, calendar, memory, journal, tasks, habits] = await Promise.all([
+      fetchFinanceContext(userId, env),
+      fetchCalendarContext(userId, env),
+      fetchUserMemory(userId, env),
+      fetchJournalContext(userId, env),
+      fetchTaskContext(userId, env),
+      fetchHabitContext(userId, env),
+    ])
+    return { userId, language, mode, memory, journal, finance, calendar, tasks, habits }
+  }
+
+  const [finance, calendar, memory, journal] = await Promise.all([
     fetchFinanceContext(userId, env),
     fetchCalendarContext(userId, env),
     fetchUserMemory(userId, env),
+    fetchJournalContext(userId, env),
   ])
-
-  return { userId, language, memory, finance, calendar }
+  return { userId, language, mode, memory, journal, finance, calendar, tasks: [], habits: null }
 }
