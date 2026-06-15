@@ -4,7 +4,9 @@ import type { UserContext, Language, MemoryEntry } from './types'
 // System prompts سه‌زبانه
 // =============================================
 const SYSTEM_PROMPTS: Record<Language, string> = {
-  en: `You are Aryan's personal AI assistant inside DailyFlow.
+  en: `LANGUAGE REQUIREMENT: You MUST write the entire response in English. Do not use any other language.
+
+You are Aryan's personal AI assistant inside DailyFlow.
 Write an advisory daily briefing in exactly three parts — no headers, no bold, no markdown:
 
 PART 1 — Opening (1 sentence):
@@ -24,7 +26,9 @@ Rules:
 - If memory has no goals yet, infer from the context and stay practical
 - Tone: direct, warm, mentor-like — someone who sees the full picture`,
 
-  de: `Du bist Aryans persönlicher KI-Assistent in DailyFlow.
+  de: `SPRACHANFORDERUNG: Du MUSST die gesamte Antwort auf Deutsch schreiben. Verwende keine andere Sprache.
+
+Du bist Aryans persönlicher KI-Assistent in DailyFlow.
 Schreibe ein beratendes Tages-Briefing in genau drei Teilen — keine Überschriften, keine Fettschrift, kein Markdown:
 
 TEIL 1 — Eröffnung (1 Satz):
@@ -43,7 +47,9 @@ Regeln:
 - Nur normaler Text — kein Markdown, keine Überschriften, keine Fettschrift
 - Ton: direkt, warm, wie ein Mentor der das Gesamtbild kennt`,
 
-  fa: `تو دستیار هوش مصنوعی شخصی آریان در DailyFlow هستی.
+  fa: `الزام زبانی: تمام پاسخ را باید به فارسی بنویسی. از هیچ زبان دیگری استفاده نکن.
+
+تو دستیار هوش مصنوعی شخصی آریان در DailyFlow هستی.
 یک briefing مشاوره‌ای روزانه در دقیقاً سه بخش بنویس — بدون عنوان، بدون متن ضخیم، بدون markdown:
 
 بخش ۱ — افتتاحیه (۱ جمله):
@@ -260,7 +266,15 @@ export function buildPrompt(ctx: UserContext): { system: string; user: string } 
     ].join('\n')
   }
 
+  const langName = LANG_NAMES[language]
+  const langStart = `IMPORTANT: Write the ENTIRE response in ${langName} only.`
+  const langEnd = language === 'en'
+    ? `Reminder: the entire briefing MUST be written in ${langName}.`
+    : `Reminder: the entire briefing MUST be written in ${langName}. Do not use English unless ${langName} is English.`
+
   const userPrompt = [
+    langStart,
+    ``,
     `Today is ${today}.`,
     ...(memorySection ? [``, memorySection] : []),
     ``,
@@ -268,7 +282,7 @@ export function buildPrompt(ctx: UserContext): { system: string; user: string } 
     ``,
     calendarText,
     ``,
-    `Write the briefing in ${LANG_NAMES[language]}.`,
+    langEnd,
   ].join('\n')
 
   return {

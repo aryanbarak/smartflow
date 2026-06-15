@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/features/profile/useProfile';
 import { usePreferences } from '@/hooks/usePreferences';
-import { useAppearance, ACCENT_COLORS, DENSITY_OPTIONS } from '@/features/settings/appearanceStore';
+import { useAppearance, ACCENT_COLORS, DENSITY_OPTIONS, type Language } from '@/features/settings/appearanceStore';
 import { useNotificationPrefs } from '@/features/settings/notificationSettings';
 import { dataExportService } from '@/features/settings/dataExportService';
 import { supabase } from '@/integrations/supabase/client';
@@ -436,7 +436,26 @@ function AppearanceTab() {
 
       <SectionCard title="Language & currency">
         <SettingRow label="Interface language">
-          <Select value={language} onValueChange={v => setLanguage(v as import('@/features/settings/appearanceStore').Language)}>
+          <Select value={language} onValueChange={v => {
+            const lang = v as Language;
+            setLanguage(lang);
+            void (async () => {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (!user) {
+                console.warn('[Lang] No authenticated user — skipping upsert');
+                return;
+              }
+              console.log('[Lang] Upserting language:', lang, 'user_id:', user.id);
+              const { error } = await supabase
+                .from('user_settings')
+                .upsert({ user_id: user.id, language: lang }, { onConflict: 'user_id' });
+              if (error) {
+                console.error('[Lang] Upsert error:', error);
+              } else {
+                console.log('[Lang] Upsert OK — language saved to user_settings:', lang);
+              }
+            })();
+          }}>
             <SelectTrigger className="w-32 h-8 text-xs" aria-label="Select language">
               <SelectValue />
             </SelectTrigger>

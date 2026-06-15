@@ -128,7 +128,9 @@ export async function buildUserContext(
   // زبان کاربر
   const settingsRows = await supabaseGet<Array<{ language: string }>>(env,
     `user_settings?select=language&user_id=eq.${userId}&limit=1`)
-  const language: Language = (settingsRows[0]?.language as Language) ?? 'en'
+  const rawLang = settingsRows[0]?.language ?? null
+  const language: Language = (rawLang === 'de' || rawLang === 'fa') ? rawLang : 'en'
+  console.log(`[Context] userId=${userId} settingsRows=${JSON.stringify(settingsRows)} rawLang=${rawLang} resolvedLanguage=${language}`)
 
   // داده‌ها رو موازی بگیر
   const [finance, calendar, memory] = await Promise.all([

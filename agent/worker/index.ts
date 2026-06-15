@@ -85,6 +85,7 @@ async function generateBriefing(
 
   // ۲. Prompt بساز
   const { system, user } = buildPrompt(context)
+  console.log(`[Briefing] language=${context.language} userId=${userId}`)
 
   // ۳. Gemini رو صدا بزن
   const content = await callGemini(system, user, env)
@@ -106,6 +107,8 @@ async function generateBriefing(
 // Gemini API call
 // =============================================
 async function callGemini(system: string, user: string, env: Env): Promise<string> {
+  console.log('[Gemini] system prompt (first 300 chars):', system.slice(0, 300))
+  console.log('[Gemini] user prompt (first 500 chars):', user.slice(0, 500))
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`,
     {
