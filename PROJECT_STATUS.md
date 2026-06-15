@@ -8,6 +8,10 @@ Keep this file under 2 pages; update after every session.
 
 | Date | Decision | Reason |
 | --- | --- | --- |
+| 2026-06-16 | Retired old `/briefing` endpoint + Weekly Life Briefing widget | Superseded by unified AgentBriefingCard with Today/This Week toggle |
+| 2026-06-15 | `agent_briefings.mode` column (daily/weekly, default daily) | Mode-filtered reads keep daily and weekly briefings separate |
+| 2026-06-15 | Memory writes deferred to Phase C (chat) | Briefing has no user input — wrong place to extract durable facts |
+| 2026-06-15 | `user_settings.language` as source of truth for agent language | UI previously wrote only to localStorage; agent always read DB |
 | 2026-06-12 | Azure Neural TTS via Cloudflare Worker (not direct) | CORS + key security; Supabase JWT auth gates cost |
 | 2026-06-12 | Text chunking 1500 chars (Azure) / 180 chars (Web Speech) | Web Speech API cuts off beyond ~200 chars |
 | 2026-06-12 | Persian locale fa-AF (Dari) not fa-IR | User preference; flag 🇦🇫 |
@@ -34,12 +38,31 @@ Keep this file under 2 pages; update after every session.
 
 ---
 
-## Next Priorities
+## Next / Backlog
 
-1. **Prune learn_ai_messages** — DB trigger or scheduled function (Bug #1)
-2. **Phase 3** — AI Gateway + provider routing
-3. **Azure TTS key security** — move from Plaintext → Secret in Cloudflare
-4. **Ergänzungsprüfung** — add OOP, DB, Network, Software-Eng question sets
+### Immediate (Phase C — AI Chat)
+
+1. **Chat page + `/chat` endpoint** — same agent core + memory context; conversation history = last N messages (short-term memory)
+2. **Auto memory-write in chat** — extract durable goals/preferences/facts from user messages → upsert `user_context` with `source='agent'`; conservative, dedupe by key; re-enable `ENABLE_AUTO_MEMORY_WRITE`
+3. **Decide**: merge chat with existing "Learn AI" tutor, or keep separate (avoid redundancy)
+
+### Infrastructure
+
+1. **Prune learn_ai_messages** — DB trigger or scheduled function (Bug #1; FREE-tier 500 MB risk)
+2. **Azure TTS key security** — move from Plaintext → Secret in Cloudflare
+3. **Supabase explicit GRANTs** — run `20260530000000_explicit_grants.sql` before 2026-10-30
+4. **Multi-provider AI Gateway** — true Gemini/Claude/OpenAI routing; isolate model call in single function now so the swap is easy later
+
+### Polish / Known gaps
+
+1. **i18n audit** — many UI strings hardcoded English when language is `fa` or `de`; full RTL polish for Farsi
+2. **a11y** — `DialogContent` missing `DialogTitle` / `aria-describedby` console warnings
+3. **Ergänzungsprüfung** — add OOP, DB, Network, Software-Eng question sets
+
+### Future (only when memory grows large)
+
+- RAG / semantic retrieval with `pgvector` + embeddings for `user_context`
+- Long-conversation summarisation/compaction
 
 ---
 
@@ -49,6 +72,35 @@ Keep this file under 2 pages; update after every session.
 | --- | --- | --- |
 | Persian TTS (fa-AF) | Azure key + region must be set in Cloudflare | AZURE_TTS_KEY ✅, AZURE_TTS_REGION ✅ |
 | Continue.dev local AI | Ollama crash on Windows/Intel Arc | Use Claude.ai instead |
+
+---
+
+## Completed This Session (2026-06-15/16)
+
+### AI Personal Agent — Phase A: Memory-aware briefings ✅
+
+- ✅ Worker reads all `user_context` entries (sources: manual / auto / agent / ai) and injects them into the Gemini prompt before finance/calendar data; manual entries flagged highest priority
+- ✅ Habit data added to briefing context
+- ✅ Fixed `maxOutputTokens` truncation — Gemini 2.5 Flash thinking tokens count against the budget; fix: `thinkingConfig: { thinkingBudget: 0 }` + `maxOutputTokens: 1024`; briefings now finish with `finishReason: STOP`
+- ✅ Auto memory-write scaffolded (`extractAndSaveMemory`) but disabled behind `ENABLE_AUTO_MEMORY_WRITE = false` — briefing flow has no user input, so it's the wrong place to extract durable facts (deferred to Phase C chat)
+
+### AI Personal Agent — Phase B: Advisory prompt + language + daily/weekly ✅
+
+- ✅ **Advisory prompt**: rewrote all three system prompts (en/de/fa) from descriptive to advisory — warm personal opener + 1–2 sentence connective analysis + 2–3 `•` bullet recommendations tied to user's real goals from memory
+- ✅ **Markdown rendering**: `AgentBriefingCard` now uses `react-markdown`; `•` bullets pre-processed to `"-"` for proper `<li>` rendering; language badge footer removed
+- ✅ **Output language**: briefing written in user's `user_settings.language` (en/de/fa); language instruction at start AND end of user prompt; explicit mandate at top of each system prompt
+- ✅ **Language persistence fix**: root cause — UI only wrote language to localStorage, never to DB; fixed: `SettingsPage` upserts `{ user_id, language }` to `user_settings` on change; `LanguageProvider` loads from DB on mount + `SIGNED_IN` event; UI and agent now share one source of truth
+- ✅ **Daily/Weekly merge**: added `mode` column to `agent_briefings` (migration `20260615000000`); `/generate` accepts `mode=daily|weekly`; weekly mode fetches tasks, habits, journal + uses week-scope Gemini prompts with 1500 token budget; journal context (last 7 days, mood + notes) added for both modes
+- ✅ **Today / This Week toggle**: `AgentBriefingCard` has a two-button pill toggle; switches fetch query (filtered by mode) and the `/generate` call; each mode's briefings stay separate
+- ✅ **Retired old Weekly Life Briefing**: removed `handleBriefing` from `dailyflow-ai-worker` + its route in `wrangler.toml` (redeployed); deleted `briefingService.ts`, `useBriefing.ts`, `BriefingPage.tsx`; removed Dashboard widget, `/briefing` route, sidebar entry, and all `briefing_*` + `nav_briefing` i18n keys (en/de/fa); one unified system remains
+
+### AI Personal Agent — Worker security ✅
+
+- ✅ `/generate` requires a valid Supabase JWT (`Authorization: Bearer`), verified via `/auth/v1/user`; `user_id` derived from the token (removed the query-param `user_id` attack surface)
+- ✅ Cron scheduled handler continues to run server-side with `service_role` key — no JWT needed
+- ✅ Verified with negative tests (401 without token, 401 with manipulated `user_id`) and positive test from the live app
+
+> ⚠️ **Reminder:** `VITE_*` env vars are baked at Vite build time. Must be set in **both** local `.env` **and** Cloudflare Pages → Settings → Environment variables (Production + Preview).
 
 ---
 
