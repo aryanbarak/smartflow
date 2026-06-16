@@ -1,6 +1,6 @@
-import type { Env, AgentBriefing, ExtractedFact, UserContext, BriefingMode } from './types'
-import { buildUserContext } from './context-builder'
-import { buildPrompt, buildExtractionPrompt, EXTRACTABLE_KEYS } from './prompt-builder'
+import type { Env, AgentBriefing, ExtractedFact, UserContext, BriefingMode, ChatMessage, ChatOptions } from './types'
+import { buildUserContext, fetchUserMemory, fetchUserLanguage, supabaseGet, supabasePost } from './context-builder'
+import { buildPrompt, buildExtractionPrompt, EXTRACTABLE_KEYS, buildChatSystemPrompt } from './prompt-builder'
 
 // Phase B: auto memory-write disabled — always returns [] and wastes a Gemini call.
 // Re-enable in Phase C when wiring memory extraction to the chat/advisory endpoint.
@@ -15,11 +15,9 @@ export default {
   },
 
   // =============================================
-  // HTTP Trigger — برای on-demand از UI
-  // POST /generate  (Authorization: Bearer <supabase-jwt>)
+  // HTTP Trigger — POST /generate | POST /chat
   // =============================================
   async fetch(request: Request, env: Env): Promise<Response> {
-    // CORS
     const origin = request.headers.get('Origin') ?? ''
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders(origin) })
@@ -29,33 +27,17 @@ export default {
       return json({ error: 'Method not allowed' }, 405, origin)
     }
 
-    const { userId, error: authError } = await requireAuth(request, env)
-    if (authError || !userId) {
-      return json({ error: authError ?? 'Unauthorized' }, 401, origin)
+    const { pathname } = new URL(request.url)
+
+    if (pathname === '/chat') {
+      return handleChat(request, env)
     }
 
-    // Parse mode from query param first, then JSON body
-    const url = new URL(request.url)
-    const queryMode = url.searchParams.get('mode')
-    let mode: BriefingMode = 'daily'
-    if (queryMode === 'daily' || queryMode === 'weekly') {
-      mode = queryMode
-    } else {
-      try {
-        const body = await request.json() as { mode?: string }
-        if (body.mode === 'daily' || body.mode === 'weekly') mode = body.mode
-      } catch {
-        // no body or invalid JSON — keep default 'daily'
-      }
+    if (pathname === '/generate') {
+      return handleGenerate(request, env)
     }
 
-    try {
-      const briefing = await generateBriefing(userId, env, 'user', mode)
-      return json({ success: true, briefing: briefing.content }, 200, origin)
-    } catch (err) {
-      console.error('Agent error:', err)
-      return json({ error: 'Failed to generate briefing' }, 500, origin)
-    }
+    return json({ error: 'Not found' }, 404, origin)
   },
 }
 
@@ -121,6 +103,97 @@ async function generateBriefing(
 }
 
 // =============================================
+// /generate handler
+// =============================================
+async function handleGenerate(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin') ?? ''
+
+  const { userId, error: authError } = await requireAuth(request, env)
+  if (authError || !userId) {
+    return json({ error: authError ?? 'Unauthorized' }, 401, origin)
+  }
+
+  const url = new URL(request.url)
+  const queryMode = url.searchParams.get('mode')
+  let mode: BriefingMode = 'daily'
+  if (queryMode === 'daily' || queryMode === 'weekly') {
+    mode = queryMode
+  } else {
+    try {
+      const body = await request.json() as { mode?: string }
+      if (body.mode === 'daily' || body.mode === 'weekly') mode = body.mode
+    } catch {
+      // no body or invalid JSON — keep default 'daily'
+    }
+  }
+
+  try {
+    const briefing = await generateBriefing(userId, env, 'user', mode)
+    return json({ success: true, briefing: briefing.content }, 200, origin)
+  } catch (err) {
+    console.error('Agent error:', err)
+    return json({ error: 'Failed to generate briefing' }, 500, origin)
+  }
+}
+
+// =============================================
+// /chat handler
+// =============================================
+async function handleChat(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin') ?? ''
+
+  const { userId, error: authError } = await requireAuth(request, env)
+  if (authError || !userId) {
+    return json({ error: authError ?? 'Unauthorized' }, 401, origin)
+  }
+
+  let message: string
+  try {
+    const body = await request.json() as { message?: unknown }
+    const parsed = typeof body.message === 'string' ? body.message.trim() : ''
+    if (parsed === '') {
+      return json({ error: 'message must be a non-empty string' }, 400, origin)
+    }
+    message = parsed
+  } catch {
+    return json({ error: 'Invalid JSON body' }, 400, origin)
+  }
+
+  try {
+    const [language, memory] = await Promise.all([
+      fetchUserLanguage(userId, env),
+      fetchUserMemory(userId, env),
+    ])
+
+    // Last 20 messages, oldest first, to build the conversation history
+    const historyRows = await supabaseGet<Array<{ role: string; content: string }>>(
+      env,
+      `agent_chat_messages?select=role,content&user_id=eq.${userId}&order=created_at.desc&limit=20`
+    )
+    const history: ChatMessage[] = historyRows
+      .filter(r => r.role === 'user' || r.role === 'assistant')
+      .map(r => ({ role: r.role as ChatMessage['role'], content: r.content }))
+      .reverse()
+
+    const system = buildChatSystemPrompt(language, memory)
+    const fullHistory: ChatMessage[] = [...history, { role: 'user', content: message }]
+
+    const reply = await callGeminiChat(system, fullHistory, env)
+
+    // Persist both after a successful Gemini call so no orphaned turns are saved on error
+    await supabasePost(env, 'agent_chat_messages', { user_id: userId, role: 'user', content: message })
+    await supabasePost(env, 'agent_chat_messages', { user_id: userId, role: 'assistant', content: reply })
+
+    console.log(`[Chat] userId=${userId} language=${language} history=${history.length} turns reply=${reply.length} chars`)
+
+    return json({ reply }, 200, origin)
+  } catch (err) {
+    console.error('[Chat] Error:', err)
+    return json({ error: 'Failed to generate reply' }, 500, origin)
+  }
+}
+
+// =============================================
 // Gemini API call
 // =============================================
 async function callGemini(system: string, user: string, env: Env, maxOutputTokens = 1024): Promise<string> {
@@ -160,6 +233,60 @@ async function callGemini(system: string, user: string, env: Env, maxOutputToken
   console.log('[Gemini] full text:', text)
 
   if (!text) throw new Error(`No content from Gemini (finishReason: ${finishReason})`)
+  return text.trim()
+}
+
+// =============================================
+// Gemini multi-turn chat API call
+// =============================================
+async function callGeminiChat(
+  system: string,
+  history: ChatMessage[],
+  env: Env,
+  options: ChatOptions = {}
+): Promise<string> {
+  const maxOutputTokens = options.maxOutputTokens ?? 1024
+  const temperature = options.temperature ?? 0.7
+
+  // Gemini uses 'model' for the assistant role
+  const contents = history.map(msg => ({
+    role: msg.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: msg.content }],
+  }))
+
+  console.log('[Chat] sending', history.length, 'turns to Gemini')
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: system }] },
+        contents,
+        generationConfig: {
+          maxOutputTokens,
+          temperature,
+          // Disable thinking tokens — they count against maxOutputTokens in Gemini 2.5
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      }),
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Gemini Chat API error: ${err}`)
+  }
+
+  const data: any = await res.json()
+  const candidate = data?.candidates?.[0]
+  const finishReason: string = candidate?.finishReason ?? 'UNKNOWN'
+  const text: string = candidate?.content?.parts?.[0]?.text ?? ''
+
+  console.log('[Chat] finishReason:', finishReason, 'text length:', text.length)
+
+  if (!text) throw new Error(`No content from Gemini chat (finishReason: ${finishReason})`)
   return text.trim()
 }
 

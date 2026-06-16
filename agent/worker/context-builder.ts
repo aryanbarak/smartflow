@@ -7,7 +7,7 @@ import type {
 // =============================================
 // Generic REST helper — GET /rest/v1/<path>
 // =============================================
-async function supabaseGet<T>(env: Env, path: string): Promise<T> {
+export async function supabaseGet<T>(env: Env, path: string): Promise<T> {
   const res = await fetch(`${env.SUPABASE_URL}/rest/v1/${path}`, {
     headers: {
       'apikey': env.SUPABASE_SERVICE_KEY,
@@ -22,6 +22,32 @@ async function supabaseGet<T>(env: Env, path: string): Promise<T> {
   }
 
   return res.json()
+}
+
+// =============================================
+// Generic REST helper — POST /rest/v1/<table>
+// =============================================
+export async function supabasePost(
+  env: Env,
+  table: string,
+  body: Record<string, unknown>,
+  prefer = 'return=minimal'
+): Promise<void> {
+  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': env.SUPABASE_SERVICE_KEY,
+      'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+      'Prefer': prefer,
+    },
+    body: JSON.stringify(body),
+  })
+
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Supabase POST error (${table}): ${err}`)
+  }
 }
 
 // =============================================
@@ -43,6 +69,19 @@ export async function fetchUserMemory(
       value: r.value.trim(),
       source: r.source as MemoryEntry['source'],
     }))
+}
+
+// =============================================
+// User language from user_settings
+// =============================================
+export async function fetchUserLanguage(userId: string, env: Env): Promise<Language> {
+  const rows = await supabaseGet<Array<{ language: string }>>(
+    env,
+    `user_settings?select=language&user_id=eq.${userId}&limit=1`
+  )
+  const rawLang = rows[0]?.language ?? null
+  if (rawLang === 'de' || rawLang === 'fa') return rawLang
+  return 'en'
 }
 
 // =============================================
@@ -227,11 +266,8 @@ export async function buildUserContext(
   env: Env,
   mode: BriefingMode = 'daily'
 ): Promise<UserContext> {
-  const settingsRows = await supabaseGet<Array<{ language: string }>>(env,
-    `user_settings?select=language&user_id=eq.${userId}&limit=1`)
-  const rawLang = settingsRows[0]?.language ?? null
-  const language: Language = (rawLang === 'de' || rawLang === 'fa') ? rawLang : 'en'
-  console.log(`[Context] userId=${userId} rawLang=${rawLang} resolvedLanguage=${language} mode=${mode}`)
+  const language = await fetchUserLanguage(userId, env)
+  console.log(`[Context] userId=${userId} language=${language} mode=${mode}`)
 
   if (mode === 'weekly') {
     const [finance, calendar, memory, journal, tasks, habits] = await Promise.all([

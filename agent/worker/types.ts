@@ -87,3 +87,13 @@ export interface AgentBriefing {
   context: UserContext
   triggered_by: 'cron' | 'user' | 'alert'
 }
+
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface ChatOptions {
+  maxOutputTokens?: number
+  temperature?: number
+}

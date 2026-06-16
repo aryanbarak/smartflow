@@ -16,6 +16,7 @@ import SettingsPage from "./pages/SettingsPage";
 import HabitsPage from "./pages/HabitsPage";
 import JournalPage from "./pages/JournalPage";
 import FlashcardsPage from "./pages/FlashcardsPage";
+import ChatPage from "./pages/ChatPage";
 
 const DocumentsPage = lazy(() => import("./pages/DocumentsPage"));
 const PhotosPage    = lazy(() => import("./pages/PhotosPage"));
@@ -129,6 +130,7 @@ const App = () => (
               <Route path="/journal" element={<JournalPage />} />
               <Route path="/flashcards" element={<FlashcardsPage />} />
               <Route path="/tts" element={<Suspense fallback={<AppLoader />}><TTSPage /></Suspense>} />
+              <Route path="/chat" element={<ChatPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
             <Route path="/offline" element={<OfflinePage />} />

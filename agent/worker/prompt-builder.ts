@@ -140,6 +140,29 @@ Regeln:
 - لحن: مربی استراتژیک — کمک به برنامه‌ریزی هفته، نه فقط واکنش به داده‌ها`,
 }
 
+// =============================================
+// Chat system prompts (3 languages)
+// =============================================
+const CHAT_PERSONA: Record<Language, string> = {
+  en: `LANGUAGE REQUIREMENT: You MUST reply entirely in English.
+
+You are a warm, direct personal assistant embedded in DailyFlow — the user's life management app. Help with questions, tasks, advice, and planning. Be concise unless depth is clearly needed. Draw on the user's memory below to personalise every response.`,
+
+  de: `SPRACHANFORDERUNG: Du MUSST ausschließlich auf Deutsch antworten.
+
+Du bist ein freundlicher, direkter persönlicher Assistent in DailyFlow — der Lebensmanagement-App des Nutzers. Hilf bei Fragen, Aufgaben, Ratschlägen und Planung. Sei prägnant, es sei denn, Tiefe ist klar erforderlich. Nutze das Gedächtnis des Nutzers unten, um jede Antwort zu personalisieren.`,
+
+  fa: `الزام زبانی: تمام پاسخ‌ها را باید به فارسی بنویسی.
+
+تو یک دستیار شخصی گرم و مستقیم در DailyFlow هستی — اپ مدیریت زندگی کاربر. در سوالات، وظایف، مشاوره و برنامه‌ریزی کمک کن. مختصر باش مگر اینکه عمق واضحاً لازم باشد. از حافظه کاربر زیر برای شخصی‌سازی هر پاسخ استفاده کن.`,
+}
+
+export function buildChatSystemPrompt(language: Language, memory: MemoryEntry[]): string {
+  const persona = CHAT_PERSONA[language]
+  const memorySection = buildMemorySection(memory)
+  return memorySection ? `${persona}\n\n${memorySection}` : persona
+}
+
 const LANG_NAMES: Record<Language, string> = {
   fa: 'Persian (Farsi)',
   de: 'German',
@@ -207,7 +230,7 @@ function buildJournalSection(journal: JournalContext): string {
   }
 
   for (const entry of journal.entries) {
-    const moodStr = entry.mood !== null ? `Mood ${entry.mood}/5` : 'No mood logged'
+    const moodStr = entry.mood === null ? 'No mood logged' : `Mood ${entry.mood}/5`
     const contentStr = entry.content ? ` — "${entry.content}"` : ''
     lines.push(`  - ${entry.date}: ${moodStr}${contentStr}`)
   }

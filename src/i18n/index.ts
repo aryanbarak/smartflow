@@ -20,6 +20,7 @@ const en = {
   nav_more: 'More',
   nav_tutor_app: 'Tutor App',
   nav_tts: 'Text to Speech',
+  nav_chat: 'Agent Chat',
 
   // Common
   save: 'Save',
@@ -376,6 +377,18 @@ const en = {
   error_load: 'Failed to load data',
   error_save: 'Failed to save',
   error_delete: 'Failed to delete',
+
+  // Agent Chat
+  chat_title: 'Agent Chat',
+  chat_subtitle: 'Your personal AI assistant',
+  chat_placeholder: 'Message your assistant…',
+  chat_send: 'Send',
+  chat_sending: 'Sending…',
+  chat_typing: 'Typing…',
+  chat_empty: 'Start a conversation with your personal assistant.',
+  chat_error_send: 'Failed to send. Try again.',
+  chat_error_load: 'Could not load chat history.',
+  chat_enter_hint: 'Enter to send · Shift+Enter for new line',
 };
 
 type TranslationDict = typeof en;
@@ -399,6 +412,7 @@ const de: TranslationDict = {
   nav_more: 'Mehr',
   nav_tutor_app: 'Tutor-App',
   nav_tts: 'Text zu Sprache',
+  nav_chat: 'Agent-Chat',
 
   save: 'Speichern',
   cancel: 'Abbrechen',
@@ -735,6 +749,18 @@ const de: TranslationDict = {
   error_load: 'Daten konnten nicht geladen werden',
   error_save: 'Speichern fehlgeschlagen',
   error_delete: 'Loeschen fehlgeschlagen',
+
+  // Agent Chat
+  chat_title: 'Agent-Chat',
+  chat_subtitle: 'Dein persönlicher KI-Assistent',
+  chat_placeholder: 'Nachricht an Assistenten…',
+  chat_send: 'Senden',
+  chat_sending: 'Sende…',
+  chat_typing: 'Tippt…',
+  chat_empty: 'Starte ein Gespräch mit deinem persönlichen Assistenten.',
+  chat_error_send: 'Senden fehlgeschlagen. Erneut versuchen.',
+  chat_error_load: 'Chatverlauf konnte nicht geladen werden.',
+  chat_enter_hint: 'Enter zum Senden · Shift+Enter für neue Zeile',
 };
 
 const fa: TranslationDict = {
@@ -756,6 +782,7 @@ const fa: TranslationDict = {
   nav_more: 'بیشتر',
   nav_tutor_app: 'اپ مدرس',
   nav_tts: 'متن به گفتار',
+  nav_chat: 'چت دستیار',
 
   save: 'ذخیره',
   cancel: 'لغو',
@@ -1092,6 +1119,18 @@ const fa: TranslationDict = {
   error_load: 'بارگذاری داده ناموفق بود',
   error_save: 'ذخیره ناموفق بود',
   error_delete: 'حذف ناموفق بود',
+
+  // Agent Chat
+  chat_title: 'چت دستیار',
+  chat_subtitle: 'دستیار هوش مصنوعی شخصی شما',
+  chat_placeholder: 'پیام به دستیار…',
+  chat_send: 'ارسال',
+  chat_sending: 'در حال ارسال…',
+  chat_typing: 'در حال تایپ…',
+  chat_empty: 'یک مکالمه با دستیار شخصی خود شروع کنید.',
+  chat_error_send: 'ارسال ناموفق بود. دوباره تلاش کنید.',
+  chat_error_load: 'تاریخچه چت بارگذاری نشد.',
+  chat_enter_hint: 'Enter برای ارسال · Shift+Enter برای خط جدید',
 };
 
 export type TranslationKey = keyof TranslationDict;
