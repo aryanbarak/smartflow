@@ -173,6 +173,7 @@ const LANG_NAMES: Record<Language, string> = {
 // Human-readable labels for user_context keys
 // =============================================
 const KEY_LABELS: Record<string, string> = {
+  preferred_name:  'Preferred name',
   goal_primary:    'Primary goal',
   goal_secondary:  'Secondary goal',
   work_status:     'Work / career status',
@@ -270,6 +271,7 @@ function buildHabitSection(habits: HabitContext): string {
 // Keys the extraction model is allowed to write
 // =============================================
 export const EXTRACTABLE_KEYS = [
+  'preferred_name',
   'goal_primary',
   'goal_secondary',
   'work_status',
@@ -350,6 +352,69 @@ export function buildExtractionPrompt(
     financeSignal,
     '',
     'Extract durable facts not already captured in stored memory above.',
+  ].join('\n')
+
+  return { system, user }
+}
+
+// =============================================
+// Prompt for chat-turn memory extraction
+// Source: the user's own message, not a briefing or assistant reply.
+// Does not require a full UserContext — only the message and current memory.
+// =============================================
+export function buildChatExtractionPrompt(
+  userMessage: string,
+  memory: MemoryEntry[]
+): { system: string; user: string } {
+  const existingLines = memory
+    .filter(e => e.value.trim())
+    .map(e => `  ${e.key}: ${e.value}`)
+  const hasExistingMemory = existingLines.length > 0
+  const existingMemory = hasExistingMemory
+    ? existingLines.join('\n')
+    : '  (empty — this is the first extraction run)'
+
+  const validKeys = EXTRACTABLE_KEYS.join(', ')
+
+  const eagerOrSelective = hasExistingMemory
+    ? 'Stored memory already exists. Only extract facts that are GENUINELY NEW or represent a meaningful change from what is already stored.'
+    : 'Stored memory is empty. Be willing to establish initial facts — extract anything stable and useful from what the user stated.'
+
+  const system = [
+    'You are a memory extractor for a personal productivity app.',
+    'Your job: identify durable long-term facts the USER has explicitly stated about themselves in a single chat message.',
+    '',
+    `Valid keys (choose only from these): ${validKeys}`,
+    '',
+    'EXTRACT stable facts when the user explicitly states or strongly implies:',
+    '  - Their name or preferred form of address → preferred_name',
+    '  - Long-term goals (career, education, personal ambitions) → goal_primary or goal_secondary',
+    '  - Work, study, or career status → work_status',
+    '  - Family situation or context → family_note',
+    '  - Health habits or constraints → health_note',
+    '  - Current learning focus → learning_note',
+    '  - Other durable personal context → custom_1 / custom_2 / custom_3',
+    '',
+    'DO NOT EXTRACT:',
+    '  - Questions the user is asking (they are asking, not stating facts about themselves)',
+    '  - Anything framed as "this week", "today", "right now", or other transient states',
+    '  - Incidental mentions that do not represent a stable personal fact',
+    '  - Specific dates, €-amounts, or one-off events',
+    '',
+    eagerOrSelective,
+    '',
+    'Output: JSON array [{"key":"...","value":"..."}] — values max 120 chars, no specific amounts or dates.',
+    'Return [] if the message contains no durable facts the user has stated about themselves.',
+  ].join('\n')
+
+  const user = [
+    'Already stored memory:',
+    existingMemory,
+    '',
+    "User's message:",
+    `"${userMessage}"`,
+    '',
+    'Extract any durable facts the user has stated about themselves that are NOT already captured above.',
   ].join('\n')
 
   return { system, user }

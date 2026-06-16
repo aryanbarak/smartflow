@@ -1,10 +1,8 @@
-import type { Env, AgentBriefing, ExtractedFact, UserContext, BriefingMode, ChatMessage, ChatOptions } from './types'
+import type { Env, AgentBriefing, ExtractedFact, MemoryEntry, UserContext, BriefingMode, ChatMessage, ChatOptions } from './types'
 import { buildUserContext, fetchUserMemory, fetchUserLanguage, supabaseGet, supabasePost } from './context-builder'
-import { buildPrompt, buildExtractionPrompt, EXTRACTABLE_KEYS, buildChatSystemPrompt } from './prompt-builder'
+import { buildPrompt, buildExtractionPrompt, buildChatExtractionPrompt, EXTRACTABLE_KEYS, buildChatSystemPrompt } from './prompt-builder'
 
-// Phase B: auto memory-write disabled — always returns [] and wastes a Gemini call.
-// Re-enable in Phase C when wiring memory extraction to the chat/advisory endpoint.
-const ENABLE_AUTO_MEMORY_WRITE = false
+const ENABLE_AUTO_MEMORY_WRITE = true
 
 export default {
   // =============================================
@@ -17,7 +15,7 @@ export default {
   // =============================================
   // HTTP Trigger — POST /generate | POST /chat
   // =============================================
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const origin = request.headers.get('Origin') ?? ''
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders(origin) })
@@ -30,7 +28,7 @@ export default {
     const { pathname } = new URL(request.url)
 
     if (pathname === '/chat') {
-      return handleChat(request, env)
+      return handleChat(request, env, ctx)
     }
 
     if (pathname === '/generate') {
@@ -139,7 +137,7 @@ async function handleGenerate(request: Request, env: Env): Promise<Response> {
 // =============================================
 // /chat handler
 // =============================================
-async function handleChat(request: Request, env: Env): Promise<Response> {
+async function handleChat(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const origin = request.headers.get('Origin') ?? ''
 
   const { userId, error: authError } = await requireAuth(request, env)
@@ -185,6 +183,15 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
     await supabasePost(env, 'agent_chat_messages', { user_id: userId, role: 'assistant', content: reply })
 
     console.log(`[Chat] userId=${userId} language=${language} history=${history.length} turns reply=${reply.length} chars`)
+
+    // Background memory extraction — does not delay the user's reply
+    if (ENABLE_AUTO_MEMORY_WRITE) {
+      ctx.waitUntil(
+        extractAndSaveMemoryFromChat(userId, message, memory, env).catch(err =>
+          console.error('[Memory] Chat extraction error:', err)
+        )
+      )
+    }
 
     return json({ reply }, 200, origin)
   } catch (err) {
@@ -424,6 +431,107 @@ async function extractAndSaveMemory(
       console.log(`[Memory] Wrote: ${fact.key} = "${fact.value.trim()}"`)
     } else {
       console.error(`[Memory] Upsert failed for key "${fact.key}":`, await upsertRes.text())
+    }
+  }
+}
+
+// =============================================
+// Memory extraction — from a single chat turn
+// Source: what the user stated about themselves, not an assistant reply.
+// =============================================
+async function extractAndSaveMemoryFromChat(
+  userId: string,
+  userMessage: string,
+  memory: MemoryEntry[],
+  env: Env
+): Promise<void> {
+  const { system, user } = buildChatExtractionPrompt(userMessage, memory)
+
+  let facts: ExtractedFact[] = []
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: system }] },
+          contents: [{ parts: [{ text: user }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  key:   { type: 'STRING' },
+                  value: { type: 'STRING' },
+                },
+                required: ['key', 'value'],
+              },
+            },
+            maxOutputTokens: 256,
+            temperature: 0.1,
+            thinkingConfig: { thinkingBudget: 0 },
+          },
+        }),
+      }
+    )
+
+    if (!res.ok) {
+      console.error('[Memory] Chat extraction Gemini call failed:', await res.text())
+      return
+    }
+
+    const data: unknown = await res.json()
+    const raw: string = (data as any)?.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]'
+    facts = JSON.parse(raw) as ExtractedFact[]
+  } catch (err) {
+    console.error('[Memory] Chat extraction parse error:', err)
+    return
+  }
+
+  // Guard: only valid keys with non-empty string values
+  const valid = facts.filter(
+    f =>
+      typeof f.key === 'string' &&
+      typeof f.value === 'string' &&
+      f.value.trim().length > 0 &&
+      EXTRACTABLE_KEY_SET.has(f.key)
+  )
+
+  if (valid.length === 0) {
+    console.log('[Memory] Chat turn: no durable facts found — nothing written.')
+    return
+  }
+
+  console.log(`[Memory] Chat turn: extracted ${valid.length} fact(s):`, JSON.stringify(valid))
+
+  for (const fact of valid) {
+    const upsertRes = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/user_context?on_conflict=user_id,key`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': env.SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+          'Prefer': 'resolution=merge-duplicates,return=minimal',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          key: fact.key,
+          value: fact.value.trim(),
+          source: 'agent',
+        }),
+      }
+    )
+
+    if (upsertRes.ok) {
+      console.log(`[Memory] Chat wrote: ${fact.key} = "${fact.value.trim()}"`)
+    } else {
+      console.error(`[Memory] Chat upsert failed for key "${fact.key}":`, await upsertRes.text())
     }
   }
 }
