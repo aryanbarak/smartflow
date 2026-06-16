@@ -40,11 +40,11 @@ Keep this file under 2 pages; update after every session.
 
 ## Next / Backlog
 
-### Immediate (Phase C — AI Chat)
+### Chat / Agent
 
-1. **Chat page + `/chat` endpoint** — same agent core + memory context; conversation history = last N messages (short-term memory)
-2. **Auto memory-write in chat** — extract durable goals/preferences/facts from user messages → upsert `user_context` with `source='agent'`; conservative, dedupe by key; re-enable `ENABLE_AUTO_MEMORY_WRITE`
-3. **Decide**: merge chat with existing "Learn AI" tutor, or keep separate (avoid redundancy)
+1. **C3b: file upload in chat** — reuse Learn AI's existing file-handling approach rather than building a parallel one
+2. **Agent Tools / function calling** — web search so the agent can answer real-world/real-time questions (sports schedules, weather, news); deferred — agent currently has Gemini knowledge but no internet access
+3. **Decide later**: merge Learn AI into the agent as a mode vs keep separate — still separate by deliberate decision
 
 ### Infrastructure
 
@@ -72,6 +72,18 @@ Keep this file under 2 pages; update after every session.
 | --- | --- | --- |
 | Persian TTS (fa-AF) | Azure key + region must be set in Cloudflare | AZURE_TTS_KEY ✅, AZURE_TTS_REGION ✅ |
 | Continue.dev local AI | Ollama crash on Windows/Intel Arc | Use Claude.ai instead |
+
+---
+
+## Completed This Session (2026-06-16)
+
+### AI Personal Agent — Phase C: Chat + Automatic Memory ✅
+
+- ✅ **C1: `agent_chat_messages` table** — columns `(id, user_id, role, content, created_at)`; RLS policies for select/insert/delete own rows; AFTER INSERT trigger `prune_agent_chat_messages` keeps only the most recent 100 messages per user (mirrors the `learn_ai_messages` TTL pattern); migration `20260616000000_agent_chat_messages_cap.sql`
+- ✅ **C2: chat core in agent worker** — exported `supabaseGet`; added `supabasePost` and `fetchUserLanguage` in `context-builder.ts`; added `callGeminiChat` (multi-turn Gemini, maps `assistant→model` role, `system_instruction`, `thinkingBudget: 0`); added `handleChat` orchestrator (auth → language + memory in parallel → last 20 messages history desc+reverse → chat system prompt → Gemini → persist both turns atomically); routed `POST /chat` by pathname; briefing path untouched
+- ✅ **C3a: Chat page frontend** — new `/chat` route + sidebar + mobile nav entry + i18n keys (en/de/fa); loads full prior history from `agent_chat_messages` (RLS-protected) on mount, persists across refresh; reuses `VITE_AGENT_WORKER_URL`, Supabase session, and existing i18n; per-message bidi via `dir="auto"` so RTL/LTR is detected per message content independent of system language; assistant bubbles render markdown via `react-markdown` (same approach as `AgentBriefingCard`); text-only (file upload deferred to C3b)
+- ✅ **C4: automatic memory-writing in chat** — added `preferred_name` to `EXTRACTABLE_KEYS`; new `buildChatExtractionPrompt(userMessage, existingMemory)` extracts durable facts the user states about themselves (not from the assistant reply) using same selective/eager logic as briefing extractor; `extractAndSaveMemoryFromChat` runs in background via `ctx.waitUntil` after the reply is returned (user gets `{ reply }` immediately); upserts to `user_context` with `source='agent'`, `on_conflict=user_id,key`; `ENABLE_AUTO_MEMORY_WRITE = true`; briefing extraction path uses same flag, untouched
+- ✅ **DB constraint fix** — `user_context_source_check` updated in production to allow `'agent'`; documented in migration `20260616120000_user_context_allow_agent_source.sql`
 
 ---
 
