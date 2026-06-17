@@ -34,13 +34,15 @@ export function FinanceWidget() {
 
   return (
     <Card className="glass-card card-accent">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <Wallet className="w-4 h-4 text-primary" />
+      <CardHeader className="px-4 py-3">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2.5">
+          <div className="icon-tile w-7 h-7 rounded-md">
+            <Wallet className="w-3.5 h-3.5 text-primary" />
+          </div>
           Finance
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+      <CardContent className="px-4 pb-4 pt-0 space-y-2 text-sm">
         {error && !isInitialLoading ? (
           <StatePanel
             variant="error"

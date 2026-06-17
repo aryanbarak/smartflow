@@ -31,23 +31,25 @@ export function TodayWidget() {
 
   return (
     <Card className="glass-card card-accent">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-primary" />
+      <CardHeader className="px-4 py-3">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2.5">
+          <div className="icon-tile w-7 h-7 rounded-md">
+            <Calendar className="w-3.5 h-3.5 text-primary" />
+          </div>
           Today
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+      <CardContent className="px-4 pb-4 pt-0 space-y-2 text-sm">
         {isInitialLoading ? (
           <SkeletonSection rows={2} />
         ) : todayEvents.length === 0 ? (
           <p className="text-xs text-muted-foreground">No events today.</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-1.5">
             {todayEvents.map((event) => (
               <li
                 key={event.id}
-                className="rounded-lg border border-border/60 bg-secondary/40 px-3 py-2"
+                className="rounded-lg border border-border/60 bg-secondary/30 px-3 py-2"
               >
                 <p className="text-sm font-medium">{event.title}</p>
                 <p className="text-xs text-muted-foreground">

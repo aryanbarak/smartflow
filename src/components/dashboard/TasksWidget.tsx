@@ -34,13 +34,15 @@ export function TasksWidget() {
 
   return (
     <Card className="glass-card card-accent">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <CheckSquare className="w-4 h-4 text-primary" />
+      <CardHeader className="px-4 py-3">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2.5">
+          <div className="icon-tile w-7 h-7 rounded-md">
+            <CheckSquare className="w-3.5 h-3.5 text-primary" />
+          </div>
           Tasks
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+      <CardContent className="px-4 pb-4 pt-0 space-y-2 text-sm">
         {error && !isInitialLoading ? (
           <StatePanel
             variant="error"
@@ -60,16 +62,16 @@ export function TasksWidget() {
             {dueSoonTasks.length === 0 ? (
               <p className="text-xs text-muted-foreground">No tasks due.</p>
             ) : (
-              <ul className="space-y-2">
+              <ul className="space-y-1.5">
                 {dueSoonTasks.map(({ task, due }) => (
                   <li
                     key={task.id}
-                    className="flex items-center justify-between rounded-lg border border-border/60 bg-secondary/40 px-3 py-2"
+                    className="flex items-center justify-between rounded-lg border border-border/60 bg-secondary/30 px-3 py-2"
                   >
                     <span className="text-sm font-medium truncate">
                       {task.title}
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground ml-2 shrink-0">
                       {isSameDay(due, today)
                         ? "Today"
                         : formatDateLabel(task.dueDate!)}
