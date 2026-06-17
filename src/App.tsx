@@ -11,11 +11,9 @@ import CalendarPage from "./pages/CalendarPage";
 import TasksPage from "./pages/TasksPage";
 import FinancePage from "./pages/FinancePage";
 import FamilyPage from "./pages/FamilyPage";
-import LinksPage from "./pages/LinksPage";
 import SettingsPage from "./pages/SettingsPage";
 import HabitsPage from "./pages/HabitsPage";
 import JournalPage from "./pages/JournalPage";
-import FlashcardsPage from "./pages/FlashcardsPage";
 import ChatPage from "./pages/ChatPage";
 
 const DocumentsPage = lazy(() => import("./pages/DocumentsPage"));
@@ -84,7 +82,6 @@ const App = () => (
               <Route path="/documents" element={<Suspense fallback={<AppLoader />}><DocumentsPage /></Suspense>} />
               <Route path="/music"     element={<Suspense fallback={<AppLoader />}><MusicPage /></Suspense>} />
               <Route path="/photos"   element={<Suspense fallback={<AppLoader />}><PhotosPage /></Suspense>} />
-              <Route path="/links" element={<LinksPage />} />
               <Route path="/learn-ai" element={<Suspense fallback={<AppLoader />}><LearnAIPage /></Suspense>} />
               <Route
                 path="/tutor"
@@ -128,7 +125,6 @@ const App = () => (
               />
               <Route path="/habits" element={<HabitsPage />} />
               <Route path="/journal" element={<JournalPage />} />
-              <Route path="/flashcards" element={<FlashcardsPage />} />
               <Route path="/tts" element={<Suspense fallback={<AppLoader />}><TTSPage /></Suspense>} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/settings" element={<SettingsPage />} />

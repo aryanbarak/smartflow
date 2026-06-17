@@ -5,7 +5,7 @@ export const dataExportService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const [tasks, events, finance, family, messages, journalEntries, links, moodLogs] =
+    const [tasks, events, finance, family, messages, journalEntries, moodLogs] =
       await Promise.all([
         supabase.from('tasks').select('*').eq('user_id', user.id),
         supabase.from('calendar_events').select('*').eq('user_id', user.id),
@@ -13,7 +13,6 @@ export const dataExportService = {
         supabase.from('family_children').select('*').eq('user_id', user.id),
         supabase.from('learn_ai_messages').select('*').eq('user_id', user.id),
         supabase.from('journal_entries').select('*').eq('user_id', user.id),
-        supabase.from('links').select('*').eq('user_id', user.id),
         supabase.from('mood_logs').select('*').eq('user_id', user.id),
       ]);
 
@@ -27,7 +26,6 @@ export const dataExportService = {
         family_children: family.data ?? [],
         learn_ai_messages: messages.data ?? [],
         journal_entries: journalEntries.data ?? [],
-        links: links.data ?? [],
         mood_logs: moodLogs.data ?? [],
       },
     };
@@ -52,10 +50,8 @@ export const dataExportService = {
       supabase.from('tasks').delete().eq('user_id', user.id),
       supabase.from('family_children').delete().eq('user_id', user.id),
       supabase.from('journal_entries').delete().eq('user_id', user.id),
-      supabase.from('links').delete().eq('user_id', user.id),
       supabase.from('mood_logs').delete().eq('user_id', user.id),
       supabase.from('shopping_items').delete().eq('user_id', user.id),
-      supabase.from('flashcard_decks').delete().eq('user_id', user.id),
     ]);
 
     const { data: files } = await supabase.storage.from('documents').list(user.id);

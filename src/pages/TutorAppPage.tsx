@@ -344,7 +344,7 @@ export default function TutorAppPage() {
         </Link>
       </div>
       <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-semibold font-display tracking-tight">Tutor Mini App</h1>
+        <h1 className="text-2xl sm:text-3xl font-semibold font-display tracking-tight">Smart Academy</h1>
         <p className="text-muted-foreground">Execute tutor topics through the real adapter API when configured.</p>
       </motion.div>
 

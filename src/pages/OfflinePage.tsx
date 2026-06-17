@@ -6,7 +6,6 @@ const CACHED_FEATURES = [
   "Previously viewed tasks and notes",
   "Calendar events loaded before going offline",
   "Finance summaries and recent transactions",
-  "Saved links and bookmarks",
 ];
 
 export default function OfflinePage() {

@@ -721,7 +721,7 @@ function DataTab() {
       </SectionCard>
 
       <SectionCard title="Export">
-        <SettingRow label="Download all data" desc="Tasks, events, finance, journal, links — as JSON">
+        <SettingRow label="Download all data" desc="Tasks, events, finance, journal — as JSON">
           <button
             type="button"
             onClick={() => exportData()}

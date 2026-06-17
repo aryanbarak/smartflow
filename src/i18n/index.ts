@@ -10,17 +10,14 @@ const en = {
   nav_documents: 'Documents',
   nav_music: 'Music',
   nav_photos: 'Photos',
-  nav_links: 'Links',
   nav_learn_ai: 'Learn AI',
-  nav_tutor: 'Tutor',
   nav_habits: 'Habits',
   nav_journal: 'Journal',
-  nav_flashcards: 'Flashcards',
   nav_settings: 'Settings',
   nav_more: 'More',
-  nav_tutor_app: 'Tutor App',
+  nav_tutor_app: 'Smart Academy',
   nav_tts: 'Text to Speech',
-  nav_chat: 'Agent Chat',
+  nav_chat: 'Flow AI',
 
   // Common
   save: 'Save',
@@ -378,8 +375,8 @@ const en = {
   error_save: 'Failed to save',
   error_delete: 'Failed to delete',
 
-  // Agent Chat
-  chat_title: 'Agent Chat',
+  // Flow AI
+  chat_title: 'Flow AI',
   chat_subtitle: 'Your personal AI assistant',
   chat_placeholder: 'Message your assistant…',
   chat_send: 'Send',
@@ -402,17 +399,14 @@ const de: TranslationDict = {
   nav_documents: 'Dokumente',
   nav_music: 'Musik',
   nav_photos: 'Fotos',
-  nav_links: 'Links',
   nav_learn_ai: 'KI lernen',
-  nav_tutor: 'Tutor',
   nav_habits: 'Gewohnheiten',
   nav_journal: 'Tagebuch',
-  nav_flashcards: 'Lernkarten',
   nav_settings: 'Einstellungen',
   nav_more: 'Mehr',
-  nav_tutor_app: 'Tutor-App',
+  nav_tutor_app: 'Smart Academy',
   nav_tts: 'Text zu Sprache',
-  nav_chat: 'Agent-Chat',
+  nav_chat: 'Flow AI',
 
   save: 'Speichern',
   cancel: 'Abbrechen',
@@ -750,8 +744,8 @@ const de: TranslationDict = {
   error_save: 'Speichern fehlgeschlagen',
   error_delete: 'Loeschen fehlgeschlagen',
 
-  // Agent Chat
-  chat_title: 'Agent-Chat',
+  // Flow AI
+  chat_title: 'Flow AI',
   chat_subtitle: 'Dein persönlicher KI-Assistent',
   chat_placeholder: 'Nachricht an Assistenten…',
   chat_send: 'Senden',
@@ -772,17 +766,14 @@ const fa: TranslationDict = {
   nav_documents: 'اسناد',
   nav_music: 'موسیقی',
   nav_photos: 'عکس‌ها',
-  nav_links: 'لینک‌ها',
   nav_learn_ai: 'یادگیری هوش مصنوعی',
-  nav_tutor: 'مدرس',
   nav_habits: 'عادات',
   nav_journal: 'دفترچه',
-  nav_flashcards: 'فلش‌کارت',
   nav_settings: 'تنظیمات',
   nav_more: 'بیشتر',
-  nav_tutor_app: 'اپ مدرس',
+  nav_tutor_app: 'Smart Academy',
   nav_tts: 'متن به گفتار',
-  nav_chat: 'چت دستیار',
+  nav_chat: 'Flow AI',
 
   save: 'ذخیره',
   cancel: 'لغو',
@@ -1120,8 +1111,8 @@ const fa: TranslationDict = {
   error_save: 'ذخیره ناموفق بود',
   error_delete: 'حذف ناموفق بود',
 
-  // Agent Chat
-  chat_title: 'چت دستیار',
+  // Flow AI
+  chat_title: 'Flow AI',
   chat_subtitle: 'دستیار هوش مصنوعی شخصی شما',
   chat_placeholder: 'پیام به دستیار…',
   chat_send: 'ارسال',
