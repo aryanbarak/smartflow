@@ -12,6 +12,8 @@ import {
   Flame,
   MessageSquare,
   Music,
+  Pause,
+  Play,
   Plus,
   Wallet,
 } from "lucide-react";
@@ -31,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SkeletonBlock } from "@/components/common/Skeletons";
 import { isSameDay, toDateOnly } from "@/lib/date";
+import { useMusicPlayer, loadHistory } from "@/hooks/useMusicPlayer";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -83,6 +86,110 @@ function Sparkline({
         </AreaChart>
       </ResponsiveContainer>
     </div>
+  );
+}
+
+function FocusPlaylistCard() {
+  const navigate = useNavigate();
+  const { currentTrack, isPlaying, pause, resume, playYouTube } =
+    useMusicPlayer();
+  const lastPlayed = useMemo(() => loadHistory()[0] ?? null, []);
+
+  const isYouTube = currentTrack?.type === "youtube";
+  const trackTitle = currentTrack
+    ? currentTrack.type === "youtube"
+      ? currentTrack.title
+      : currentTrack.name
+    : null;
+  const videoId = isYouTube ? currentTrack.videoId : null;
+  const thumbnailUrl = videoId
+    ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
+    : null;
+
+  return (
+    <Card className="glass-card card-accent">
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="icon-tile w-7 h-7 rounded-md">
+            <Music className="w-3.5 h-3.5 text-primary" />
+          </div>
+          <p className="text-sm font-semibold">Focus Playlist</p>
+        </div>
+
+        {currentTrack ? (
+          <div className="flex items-center gap-3">
+            {thumbnailUrl ? (
+              <img
+                src={thumbnailUrl}
+                alt=""
+                className="w-12 h-12 rounded-md object-cover shrink-0"
+              />
+            ) : (
+              <div className="icon-tile w-12 h-12 rounded-md">
+                <Music className="w-5 h-5 text-primary" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium truncate">{trackTitle}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {isPlaying ? "Now playing" : "Paused"}
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label={isPlaying ? "Pause" : "Resume"}
+              onClick={isPlaying ? pause : resume}
+              className="icon-tile w-8 h-8 rounded-full shrink-0 hover:bg-primary/20 transition-colors"
+            >
+              {isPlaying ? (
+                <Pause className="w-4 h-4 text-primary" />
+              ) : (
+                <Play className="w-4 h-4 text-primary ml-0.5" />
+              )}
+            </button>
+          </div>
+        ) : lastPlayed ? (
+          <div className="flex items-center gap-3">
+            <img
+              src={`https://img.youtube.com/vi/${lastPlayed.videoId}/mqdefault.jpg`}
+              alt=""
+              className="w-12 h-12 rounded-md object-cover shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium truncate">
+                {lastPlayed.title}
+              </p>
+              <p className="text-[10px] text-muted-foreground">Last played</p>
+            </div>
+            <button
+              type="button"
+              aria-label="Play"
+              onClick={() =>
+                playYouTube(lastPlayed.videoId, lastPlayed.title)
+              }
+              className="icon-tile w-8 h-8 rounded-full shrink-0 hover:bg-primary/20 transition-colors"
+            >
+              <Play className="w-4 h-4 text-primary ml-0.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              No recent tracks
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => navigate("/music")}
+            >
+              <Music className="w-3.5 h-3.5" />
+              Browse Music
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -415,19 +522,9 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Focus Playlist */}
+          {/* Focus Playlist — live player widget */}
           <div className="order-6 lg:order-none">
-            <Card className="glass-card card-accent">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="icon-tile w-7 h-7 rounded-md">
-                    <Music className="w-3.5 h-3.5 text-primary" />
-                  </div>
-                  <p className="text-sm font-semibold">Focus Playlist</p>
-                </div>
-                <p className="text-xs text-muted-foreground">Coming soon</p>
-              </CardContent>
-            </Card>
+            <FocusPlaylistCard />
           </div>
         </div>
       </div>
