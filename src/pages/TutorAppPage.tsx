@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useSearchParams } from "react-router-dom";
+import { useT } from "@/i18n";
 import { TutorControlPanel } from "@/components/tutor/app/TutorControlPanel";
 import { TutorOutputTabs } from "@/components/tutor/app/TutorOutputTabs";
 import {
@@ -63,6 +64,7 @@ function exportExecutionPdf(execution: TutorRunExecution): void {
 }
 
 export default function TutorAppPage() {
+  const { t } = useT();
   const [searchParams] = useSearchParams();
   const tutorView = (searchParams.get("view") || "").trim().toLowerCase();
   const isWisoView = tutorView === "wiso";
@@ -341,6 +343,9 @@ export default function TutorAppPage() {
         </Link>
         <Link to="/tutor/ergaenzungspruefung" className="rounded border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm font-medium hover:bg-slate-800">
           Ergänzungsprüfung
+        </Link>
+        <Link to="/learn-ai" className="rounded border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm font-medium hover:bg-slate-800">
+          {t('nav_learn_ai')}
         </Link>
       </div>
       <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
