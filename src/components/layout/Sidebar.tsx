@@ -23,8 +23,10 @@ import type { TranslationKey } from "@/i18n";
 
 const navItems: { icon: React.ElementType; key: TranslationKey; path: string }[] = [
   { icon: LayoutDashboard, key: 'nav_dashboard', path: "/" },
-  { icon: Calendar, key: 'nav_calendar', path: "/calendar" },
+  { icon: MessageSquare, key: 'nav_chat', path: "/chat" },
+  { icon: Bot, key: 'nav_tutor_app', path: "/tutor/app" },
   { icon: CheckSquare, key: 'nav_tasks', path: "/tasks" },
+  { icon: Calendar, key: 'nav_calendar', path: "/calendar" },
   { icon: Flame, key: 'nav_habits', path: "/habits" },
   { icon: BookOpen, key: 'nav_journal', path: "/journal" },
   { icon: Wallet, key: 'nav_finance', path: "/finance" },
@@ -32,8 +34,6 @@ const navItems: { icon: React.ElementType; key: TranslationKey; path: string }[]
   { icon: FileText, key: 'nav_documents', path: "/documents" },
   { icon: Image, key: 'nav_photos', path: "/photos" },
   { icon: Music, key: 'nav_music', path: "/music" },
-  { icon: Bot, key: 'nav_tutor_app', path: "/tutor/app" },
-  { icon: MessageSquare, key: 'nav_chat', path: "/chat" },
   { icon: Settings, key: 'nav_settings', path: "/settings" },
 ];
 
