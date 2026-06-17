@@ -48,14 +48,19 @@
     --warning: 38 92% 50%;
     --info: 199 89% 48%;
     
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(199 85% 38%), hsl(248 65% 55%));
+    /* Glass surface — semi-transparent card background for frosted panels */
+    --glass-bg: 210 20% 97% / 0.9;
+
+    /* Gradients — --gradient-primary uses var(--primary) so accent-color changes flow through */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(248 65% 55%));
+    --gradient-accent: linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(248 65% 55% / 0.06));
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 20% 98%));
 
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --shadow-elevated: 0 8px 24px -4px rgba(0, 0, 0, 0.08), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
     --shadow-glow: 0 0 20px rgba(56, 189, 248, 0.18);
 
     --sidebar-background: 0 0% 100%;
@@ -106,14 +111,19 @@
     --warning: 38 92% 55%;
     --info: 199 89% 55%;
 
+    /* Glass surface dark */
+    --glass-bg: 222 47% 8% / 0.8;
+
     /* Gradients dark */
-    --gradient-primary: linear-gradient(135deg, hsl(199 92% 58%), hsl(248 80% 68%));
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(248 80% 68%));
+    --gradient-accent: linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(248 80% 68% / 0.08));
     --gradient-card: linear-gradient(180deg, hsl(222 47% 10%), hsl(222 47% 8%));
 
     /* Shadows dark */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+    --shadow-elevated: 0 8px 24px -4px rgba(0, 0, 0, 0.5), 0 2px 8px -2px rgba(0, 0, 0, 0.4);
     --shadow-glow: 0 0 30px rgba(56, 189, 248, 0.25);
 
     --sidebar-background: 225 50% 8%;
@@ -150,14 +160,15 @@
     @apply bg-primary text-primary-foreground hover:opacity-90 transition-opacity;
   }
 
+  /* Frosted panel — uses --glass-bg (theme-aware) and --primary for accent-tinted border */
   .glass-card {
     @apply backdrop-blur-sm transition-colors duration-200;
-    background: #0F1621;
-    border: 1px solid rgba(56, 189, 248, 0.12);
+    background: hsl(var(--glass-bg));
+    border: 1px solid hsl(var(--primary) / 0.12);
   }
 
   .glass-card:hover {
-    border-color: #2D4460;
+    border-color: hsl(var(--primary) / 0.25);
   }
 
   .priority-high {
@@ -209,6 +220,25 @@
 
   .auth-card-banner {
     background: linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(167, 139, 250, 0.06));
+  }
+
+  /* Gradient text — clips --gradient-primary onto text fill */
+  .gradient-primary-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Elevated card surface — subtle gradient background + deeper shadow for hero/stat cards */
+  .surface-elevated {
+    background: var(--gradient-card);
+    box-shadow: var(--shadow-elevated);
+  }
+
+  /* Rounded icon tile — tinted primary background; override with bg-* for other colors */
+  .icon-tile {
+    @apply w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-primary/10;
   }
 }
 
