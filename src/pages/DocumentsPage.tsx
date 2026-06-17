@@ -55,7 +55,7 @@ import { PdfCompressTool } from "@/features/documents/components/PdfCompressTool
 import { PdfOcrTool } from "@/features/documents/components/PdfOcrTool";
 import { ImageToPdfTool } from "@/features/documents/components/ImageToPdfTool";
 import { TextEditorTool, type TextEditorHandle } from "@/features/documents/components/TextEditorTool";
-import { AudioGeneratorTool } from "@/features/documents/components/AudioGeneratorTool";
+import { TtsTool } from "@/features/documents/components/TtsTool";
 import { cn } from "@/lib/utils";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
@@ -583,14 +583,14 @@ export default function DocumentsPage() {
           />
         </TabsContent>
 
-        {/* ── Audio Generator Tab ───────────────────────────────────────── */}
+        {/* ── Text to Speech Tab ────────────────────────────────────────── */}
         <TabsContent value="audio">
           <ToolCard
-            title="Audio Generator"
-            description="Convert text to natural Persian, German, or English speech via ElevenLabs."
+            title="Text to Speech"
+            description="Azure Neural TTS — German and Persian with Web Speech fallback. Unlimited length, JWT-authenticated."
             icon={<Volume2 className="w-4 h-4 text-primary" />}
           >
-            <AudioGeneratorTool />
+            <TtsTool />
           </ToolCard>
         </TabsContent>
       </Tabs>

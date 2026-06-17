@@ -3,8 +3,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAzureTTS, type TtsLang } from "@/hooks/useAzureTTS";
 
-// ─── Voice picker (Web Speech fallback) ──────────────────────────────────────
-
 function pickBestVoice(lang: TtsLang): SpeechSynthesisVoice | null {
   const all = globalThis.speechSynthesis?.getVoices() ?? [];
   const de = [/Microsoft Katja/i, /Microsoft Conrad/i, /Google Deutsch/i, /Anna/i];
@@ -18,8 +16,6 @@ function pickBestVoice(lang: TtsLang): SpeechSynthesisVoice | null {
   return filtered.find((v) => v.localService) ?? filtered[0] ?? null;
 }
 
-// ─── Lang config ─────────────────────────────────────────────────────────────
-
 function getEngineLabel(engine: string | undefined): string | null {
   if (engine === "azure") return "Azure Neural TTS";
   if (engine === "webspeech") return "Web Speech API";
@@ -31,9 +27,7 @@ const LANG_CONFIG: Record<TtsLang, { label: string; flag: string; dir: "ltr" | "
   fa: { label: "فارسی",  flag: "🇦🇫", dir: "rtl", placeholder: "متن فارسی را اینجا بنویسید…" },
 };
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
-export default function TTSPage() {
+export function TtsTool() {
   const [lang, setLang] = useState<TtsLang>("de");
   const [text, setText] = useState("");
   const [rate, setRate] = useState(0.9);
@@ -46,7 +40,6 @@ export default function TTSPage() {
   const supported = globalThis.window !== undefined && "speechSynthesis" in globalThis;
   const cfg = LANG_CONFIG[lang];
 
-  // Reload voices when lang changes
   useEffect(() => {
     const load = () => {
       const filtered = (globalThis.speechSynthesis?.getVoices() ?? [])
@@ -67,15 +60,7 @@ export default function TTSPage() {
   const engineLabel = getEngineLabel(progress?.engine);
 
   return (
-    <div className="p-4 lg:p-8 max-w-3xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-semibold">Text zu Sprache / متن به گفتار</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Azure Neural TTS (de-DE-KatjaNeural / fa-IR-DilaraNeural) · متن نامحدود با chunking
-        </p>
-      </div>
-
+    <div className="space-y-6">
       {/* Language selector */}
       <div className="flex gap-3">
         {(Object.entries(LANG_CONFIG) as [TtsLang, typeof cfg][]).map(([key, c]) => (
@@ -96,13 +81,13 @@ export default function TTSPage() {
         ))}
       </div>
 
-      {/* Textarea — no hard char limit; chunking handles long texts */}
+      {/* Textarea */}
       <div className="space-y-1.5">
-        <label htmlFor="tts-text" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <label htmlFor="tts-tool-text" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Text eingeben / متن
         </label>
         <textarea
-          id="tts-text"
+          id="tts-tool-text"
           dir={cfg.dir}
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -133,14 +118,13 @@ export default function TTSPage() {
 
       {/* Controls */}
       <div className="space-y-4 rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
-        {/* Web Speech voice (fallback only) */}
         {supported && voices.length > 0 && (
           <div className="space-y-1.5">
-            <label htmlFor="tts-voice" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <label htmlFor="tts-tool-voice" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Fallback-Stimme (Web Speech)
             </label>
             <select
-              id="tts-voice"
+              id="tts-tool-voice"
               title="Stimme für Web Speech Fallback"
               value={voiceName}
               onChange={(e) => setVoiceName(e.target.value)}
@@ -154,15 +138,14 @@ export default function TTSPage() {
           </div>
         )}
 
-        {/* Rate */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <label htmlFor="tts-rate" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <label htmlFor="tts-tool-rate" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Geschwindigkeit / سرعت
             </label>
             <span className="text-xs font-mono text-slate-300">{rate.toFixed(2)}×</span>
           </div>
-          <input id="tts-rate" type="range" title="Geschwindigkeit" min={0.5} max={2} step={0.05}
+          <input id="tts-tool-rate" type="range" title="Geschwindigkeit" min={0.5} max={2} step={0.05}
             value={rate} onChange={(e) => setRate(Number(e.target.value))}
             className="w-full accent-primary" />
           <div className="flex justify-between text-xs text-muted-foreground">
@@ -170,15 +153,14 @@ export default function TTSPage() {
           </div>
         </div>
 
-        {/* Pitch */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <label htmlFor="tts-pitch" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <label htmlFor="tts-tool-pitch" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Tonhöhe / زیر و بمی
             </label>
             <span className="text-xs font-mono text-slate-300">{pitch.toFixed(1)}</span>
           </div>
-          <input id="tts-pitch" type="range" title="Tonhöhe" min={0.5} max={2} step={0.1}
+          <input id="tts-tool-pitch" type="range" title="Tonhöhe" min={0.5} max={2} step={0.1}
             value={pitch} onChange={(e) => setPitch(Number(e.target.value))}
             className="w-full accent-primary" />
           <div className="flex justify-between text-xs text-muted-foreground">
@@ -192,14 +174,14 @@ export default function TTSPage() {
         <Button size="lg" onClick={handlePlay}
           disabled={text.trim().length === 0 || isPlaying}
           className="flex-1 gap-2 text-base">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <polygon points="5 3 19 12 5 21 5 3" />
           </svg>
           {lang === "de" ? "Vorlesen" : "پخش"}
         </Button>
         <Button size="lg" variant="outline" onClick={stop} disabled={!isPlaying}
           className="gap-2 border-rose-500/40 text-rose-400 hover:bg-rose-500/10 disabled:opacity-30">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <rect x="6" y="5" width="4" height="14" rx="1" />
             <rect x="14" y="5" width="4" height="14" rx="1" />
           </svg>
@@ -232,7 +214,7 @@ export default function TTSPage() {
         </div>
       )}
 
-      {/* Persian install guide */}
+      {/* Persian install guide — shown only when Web Speech fallback has no Persian voices */}
       {lang === "fa" && voices.length === 0 && supported && (
         <div className="rounded-md border border-slate-700/60 bg-slate-900/40 p-4 text-sm space-y-2">
           <p className="font-medium text-slate-300">

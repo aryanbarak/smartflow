@@ -16,7 +16,6 @@ import {
   Flame,
   BookOpen,
   MessageSquare,
-  Volume2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -40,7 +39,6 @@ const moreNavItems: { icon: React.ElementType; key: TranslationKey; path: string
   { icon: Music, key: 'nav_music', path: "/music" },
   { icon: Brain, key: 'nav_learn_ai', path: "/learn-ai" },
   { icon: Bot, key: 'nav_tutor_app', path: "/tutor/app" },
-  { icon: Volume2, key: 'nav_tts', path: "/tts" },
   { icon: MessageSquare, key: 'nav_chat', path: "/chat" },
   { icon: Settings, key: 'nav_settings', path: "/settings" },
 ];
