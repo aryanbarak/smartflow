@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AreaChart,
@@ -6,15 +6,16 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import {
+  BookOpen,
   Calendar,
   CheckSquare,
   Flame,
   MessageSquare,
   Music,
-  PenLine,
   Plus,
   Wallet,
 } from "lucide-react";
+import { AddHabitModal } from "@/features/habits/components/AddHabitModal";
 import { AgentBriefingCard } from "@/components/AgentBriefingCard";
 import "@/components/AgentBriefingCard.css";
 import { TodayWidget } from "@/components/dashboard/TodayWidget";
@@ -85,15 +86,9 @@ function Sparkline({
   );
 }
 
-const QUICK_ACTIONS = [
-  { icon: CheckSquare, label: "New Task" },
-  { icon: PenLine, label: "New Note" },
-  { icon: Flame, label: "Add Habit" },
-  { icon: Wallet, label: "Record Expense" },
-] as const;
-
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [showAddHabit, setShowAddHabit] = useState(false);
   const { user } = useAuth();
   const { profile } = useProfile();
   const { events, isLoading: isEventsLoading } = useEvents();
@@ -370,24 +365,54 @@ export default function Dashboard() {
                   <p className="text-sm font-semibold">Quick Actions</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {QUICK_ACTIONS.map((action) => (
-                    <button
-                      key={action.label}
-                      type="button"
-                      disabled
-                      className="flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 p-3 text-muted-foreground opacity-50 cursor-not-allowed transition-colors"
-                    >
-                      <div className="icon-tile w-7 h-7 rounded-md">
-                        <action.icon className="w-3.5 h-3.5 text-primary" />
-                      </div>
-                      <span className="text-[11px] font-medium">
-                        {action.label}
-                      </span>
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    onClick={() => navigate("/tasks")}
+                    className="flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 p-3 text-foreground transition-colors hover:bg-secondary/40 hover:border-primary/30"
+                  >
+                    <div className="icon-tile w-7 h-7 rounded-md">
+                      <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <span className="text-[11px] font-medium">New Task</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/journal")}
+                    className="flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 p-3 text-foreground transition-colors hover:bg-secondary/40 hover:border-primary/30"
+                  >
+                    <div className="icon-tile w-7 h-7 rounded-md">
+                      <BookOpen className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <span className="text-[11px] font-medium">Journal</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddHabit(true)}
+                    className="flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 p-3 text-foreground transition-colors hover:bg-secondary/40 hover:border-primary/30"
+                  >
+                    <div className="icon-tile w-7 h-7 rounded-md">
+                      <Flame className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <span className="text-[11px] font-medium">Add Habit</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/finance")}
+                    className="flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 p-3 text-foreground transition-colors hover:bg-secondary/40 hover:border-primary/30"
+                  >
+                    <div className="icon-tile w-7 h-7 rounded-md">
+                      <Wallet className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <span className="text-[11px] font-medium">
+                      Record Expense
+                    </span>
+                  </button>
                 </div>
               </CardContent>
             </Card>
+            {showAddHabit && (
+              <AddHabitModal onClose={() => setShowAddHabit(false)} />
+            )}
           </div>
 
           {/* Focus Playlist */}
