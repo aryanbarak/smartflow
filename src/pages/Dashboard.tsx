@@ -9,12 +9,14 @@ import {
   BookOpen,
   Calendar,
   CheckSquare,
+  ChevronRight,
   Flame,
   MessageSquare,
   Music,
   Pause,
   Play,
   Plus,
+  Sparkles,
   Wallet,
 } from "lucide-react";
 import { AddHabitModal } from "@/features/habits/components/AddHabitModal";
@@ -34,6 +36,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SkeletonBlock } from "@/components/common/Skeletons";
 import { isSameDay, toDateOnly } from "@/lib/date";
 import { useMusicPlayer, loadHistory } from "@/hooks/useMusicPlayer";
+import briefingArt from "@/assets/dashboard-briefing-192.png";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -414,7 +417,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Main content: two columns on desktop, reordered single column on mobile ── */}
-      <div className="flex flex-col lg:grid lg:grid-cols-[1fr_340px] gap-4 lg:gap-5">
+      <div className="flex flex-col lg:grid lg:grid-cols-[1fr_280px] gap-4 lg:gap-5">
         {/* Left column */}
         <div className="contents lg:block lg:space-y-4">
           <div className="hidden lg:block rounded-2xl shadow-elevated">
@@ -448,6 +451,41 @@ export default function Dashboard() {
                     </p>
                   </div>
                 </div>
+                <div className="flex justify-center py-2">
+                  <img
+                    src={briefingArt}
+                    alt=""
+                    width={192}
+                    height={192}
+                    className="w-4/5 max-w-[220px] opacity-80 select-none animate-fade-in"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    How can I help you today?
+                  </p>
+                  {[
+                    { label: "Daily planning", prompt: "Help me plan my day" },
+                    { label: "Job search help", prompt: "Help me with my job search today" },
+                    { label: "Study with me", prompt: "Help me study and review a concept" },
+                    { label: "Analyze my habits", prompt: "Analyze my habits and give me insights" },
+                  ].map((item) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() =>
+                        navigate("/chat", {
+                          state: { initialPrompt: item.prompt },
+                        })
+                      }
+                      className="w-full flex items-center gap-2 rounded-md border border-border/50 bg-secondary/20 px-2.5 py-1.5 text-xs text-foreground transition-colors hover:bg-secondary/40 hover:border-primary/30"
+                    >
+                      <span className="flex-1 text-left">{item.label}</span>
+                      <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                    </button>
+                  ))}
+                </div>
                 <Button
                   size="sm"
                   className="w-full gap-2 text-white border-0"
@@ -475,40 +513,40 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => navigate("/tasks")}
-                    className="flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 p-3 text-foreground transition-colors hover:bg-secondary/40 hover:border-primary/30"
+                    className="flex flex-col items-center justify-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 p-2 aspect-square text-foreground transition-colors hover:bg-secondary/40 hover:border-primary/30"
                   >
-                    <div className="icon-tile w-7 h-7 rounded-md">
-                      <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                    <div className="icon-tile w-7 h-7 rounded-md bg-violet-500/15">
+                      <CheckSquare className="w-3.5 h-3.5 text-violet-400" />
                     </div>
                     <span className="text-[11px] font-medium">New Task</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => navigate("/journal")}
-                    className="flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 p-3 text-foreground transition-colors hover:bg-secondary/40 hover:border-primary/30"
+                    className="flex flex-col items-center justify-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 p-2 aspect-square text-foreground transition-colors hover:bg-secondary/40 hover:border-primary/30"
                   >
-                    <div className="icon-tile w-7 h-7 rounded-md">
-                      <BookOpen className="w-3.5 h-3.5 text-primary" />
+                    <div className="icon-tile w-7 h-7 rounded-md bg-blue-500/15">
+                      <BookOpen className="w-3.5 h-3.5 text-blue-400" />
                     </div>
                     <span className="text-[11px] font-medium">Journal</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowAddHabit(true)}
-                    className="flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 p-3 text-foreground transition-colors hover:bg-secondary/40 hover:border-primary/30"
+                    className="flex flex-col items-center justify-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 p-2 aspect-square text-foreground transition-colors hover:bg-secondary/40 hover:border-primary/30"
                   >
-                    <div className="icon-tile w-7 h-7 rounded-md">
-                      <Flame className="w-3.5 h-3.5 text-primary" />
+                    <div className="icon-tile w-7 h-7 rounded-md bg-orange-500/15">
+                      <Flame className="w-3.5 h-3.5 text-orange-400" />
                     </div>
                     <span className="text-[11px] font-medium">Add Habit</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => navigate("/finance")}
-                    className="flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 p-3 text-foreground transition-colors hover:bg-secondary/40 hover:border-primary/30"
+                    className="flex flex-col items-center justify-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 p-2 aspect-square text-foreground transition-colors hover:bg-secondary/40 hover:border-primary/30"
                   >
-                    <div className="icon-tile w-7 h-7 rounded-md">
-                      <Wallet className="w-3.5 h-3.5 text-primary" />
+                    <div className="icon-tile w-7 h-7 rounded-md bg-emerald-500/15">
+                      <Wallet className="w-3.5 h-3.5 text-emerald-400" />
                     </div>
                     <span className="text-[11px] font-medium">
                       Record Expense

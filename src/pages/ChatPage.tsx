@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Bot, Send } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
@@ -80,12 +81,15 @@ function TypingIndicator({ label }: Readonly<{ label: string }>) {
 export default function ChatPage() {
   const { user } = useAuth()
   const { t } = useT()
+  const location = useLocation()
+  const nav = useNavigate()
   const [messages, setMessages] = useState<ChatMsg[]>([])
   const [draft, setDraft] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const initialPromptFired = useRef(false)
   const workerUrl = import.meta.env.VITE_AGENT_WORKER_URL as string
 
   // Load history on mount
@@ -121,11 +125,11 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, sending])
 
-  const handleSend = useCallback(async () => {
-    const text = draft.trim()
+  const handleSend = useCallback(async (overrideText?: string) => {
+    const text = (overrideText ?? draft).trim()
     if (text === '' || sending) return
 
-    setDraft('')
+    if (!overrideText) setDraft('')
     setSending(true)
     setSendError(null)
 
@@ -153,11 +157,20 @@ export default function ChatPage() {
       ])
     } catch {
       setSendError(t('chat_error_send'))
-      setDraft(text)
+      if (!overrideText) setDraft(text)
     } finally {
       setSending(false)
     }
   }, [draft, sending, workerUrl, t])
+
+  // Auto-send initial prompt from location state (e.g. Dashboard suggested prompts)
+  useEffect(() => {
+    const prompt = (location.state as { initialPrompt?: string } | null)?.initialPrompt
+    if (!prompt || loading || initialPromptFired.current) return
+    initialPromptFired.current = true
+    nav(location.pathname, { replace: true, state: {} })
+    void handleSend(prompt)
+  }, [loading, location.state, location.pathname, nav, handleSend])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && e.shiftKey === false) {
