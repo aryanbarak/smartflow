@@ -75,6 +75,48 @@ Keep this file under 2 pages; update after every session.
 
 ---
 
+## Completed This Session (2026-06-17/19) — Dashboard Redesign
+
+Branch: `redesign/ui-cleanup`
+
+### UI Cleanup ✅
+
+- ✅ Removed Links page, Flashcards page (routes, sidebar, services, i18n)
+- ✅ Removed Tutor from sidebar (route/page kept — linked from Smart Academy)
+- ✅ Renamed Tutor App → Smart Academy, Agent Chat → Flow AI (sidebar, mobile nav, i18n all 3 languages)
+- ✅ Merged standalone TTS into Documents Audio tab (replaced broken ElevenLabs `AudioGeneratorTool` with working Azure `TtsTool`); deleted `TTSPage.tsx`, `AudioGeneratorTool.tsx`, `/tts` route, nav entries
+- ✅ Relocated Learn AI into Smart Academy's breadcrumb row (removed from sidebar/mobile nav; `/learn-ai` route kept)
+- ✅ Sidebar reordered: Dashboard → Flow AI → Smart Academy → Tasks → Calendar → Habits → Journal → Finance → Family → Documents → Photos → Music → Settings (mobile bottom bar updated to match)
+
+### Design System Improvements ✅
+
+- ✅ **`.glass-card` made theme-aware** — was hardcoded `background: #0F1621` and cyan border; now uses `hsl(var(--glass-bg))` background + `hsl(var(--primary) / 0.12)` border; works in both dark and light modes
+- ✅ **New utilities** (`@layer components`): `.gradient-primary-text` (gradient text clip), `.surface-elevated` (gradient card + deeper shadow), `.icon-tile` (rounded tinted icon background, `bg-primary/10` default, overridable)
+- ✅ **New tokens** (`:root` + `.dark`): `--glass-bg`, `--gradient-accent`, `--shadow-elevated`; `shadow-elevated` added to Tailwind config
+- ✅ **`--gradient-primary`** now starts with `hsl(var(--primary))` — accent color changes flow through to card-accent strip and gradient text
+- ✅ `AgentBriefingCard.css` intentionally untouched (dark-mode-only hardcoded colors, to migrate later)
+
+### Dashboard Redesign ✅
+
+- ✅ **Two-column responsive layout**: left column = 3 equal stat cards (grid-cols-3) + Daily Briefing + Today/Tasks/Finance widgets; right narrow sidebar (~280px) = Flow AI card (top-aligned with stats), Quick Actions, Focus Playlist. Mobile reflows to single column (briefing first via `contents` + `order-*`)
+- ✅ **Extracted inline widgets** to `src/components/dashboard/`: `TodayWidget` (`useEvents`), `TasksWidget` (`useTasks`), `FinanceWidget` (`useFinance`) — each self-contained with own hook calls, loading/error/empty states, icon-tile headers, compact spacing
+- ✅ **Stat cards**: accent icon-tiles + real Recharts `AreaChart` sparklines (same pattern as MoodWidget): Net this month = daily running net, Events today = 7-day events/day; Open tasks shows real "X created this week" secondary stat (no fake sparkline — `completed_at` column doesn't exist)
+- ✅ **Flow AI card**: orb illustration (`src/assets/dashboard-briefing-192.png`, ~16KB) + "How can I help you today?" heading + 4 suggested-prompt buttons (Daily planning / Job search help / Study with me / Analyze my habits) + gradient CTA. Prompts pass `initialPrompt` via router location state
+- ✅ **ChatPage auto-send**: `handleSend` refactored to accept optional `overrideText` argument; on mount after history loads, reads `location.state?.initialPrompt`, auto-sends once (guarded by ref), clears location state to prevent re-send on back navigation
+- ✅ **Quick Actions wired**: New Task → `/tasks`, Journal (renamed from "New Note", BookOpen icon) → `/journal`, Add Habit → opens reusable `AddHabitModal` inline, Record Expense → `/finance`. Square aspect-ratio buttons with colorful icon-tiles (violet/blue/orange/emerald) — deliberate exception to accent-only rule, only these 4
+- ✅ **Focus Playlist widget**: wired to global music system (`useMusicPlayer()` + `loadHistory()[0]` from localStorage); shows current/last-played track with YouTube thumbnail + play/pause toggle; empty state links to `/music`. No fake timestamps
+- ✅ Removed greeting header (getGreeting + firstName + date subtitle)
+- ✅ Added `glass-card` to both briefing wrappers (mobile + desktop) with `p-2` inset for better visual presence
+
+### Dashboard — Backlog / Still Open
+
+- AgentBriefingCard header toggle (Today / This Week) cramps on narrow mobile — needs `flex-wrap` inside `AgentBriefingCard.css` (deferred to avoid touching that component)
+- `AgentBriefingCard.css` still outside design-system tokens (dark-mode-only hardcoded colors) — migrate later
+- Other pages still need the same visual redesign (Dashboard is now the reference template)
+- `dashboard-calendar.png` (~1.5MB) in `src/assets/`, unused + unoptimized — for a future page
+
+---
+
 ## Completed This Session (2026-06-16)
 
 ### AI Personal Agent — Phase C: Chat + Automatic Memory ✅

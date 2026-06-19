@@ -26,8 +26,6 @@ import { TodayWidget } from "@/components/dashboard/TodayWidget";
 import { TasksWidget } from "@/components/dashboard/TasksWidget";
 import { FinanceWidget } from "@/components/dashboard/FinanceWidget";
 import { useSetPageTitle } from "@/hooks/useSetPageTitle";
-import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/features/profile/useProfile";
 import { useEvents } from "@/hooks/useEvents";
 import { useTasks } from "@/hooks/useTasks";
 import { useFinance } from "@/hooks/useFinance";
@@ -37,13 +35,6 @@ import { SkeletonBlock } from "@/components/common/Skeletons";
 import { isSameDay, toDateOnly } from "@/lib/date";
 import { useMusicPlayer, loadHistory } from "@/hooks/useMusicPlayer";
 import briefingArt from "@/assets/dashboard-briefing-192.png";
-
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-}
 
 function formatCurrency(amount: number) {
   return amount.toLocaleString(undefined, {
@@ -199,8 +190,6 @@ function FocusPlaylistCard() {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [showAddHabit, setShowAddHabit] = useState(false);
-  const { user } = useAuth();
-  const { profile } = useProfile();
   const { events, isLoading: isEventsLoading } = useEvents();
   const { tasks, isLoading: isTasksLoading } = useTasks();
   const { transactions, isLoading: isFinanceLoading } = useFinance();
@@ -211,11 +200,6 @@ export default function Dashboard() {
     month: "long",
     day: "numeric",
   });
-
-  const firstName =
-    profile?.displayName?.trim()?.split(" ")[0] ||
-    user?.email?.split("@")[0] ||
-    "there";
 
   const todayEventCount = useMemo(() => {
     const seen = new Set<string>();
@@ -300,144 +284,140 @@ export default function Dashboard() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-6xl mx-auto space-y-5">
-      {/* ── Header ── */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-semibold font-display leading-tight">
-          {getGreeting()}, {firstName}!
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">{todayLabel}</p>
-      </div>
-
-      {/* ── Briefing (mobile — shown before stats) ── */}
-      <div className="lg:hidden rounded-2xl shadow-elevated">
+      {/* ── Briefing (mobile only — shown before the two-column grid) ── */}
+      <div className="lg:hidden glass-card rounded-2xl shadow-elevated p-2">
         <AgentBriefingCard />
       </div>
 
-      {/* ── Stats row ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {/* Open tasks — no sparkline, secondary stat instead */}
-        <Card className="glass-card card-accent surface-elevated">
-          <CardContent className="p-3.5">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="icon-tile w-8 h-8 rounded-md">
-                <CheckSquare className="w-4 h-4 text-primary" />
-              </div>
-              <span className="text-xs font-medium text-muted-foreground">
-                Open tasks
-              </span>
-            </div>
-            {isStatsLoading ? (
-              <SkeletonBlock className="h-7 w-12" />
-            ) : (
-              <>
-                <p className="text-2xl font-bold tracking-tight">
-                  {incompleteCount}
-                </p>
-                <div className="h-10 flex items-end">
-                  <p className="text-[11px] text-muted-foreground">
-                    {createdThisWeek} created this week
-                  </p>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Events today — 7-day sparkline */}
-        <Card className="glass-card card-accent surface-elevated">
-          <CardContent className="p-3.5">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="icon-tile w-8 h-8 rounded-md">
-                <Calendar className="w-4 h-4 text-primary" />
-              </div>
-              <span className="text-xs font-medium text-muted-foreground">
-                Events today
-              </span>
-            </div>
-            {isStatsLoading ? (
-              <SkeletonBlock className="h-7 w-8" />
-            ) : (
-              <>
-                <p className="text-2xl font-bold tracking-tight">
-                  {todayEventCount}
-                </p>
-                {hasEventData ? (
-                  <Sparkline
-                    data={eventsPerDay}
-                    gradientId="sparkline-events"
-                  />
-                ) : (
-                  <div className="h-10 flex items-end">
-                    <p className="text-[11px] text-muted-foreground">
-                      No events this week
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Net this month — running balance sparkline */}
-        <Card className="glass-card card-accent surface-elevated col-span-2 sm:col-span-1">
-          <CardContent className="p-3.5">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="icon-tile w-8 h-8 rounded-md">
-                <Wallet className="w-4 h-4 text-primary" />
-              </div>
-              <span className="text-xs font-medium text-muted-foreground">
-                Net this month
-              </span>
-            </div>
-            {isStatsLoading ? (
-              <SkeletonBlock className="h-7 w-20" />
-            ) : (
-              <>
-                <p className="text-2xl font-bold tracking-tight">
-                  {formatCurrency(netThisMonth)}
-                </p>
-                {dailyNetData.length >= 2 ? (
-                  <Sparkline
-                    data={dailyNetData}
-                    gradientId="sparkline-finance"
-                  />
-                ) : (
-                  <div className="h-10 flex items-end">
-                    <p className="text-[11px] text-muted-foreground">
-                      {dailyNetData.length === 0
-                        ? "No transactions yet"
-                        : "1 transaction day"}
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ── Main content: two columns on desktop, reordered single column on mobile ── */}
-      <div className="flex flex-col lg:grid lg:grid-cols-[1fr_280px] gap-4 lg:gap-5">
-        {/* Left column */}
+      {/* ── Two-column grid: left (stats+briefing+widgets) | right (Flow AI+actions+playlist) ──
+           Mobile: single column via contents + flex order
+           Desktop: Flow AI top-aligns with the stat cards row */}
+      <div className="flex flex-col lg:grid lg:grid-cols-[1fr_280px] gap-4 lg:gap-5 lg:items-start">
+        {/* ── Left column ── */}
         <div className="contents lg:block lg:space-y-4">
-          <div className="hidden lg:block rounded-2xl shadow-elevated">
+          {/* Stats row — 3 equal columns on desktop, stacked on mobile */}
+          <div className="order-1 lg:order-none grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Open tasks */}
+            <Card className="glass-card card-accent surface-elevated">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="icon-tile w-8 h-8 rounded-md">
+                    <CheckSquare className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Open tasks
+                  </span>
+                </div>
+                {isStatsLoading ? (
+                  <SkeletonBlock className="h-7 w-12" />
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold tracking-tight">
+                      {incompleteCount}
+                    </p>
+                    <div className="h-10 flex items-end">
+                      <p className="text-[11px] text-muted-foreground">
+                        {createdThisWeek} created this week
+                      </p>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Events today */}
+            <Card className="glass-card card-accent surface-elevated">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="icon-tile w-8 h-8 rounded-md">
+                    <Calendar className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Events today
+                  </span>
+                </div>
+                {isStatsLoading ? (
+                  <SkeletonBlock className="h-7 w-8" />
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold tracking-tight">
+                      {todayEventCount}
+                    </p>
+                    {hasEventData ? (
+                      <Sparkline
+                        data={eventsPerDay}
+                        gradientId="sparkline-events"
+                      />
+                    ) : (
+                      <div className="h-10 flex items-end">
+                        <p className="text-[11px] text-muted-foreground">
+                          No events this week
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Net this month */}
+            <Card className="glass-card card-accent surface-elevated">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="icon-tile w-8 h-8 rounded-md">
+                    <Wallet className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Net this month
+                  </span>
+                </div>
+                {isStatsLoading ? (
+                  <SkeletonBlock className="h-7 w-20" />
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold tracking-tight">
+                      {formatCurrency(netThisMonth)}
+                    </p>
+                    {dailyNetData.length >= 2 ? (
+                      <Sparkline
+                        data={dailyNetData}
+                        gradientId="sparkline-finance"
+                      />
+                    ) : (
+                      <div className="h-10 flex items-end">
+                        <p className="text-[11px] text-muted-foreground">
+                          {dailyNetData.length === 0
+                            ? "No transactions yet"
+                            : "1 transaction day"}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Daily Briefing (desktop only) */}
+          <div className="hidden lg:block glass-card rounded-2xl shadow-elevated p-2">
             <AgentBriefingCard />
           </div>
-          <div className="order-2 lg:order-none">
+
+          <div className="order-3 lg:order-none">
             <TodayWidget />
           </div>
-          <div className="order-3 lg:order-none">
+          <div className="order-4 lg:order-none">
             <TasksWidget />
           </div>
-          <div className="order-4 lg:order-none">
+          <div className="order-5 lg:order-none">
             <FinanceWidget />
           </div>
         </div>
 
-        {/* Right column (sidebar) */}
+        {/* ── Right column (sidebar) ── */}
         <div className="contents lg:block lg:space-y-4">
           {/* Flow AI — featured assistant card */}
-          <div className="order-1 lg:order-none">
+          <div className="order-2 lg:order-none">
             <Card className="glass-card card-accent surface-elevated">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-3">
@@ -500,7 +480,7 @@ export default function Dashboard() {
           </div>
 
           {/* Quick Actions */}
-          <div className="order-5 lg:order-none">
+          <div className="order-6 lg:order-none">
             <Card className="glass-card card-accent">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-3">
@@ -561,7 +541,7 @@ export default function Dashboard() {
           </div>
 
           {/* Focus Playlist — live player widget */}
-          <div className="order-6 lg:order-none">
+          <div className="order-7 lg:order-none">
             <FocusPlaylistCard />
           </div>
         </div>
