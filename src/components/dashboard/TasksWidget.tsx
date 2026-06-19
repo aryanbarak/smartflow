@@ -2,9 +2,9 @@ import { useMemo } from "react";
 import { CheckSquare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatePanel } from "@/components/common/StatePanel";
-import { SkeletonBlock, SkeletonListItem } from "@/components/common/Skeletons";
+import { SkeletonBlock } from "@/components/common/Skeletons";
 import { useTasks } from "@/hooks/useTasks";
-import { formatDateLabel, isBeforeDay, isSameDay } from "@/lib/date";
+import { isBeforeDay } from "@/lib/date";
 
 function parseDateOnly(value: string) {
   return new Date(`${value}T00:00:00`);
@@ -19,15 +19,15 @@ export function TasksWidget() {
     [tasks]
   );
 
-  const dueSoonTasks = useMemo(() => {
+  const mostUrgent = useMemo(() => {
     const windowEnd = new Date(today);
     windowEnd.setDate(windowEnd.getDate() + 7);
-    return tasks
+    const due = tasks
       .filter((task) => !task.completed && task.dueDate)
       .map((task) => ({ task, due: parseDateOnly(task.dueDate!) }))
-      .filter(({ due }) => !isBeforeDay(due, today) && due <= windowEnd)
-      .sort((a, b) => a.due.getTime() - b.due.getTime())
-      .slice(0, 5);
+      .filter(({ due: d }) => !isBeforeDay(d, today) && d <= windowEnd)
+      .sort((a, b) => a.due.getTime() - b.due.getTime());
+    return due[0]?.task ?? null;
   }, [tasks, today]);
 
   const isInitialLoading = isLoading && tasks.length === 0;
@@ -42,7 +42,7 @@ export function TasksWidget() {
           Tasks
         </CardTitle>
       </CardHeader>
-      <CardContent className="px-4 pb-4 pt-0 space-y-2 text-sm">
+      <CardContent className="px-4 pb-3 pt-0 text-sm">
         {error && !isInitialLoading ? (
           <StatePanel
             variant="error"
@@ -50,37 +50,16 @@ export function TasksWidget() {
             description={error}
           />
         ) : isInitialLoading ? (
-          <div className="space-y-2">
-            <SkeletonBlock className="h-4 w-24" />
-            <SkeletonListItem />
-          </div>
+          <SkeletonBlock className="h-4 w-24" />
         ) : (
-          <>
-            <p className="text-xs text-muted-foreground">
-              {incompleteCount} open task(s)
+          <div className="space-y-1">
+            <p className="text-2xl font-bold tracking-tight">
+              {incompleteCount}
             </p>
-            {dueSoonTasks.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No tasks due.</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {dueSoonTasks.map(({ task, due }) => (
-                  <li
-                    key={task.id}
-                    className="flex items-center justify-between rounded-lg border border-border/60 bg-secondary/30 px-3 py-2"
-                  >
-                    <span className="text-sm font-medium truncate">
-                      {task.title}
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-2 shrink-0">
-                      {isSameDay(due, today)
-                        ? "Today"
-                        : formatDateLabel(task.dueDate!)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
+            <p className="text-[11px] text-muted-foreground truncate">
+              {mostUrgent ? mostUrgent.title : "No tasks due"}
+            </p>
+          </div>
         )}
       </CardContent>
     </Card>

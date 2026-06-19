@@ -124,11 +124,6 @@ export function AgentBriefingCard() {
         <div className="agent-briefing-card__title">
           <span className="agent-briefing-card__icon" aria-hidden="true">✦</span>
           <span>{title}</span>
-          {briefing && (
-            <span className="agent-briefing-card__badge">
-              {isToday ? 'Today' : 'Yesterday'}
-            </span>
-          )}
         </div>
         <div className="agent-briefing-card__controls">
           <div className="agent-briefing-card__mode-toggle">

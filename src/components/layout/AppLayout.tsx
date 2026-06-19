@@ -7,28 +7,7 @@ import { MiniPlayer } from "@/components/music/MiniPlayer";
 import { GlobalSearch } from "@/features/search/GlobalSearch";
 import { useAlarms } from "@/features/calendar/useAlarms";
 import { aiMemoryService } from "@/features/ai-memory/aiMemoryService";
-import { PageTitleProvider, usePageTitle } from "@/contexts/PageTitleContext";
-
-function DesktopHeader() {
-  const { pageTitle } = usePageTitle();
-  return (
-    <div className="flex items-center justify-between px-6 py-6 border-b border-sidebar-border shrink-0">
-      {pageTitle ? (
-        <div>
-          <h1 className="text-lg font-semibold font-display leading-none">
-            {pageTitle.title}
-          </h1>
-          {pageTitle.subtitle && (
-            <p className="text-xs text-muted-foreground mt-0.5">{pageTitle.subtitle}</p>
-          )}
-        </div>
-      ) : (
-        <div />
-      )}
-      <GlobalSearch />
-    </div>
-  );
-}
+import { PageTitleProvider } from "@/contexts/PageTitleContext";
 
 function AppLayoutInner() {
   useAlarms();
@@ -54,8 +33,7 @@ function AppLayoutInner() {
       {/* Desktop */}
       <div className="hidden lg:flex">
         <Sidebar />
-        <main className="flex-1 min-h-screen overflow-auto flex flex-col">
-          <DesktopHeader />
+        <main className="flex-1 min-h-screen overflow-auto">
           <Outlet />
         </main>
       </div>

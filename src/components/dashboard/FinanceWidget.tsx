@@ -17,7 +17,7 @@ export function FinanceWidget() {
   const { transactions, isLoading, error } = useFinance();
   const currentMonth = useMemo(() => toDateOnly(new Date()).slice(0, 7), []);
 
-  const summary = useMemo(() => {
+  const net = useMemo(() => {
     const monthTx = transactions.filter((tx) =>
       tx.date.startsWith(currentMonth)
     );
@@ -27,7 +27,7 @@ export function FinanceWidget() {
     const expense = monthTx
       .filter((tx) => tx.type === "expense")
       .reduce((s, tx) => s + tx.amount, 0);
-    return { income, expense, net: income - expense, hasAny: monthTx.length > 0 };
+    return { value: income - expense, hasAny: monthTx.length > 0 };
   }, [transactions, currentMonth]);
 
   const isInitialLoading = isLoading && transactions.length === 0;
@@ -42,7 +42,7 @@ export function FinanceWidget() {
           Finance
         </CardTitle>
       </CardHeader>
-      <CardContent className="px-4 pb-4 pt-0 space-y-2 text-sm">
+      <CardContent className="px-4 pb-3 pt-0 text-sm">
         {error && !isInitialLoading ? (
           <StatePanel
             variant="error"
@@ -50,32 +50,15 @@ export function FinanceWidget() {
             description={error}
           />
         ) : isInitialLoading ? (
-          <div className="space-y-2">
-            <SkeletonBlock className="h-4 w-28" />
-            <SkeletonBlock className="h-6 w-32" />
-          </div>
-        ) : !summary.hasAny ? (
-          <p className="text-xs text-muted-foreground">No transactions yet.</p>
+          <SkeletonBlock className="h-4 w-28" />
         ) : (
           <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Income</span>
-              <span className="text-sm font-medium">
-                {formatCurrency(summary.income)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Expenses</span>
-              <span className="text-sm font-medium">
-                {formatCurrency(summary.expense)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Net</span>
-              <span className="text-sm font-semibold">
-                {formatCurrency(summary.net)}
-              </span>
-            </div>
+            <p className="text-2xl font-bold tracking-tight">
+              {net.hasAny ? formatCurrency(net.value) : "—"}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {net.hasAny ? "Net this month" : "No transactions yet"}
+            </p>
           </div>
         )}
       </CardContent>

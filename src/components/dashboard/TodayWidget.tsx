@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SkeletonSection } from "@/components/common/Skeletons";
+import { SkeletonBlock } from "@/components/common/Skeletons";
 import { useEvents } from "@/hooks/useEvents";
 import { isSameDay } from "@/lib/date";
 
@@ -23,11 +23,12 @@ export function TodayWidget() {
         (a, b) =>
           new Date(a.dateTimeStart).getTime() -
           new Date(b.dateTimeStart).getTime()
-      )
-      .slice(0, 5);
+      );
   }, [events, today]);
 
   const isInitialLoading = isLoading && events.length === 0;
+  const next = todayEvents[0] ?? null;
+  const remaining = todayEvents.length - 1;
 
   return (
     <Card className="glass-card card-accent">
@@ -39,28 +40,28 @@ export function TodayWidget() {
           Today
         </CardTitle>
       </CardHeader>
-      <CardContent className="px-4 pb-4 pt-0 space-y-2 text-sm">
+      <CardContent className="px-4 pb-3 pt-0 text-sm">
         {isInitialLoading ? (
-          <SkeletonSection rows={2} />
-        ) : todayEvents.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No events today.</p>
+          <SkeletonBlock className="h-4 w-28" />
+        ) : next ? (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium truncate">{next.title}</span>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {new Date(next.dateTimeStart).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </div>
+            {remaining > 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                +{remaining} more
+              </p>
+            )}
+          </div>
         ) : (
-          <ul className="space-y-1.5">
-            {todayEvents.map((event) => (
-              <li
-                key={event.id}
-                className="rounded-lg border border-border/60 bg-secondary/30 px-3 py-2"
-              >
-                <p className="text-sm font-medium">{event.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {new Date(event.dateTimeStart).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-              </li>
-            ))}
-          </ul>
+          <p className="text-xs text-muted-foreground">No events today.</p>
         )}
       </CardContent>
     </Card>

@@ -22,9 +22,9 @@ import {
 import { AddHabitModal } from "@/features/habits/components/AddHabitModal";
 import { AgentBriefingCard } from "@/components/AgentBriefingCard";
 import "@/components/AgentBriefingCard.css";
-import { TodayWidget } from "@/components/dashboard/TodayWidget";
-import { TasksWidget } from "@/components/dashboard/TasksWidget";
-import { FinanceWidget } from "@/components/dashboard/FinanceWidget";
+import { SmartAcademyWidget } from "@/components/dashboard/SmartAcademyWidget";
+import { TodaysFocusWidget } from "@/components/dashboard/TodaysFocusWidget";
+import { AiInsightsWidget } from "@/components/dashboard/AiInsightsWidget";
 import { useSetPageTitle } from "@/hooks/useSetPageTitle";
 import { useEvents } from "@/hooks/useEvents";
 import { useTasks } from "@/hooks/useTasks";
@@ -283,13 +283,8 @@ export default function Dashboard() {
   useSetPageTitle("Dashboard", todayLabel);
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-6xl mx-auto space-y-5">
-      {/* ── Briefing (mobile only — shown before the two-column grid) ── */}
-      <div className="lg:hidden glass-card rounded-2xl shadow-elevated p-2">
-        <AgentBriefingCard />
-      </div>
-
-      {/* ── Two-column grid: left (stats+briefing+widgets) | right (Flow AI+actions+playlist) ──
+    <div className="px-4 sm:px-6 lg:px-8 pb-6 space-y-5">
+      {/* ── Two-column grid: left (stats+widgets+briefing) | right (Flow AI+actions+playlist) ──
            Mobile: single column via contents + flex order
            Desktop: Flow AI top-aligns with the stat cards row */}
       <div className="flex flex-col lg:grid lg:grid-cols-[1fr_280px] gap-4 lg:gap-5 lg:items-start">
@@ -398,19 +393,15 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* Daily Briefing (desktop only) */}
-          <div className="hidden lg:block glass-card rounded-2xl shadow-elevated p-2">
-            <AgentBriefingCard />
+          <div className="order-3 lg:order-none grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
+            <SmartAcademyWidget />
+            <TodaysFocusWidget />
+            <AiInsightsWidget />
           </div>
 
-          <div className="order-3 lg:order-none">
-            <TodayWidget />
-          </div>
-          <div className="order-4 lg:order-none">
-            <TasksWidget />
-          </div>
-          <div className="order-5 lg:order-none">
-            <FinanceWidget />
+          {/* Daily Briefing */}
+          <div className="order-4 lg:order-none glass-card rounded-2xl shadow-elevated p-2">
+            <AgentBriefingCard />
           </div>
         </div>
 

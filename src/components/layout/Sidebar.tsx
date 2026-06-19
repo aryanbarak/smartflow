@@ -15,6 +15,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GlobalSearch } from "@/features/search/GlobalSearch";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/features/profile/useProfile";
 import { DailyFlowIcon } from "@/components/DailyFlowLogo";
@@ -88,6 +89,11 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Search */}
+      <div className="px-3 py-2 border-t border-white/5">
+        <GlobalSearch />
+      </div>
 
       {/* Footer */}
       <div className="p-4 border-t border-sidebar-border">
