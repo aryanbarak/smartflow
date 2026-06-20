@@ -117,7 +117,8 @@ export function useTasks() {
       if (!current) return null;
       const snapshot = tasks;
       const nextCompleted = !current.completed;
-      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, completed: nextCompleted } : t)));
+      const nextCompletedAt = nextCompleted ? new Date().toISOString() : null;
+      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, completed: nextCompleted, completedAt: nextCompletedAt } : t)));
       try {
         const updated = await tasksService.toggleTaskCompleted(user.id, id, nextCompleted);
         setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));

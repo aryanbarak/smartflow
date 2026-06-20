@@ -1,5 +1,5 @@
 import type { Env, AgentBriefing, ExtractedFact, MemoryEntry, UserContext, BriefingMode, ChatMessage, ChatOptions } from './types'
-import { buildUserContext, fetchUserMemory, fetchUserLanguage, supabaseGet, supabasePost, supabasePatch } from './context-builder'
+import { buildUserContext, fetchUserMemory, fetchUserLanguage, fetchTaskSnapshot, supabaseGet, supabasePost, supabasePatch } from './context-builder'
 import { buildPrompt, buildExtractionPrompt, buildChatExtractionPrompt, EXTRACTABLE_KEYS, buildChatSystemPrompt } from './prompt-builder'
 
 const ENABLE_AUTO_MEMORY_WRITE = true
@@ -33,6 +33,10 @@ export default {
 
     if (pathname === '/generate') {
       return handleGenerate(request, env)
+    }
+
+    if (pathname === '/tasks/suggestions') {
+      return handleTaskSuggestions(request, env)
     }
 
     return json({ error: 'Not found' }, 404, origin)
@@ -131,6 +135,109 @@ async function handleGenerate(request: Request, env: Env): Promise<Response> {
   } catch (err) {
     console.error('Agent error:', err)
     return json({ error: 'Failed to generate briefing' }, 500, origin)
+  }
+}
+
+// =============================================
+// /tasks/suggestions handler
+// =============================================
+async function handleTaskSuggestions(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin') ?? ''
+
+  const { userId, error: authError } = await requireAuth(request, env)
+  if (authError || !userId) {
+    return json({ error: authError ?? 'Unauthorized' }, 401, origin)
+  }
+
+  try {
+    const [snapshot, language] = await Promise.all([
+      fetchTaskSnapshot(userId, env),
+      fetchUserLanguage(userId, env),
+    ])
+
+    if (snapshot.total === 0) {
+      return json({ suggestions: [] }, 200, origin)
+    }
+
+    const system = [
+      `You are a task productivity analyst. Analyze the user's real task data below and return 2-3 short, specific, actionable observations.`,
+      ``,
+      `RULES:`,
+      `- ONLY state patterns that are verifiably true from the provided data — no generic motivational filler, no fabricated claims.`,
+      `- Each observation must reference specific numbers or task names from the data.`,
+      `- Keep each observation to 1 sentence, max 15 words.`,
+      `- Return ONLY a JSON array, no markdown, no preamble, no explanation.`,
+      `- Each item: { "text": "...", "type": "pattern" | "recommendation" }`,
+      `- "pattern" = an observation about what the data shows. "recommendation" = a specific suggested action.`,
+      `- Write in ${language === 'de' ? 'German' : language === 'fa' ? 'Persian (Farsi)' : 'English'}.`,
+    ].join('\n')
+
+    const dataLines = [
+      `Total tasks: ${snapshot.total}`,
+      `Open: ${snapshot.open}, Completed: ${snapshot.completed}`,
+      `Overdue: ${snapshot.overdue}`,
+      `Tasks with no due date: ${snapshot.noDueDate}`,
+      `Completed this week: ${snapshot.completedThisWeek}`,
+      snapshot.overdueList.length > 0 ? `Overdue tasks: ${snapshot.overdueList.join(', ')}` : null,
+      snapshot.noDueDateList.length > 0 ? `Unscheduled tasks: ${snapshot.noDueDateList.join(', ')}` : null,
+      snapshot.recentlyCompleted.length > 0 ? `Recently completed: ${snapshot.recentlyCompleted.join(', ')}` : null,
+    ].filter(Boolean).join('\n')
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: system }] },
+          contents: [{ parts: [{ text: dataLines }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  text: { type: 'STRING' },
+                  type: { type: 'STRING', enum: ['pattern', 'recommendation'] },
+                },
+                required: ['text', 'type'],
+              },
+            },
+            maxOutputTokens: 256,
+            temperature: 0.3,
+            thinkingConfig: { thinkingBudget: 0 },
+          },
+        }),
+      }
+    )
+
+    if (!res.ok) {
+      console.error('[TaskSuggestions] Gemini error:', await res.text())
+      return json({ suggestions: [] }, 200, origin)
+    }
+
+    const data: unknown = await res.json()
+    const raw: string = (data as any)?.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]'
+
+    let suggestions: Array<{ text: string; type: string }> = []
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) {
+        suggestions = parsed
+          .filter((s: any) => typeof s.text === 'string' && s.text.trim().length > 0)
+          .slice(0, 3)
+          .map((s: any) => ({ text: s.text.trim(), type: s.type === 'recommendation' ? 'recommendation' : 'pattern' }))
+      }
+    } catch {
+      console.error('[TaskSuggestions] Failed to parse Gemini response:', raw)
+    }
+
+    console.log(`[TaskSuggestions] userId=${userId} total=${snapshot.total} suggestions=${suggestions.length}`)
+    return json({ suggestions }, 200, origin)
+  } catch (err) {
+    console.error('[TaskSuggestions] Error:', err)
+    return json({ suggestions: [] }, 200, origin)
   }
 }
 

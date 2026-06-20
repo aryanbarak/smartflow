@@ -398,6 +398,11 @@ const en = {
   flow_new_chat: 'New Chat',
   flow_conversations: 'Conversations',
   flow_no_conversations: 'No conversations yet — start chatting!',
+
+  // Tasks page
+  tasks_suggestion_overdue: 'Overdue — finish it today!',
+  tasks_suggestion_due: 'Due {{date}}',
+  tasks_suggestion_no_date: 'No due date — plan it today.',
 };
 
 type TranslationDict = typeof en;
@@ -778,6 +783,10 @@ const de: TranslationDict = {
   flow_new_chat: 'Neuer Chat',
   flow_conversations: 'Gespräche',
   flow_no_conversations: 'Noch keine Gespräche — fang an zu chatten!',
+
+  tasks_suggestion_overdue: 'Überfällig — heute noch erledigen!',
+  tasks_suggestion_due: 'Fällig {{date}}',
+  tasks_suggestion_no_date: 'Kein Fälligkeitsdatum — plane es heute.',
 };
 
 const fa: TranslationDict = {
@@ -1156,6 +1165,10 @@ const fa: TranslationDict = {
   flow_new_chat: 'چت جدید',
   flow_conversations: 'مکالمات',
   flow_no_conversations: 'هنوز مکالمه‌ای نیست — شروع به چت کنید!',
+
+  tasks_suggestion_overdue: 'عقب‌مانده — امروز تمامش کن!',
+  tasks_suggestion_due: 'موعد {{date}}',
+  tasks_suggestion_no_date: 'بدون موعد — امروز برنامه‌ریزی کن.',
 };
 
 export type TranslationKey = keyof TranslationDict;

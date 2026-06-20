@@ -170,6 +170,46 @@ export async function fetchTaskContext(
 }
 
 // =============================================
+// Tasks — full snapshot for AI suggestions
+// =============================================
+export interface TaskSnapshot {
+  total: number
+  open: number
+  completed: number
+  overdue: number
+  noDueDate: number
+  completedThisWeek: number
+  overdueList: string[]
+  noDueDateList: string[]
+  recentlyCompleted: string[]
+}
+
+export async function fetchTaskSnapshot(userId: string, env: Env): Promise<TaskSnapshot> {
+  const rows = await supabaseGet<Array<{
+    title: string
+    completed: boolean
+    due_date: string | null
+    completed_at: string | null
+  }>>(env, `tasks?select=title,completed,due_date,completed_at&user_id=eq.${userId}&order=created_at.desc&limit=100`)
+
+  const now = new Date()
+  const today = now.toISOString().slice(0, 10)
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  const total = rows.length
+  const open = rows.filter(r => !r.completed).length
+  const completed = rows.filter(r => r.completed).length
+  const overdue = rows.filter(r => !r.completed && r.due_date && r.due_date < today).length
+  const noDueDate = rows.filter(r => !r.completed && !r.due_date).length
+  const completedThisWeek = rows.filter(r => r.completed_at && r.completed_at >= weekAgo).length
+  const overdueList = rows.filter(r => !r.completed && r.due_date && r.due_date < today).map(r => r.title).slice(0, 5)
+  const noDueDateList = rows.filter(r => !r.completed && !r.due_date).map(r => r.title).slice(0, 5)
+  const recentlyCompleted = rows.filter(r => r.completed_at && r.completed_at >= weekAgo).map(r => r.title).slice(0, 5)
+
+  return { total, open, completed, overdue, noDueDate, completedThisWeek, overdueList, noDueDateList, recentlyCompleted }
+}
+
+// =============================================
 // Habits — completion rate this week (weekly)
 // =============================================
 export async function fetchHabitContext(

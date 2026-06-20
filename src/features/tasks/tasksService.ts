@@ -7,6 +7,7 @@ export interface Task {
   notes?: string;
   dueDate?: string | null;
   completed: boolean;
+  completedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -20,6 +21,7 @@ function mapRowToTask(row: TaskRow): Task {
     notes: row.notes ?? undefined,
     dueDate: row.due_date ?? null,
     completed: row.completed,
+    completedAt: (row as Record<string, unknown>).completed_at as string | null ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -29,7 +31,7 @@ export const tasksService = {
   async listTasks(userId: string) {
     const { data, error } = await supabase
       .from("tasks")
-      .select("id,user_id,title,notes,due_date,completed,created_at,updated_at")
+      .select("id,user_id,title,notes,due_date,completed,completed_at,created_at,updated_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw error;
@@ -49,7 +51,7 @@ export const tasksService = {
         completed: false,
         ...(input.recurrenceRule ? { recurrence_rule: input.recurrenceRule, recurrence_end_date: input.recurrenceEndDate ?? null } : {}),
       })
-      .select("id,user_id,title,notes,due_date,completed,created_at,updated_at")
+      .select("id,user_id,title,notes,due_date,completed,completed_at,created_at,updated_at")
       .single();
     if (error) throw error;
     return mapRowToTask(data as TaskRow);
@@ -70,7 +72,7 @@ export const tasksService = {
       })
       .eq("id", id)
       .eq("user_id", userId)
-      .select("id,user_id,title,notes,due_date,completed,created_at,updated_at")
+      .select("id,user_id,title,notes,due_date,completed,completed_at,created_at,updated_at")
       .single();
     if (error) throw error;
     return mapRowToTask(data as TaskRow);
@@ -78,10 +80,13 @@ export const tasksService = {
   async toggleTaskCompleted(userId: string, id: string, nextCompleted: boolean) {
     const { data, error } = await supabase
       .from("tasks")
-      .update({ completed: nextCompleted })
+      .update({
+        completed: nextCompleted,
+        completed_at: nextCompleted ? new Date().toISOString() : null,
+      })
       .eq("id", id)
       .eq("user_id", userId)
-      .select("id,user_id,title,notes,due_date,completed,created_at,updated_at")
+      .select("id,user_id,title,notes,due_date,completed,completed_at,created_at,updated_at")
       .single();
     if (error) throw error;
     return mapRowToTask(data as TaskRow);

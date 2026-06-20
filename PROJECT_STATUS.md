@@ -75,6 +75,34 @@ Keep this file under 2 pages; update after every session.
 
 ---
 
+## Completed This Session (2026-06-20) — Tasks Page Redesign
+
+### Tasks Page — Full Redesign ✅
+
+- ✅ **Two-column layout**: left column (stats + focus + filters + task list) + right sidebar (300px, sticky) with AI Suggestions, Productivity Stats, Smart Academy
+- ✅ **4 KPI stat cards** (inside left column, above Today's Focus): Total Tasks, Open Tasks, Due This Week, Completion Rate — all computed from real `useTasks()` data, using `glass-card card-accent surface-elevated` + `icon-tile` pattern from Dashboard
+- ✅ **Today's Focus horizontal card**: matches mockup — left (Target icon + title + subtitle), middle (up to 3 tasks with interactive checkboxes in 2-col grid), right (SVG circular progress ring showing X/Y + "Completed"). Hidden when no tasks are due today/overdue
+- ✅ **"Upcoming" filter tab** added: tasks due in next 2-7 days (not today, not overdue, not completed) — inserted between Today and Overdue tabs
+- ✅ **Filter tabs restyled**: replaced shadcn `TabsList`/`TabsTrigger` with custom pill buttons (`bg-primary/15 text-primary border-primary/25` active, `glass-card` inactive) matching Dashboard toggle style
+- ✅ **Task list rows restyled**: `bg-secondary` → `glass-card rounded-xl`, completed tasks get `opacity-60`, badge colors accent-driven (`border-primary/30 text-primary` for open), task `notes` shown as truncated subtitle below title
+- ✅ **AI Suggestions sidebar widget** (inline, not a reusable component): derives 3 real suggestions from user's actual tasks — overdue tasks (rose), upcoming tasks (violet), undated tasks (emerald). No fake data
+- ✅ **Productivity Stats sidebar widget** (inline): 3 stats with colored icon-tiles — Completed (X of Y tasks), Due This Week (N upcoming), Completion Rate (X% overall). All computed from real data
+- ✅ **SmartAcademyWidget** reused in sidebar (same import as Dashboard, no code duplication)
+- ✅ **Empty state**: constrained to `max-w-md mx-auto` for compact centered appearance
+- ✅ **"Add Task" button**: restyled with `var(--gradient-primary)` gradient matching Dashboard CTAs
+- ✅ **Full-width layout**: removed `max-w-4xl` constraint, now uses `px-4 sm:px-6 lg:px-8` matching Dashboard
+- ✅ **Mobile responsive**: sidebar stacks below on mobile, stats go `grid-cols-2`, Today's Focus stacks vertically
+
+### Tasks Page — Deferred
+
+- Priority field (High/Medium/Low) — requires DB schema change (`ALTER TABLE tasks ADD COLUMN priority`)
+- Star/favorite toggle — requires DB schema change
+- Board View (Kanban) — significant new feature, deferred
+- List View / Board View toggle — depends on Board View implementation
+- "vs last week" comparisons in Productivity Stats — no `completed_at` timestamp available
+
+---
+
 ## Completed This Session (2026-06-20) — Flow AI Page Redesign
 
 ### Flow AI Page — Phase 1 ✅
