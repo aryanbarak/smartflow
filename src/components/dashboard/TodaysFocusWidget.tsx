@@ -28,7 +28,7 @@ export function TodaysFocusWidget() {
   const isInitialLoading = isLoading && tasks.length === 0;
 
   return (
-    <Card className="glass-card card-accent">
+    <Card className="glass-card card-accent h-full flex flex-col">
       <CardHeader className="px-4 py-3">
         <CardTitle className="text-sm font-semibold flex items-center gap-2.5">
           <div className="icon-tile w-7 h-7 rounded-md">
@@ -42,7 +42,7 @@ export function TodaysFocusWidget() {
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="px-4 pb-3 pt-0 text-sm">
+      <CardContent className="px-4 pb-3 pt-0 text-sm flex-1">
         {error && !isInitialLoading ? (
           <StatePanel
             variant="error"
@@ -76,7 +76,7 @@ export function TodaysFocusWidget() {
                     />
                     <span
                       className={cn(
-                        "text-sm truncate flex-1",
+                        "text-sm truncate flex-1 min-w-0",
                         task.completed &&
                           "line-through text-muted-foreground",
                       )}

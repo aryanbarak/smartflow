@@ -44,6 +44,7 @@ const TutorAppPage = lazy(() => import("./pages/TutorAppPage"));
 const TutorWisoPage = lazy(() => import("./pages/TutorWisoPage"));
 const TutorErgaenzungspruefungPage = lazy(() => import("./pages/TutorErgaenzungspruefungPage"));
 const MepSimulationPage = lazy(() => import("./pages/MepSimulationPage"));
+const WeeklyBriefingPage = lazy(() => import("./pages/WeeklyBriefingPage"));
 
 const ProtectedRoute = () => {
   const { session, isLoading } = useAuth();
@@ -124,6 +125,7 @@ const App = () => (
               />
               <Route path="/habits" element={<HabitsPage />} />
               <Route path="/journal" element={<JournalPage />} />
+              <Route path="/briefing/weekly" element={<Suspense fallback={<AppLoader />}><WeeklyBriefingPage /></Suspense>} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>

@@ -99,7 +99,7 @@ export function AiInsightsWidget() {
   const { insights, isLoading, allErrored } = useInsights();
 
   return (
-    <Card className="glass-card card-accent">
+    <Card className="glass-card card-accent h-full flex flex-col">
       <CardHeader className="px-4 py-3">
         <CardTitle className="text-sm font-semibold flex items-center gap-2.5">
           <div className="icon-tile w-7 h-7 rounded-md">
@@ -113,7 +113,7 @@ export function AiInsightsWidget() {
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="px-4 pb-3 pt-0 text-sm">
+      <CardContent className="px-4 pb-3 pt-0 text-sm flex-1">
         {isLoading ? (
           <div className="space-y-2.5">
             <SkeletonBlock className="h-4 w-full" />

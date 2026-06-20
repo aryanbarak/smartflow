@@ -22,9 +22,11 @@ import {
 import { AddHabitModal } from "@/features/habits/components/AddHabitModal";
 import { AgentBriefingCard } from "@/components/AgentBriefingCard";
 import "@/components/AgentBriefingCard.css";
+import briefingBg from "@/assets/briefing-bg.jpg";
 import { SmartAcademyWidget } from "@/components/dashboard/SmartAcademyWidget";
 import { TodaysFocusWidget } from "@/components/dashboard/TodaysFocusWidget";
 import { AiInsightsWidget } from "@/components/dashboard/AiInsightsWidget";
+import { RecommendedTopicsWidget } from "@/components/dashboard/RecommendedTopicsWidget";
 import { useSetPageTitle } from "@/hooks/useSetPageTitle";
 import { useEvents } from "@/hooks/useEvents";
 import { useTasks } from "@/hooks/useTasks";
@@ -400,8 +402,28 @@ export default function Dashboard() {
           </div>
 
           {/* Daily Briefing */}
-          <div className="order-4 lg:order-none glass-card rounded-2xl shadow-elevated p-2">
-            <AgentBriefingCard />
+          <div className="order-4 lg:order-none glass-card rounded-2xl shadow-elevated overflow-hidden [&_.agent-briefing-card\_\_title]:sm:invisible">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-0 p-4 sm:p-5">
+              <div className="hidden sm:flex sm:flex-col sm:items-center shrink-0 sm:mr-5 lg:mr-6">
+                <p className="text-[13px] font-medium text-[rgba(165,160,255,0.9)] flex items-center gap-2 mb-2">
+                  <span className="text-xs text-[rgba(165,160,255,0.7)]" aria-hidden="true">✦</span>
+                  Daily Briefing
+                </p>
+                <img
+                  src={briefingBg}
+                  alt=""
+                  className="w-36 lg:w-44 h-auto object-contain select-none"
+                />
+              </div>
+              <div className="flex-1 min-w-0 [&_.agent-briefing-card]:!bg-transparent [&_.agent-briefing-card]:!border-0 [&_.agent-briefing-card]:!p-0 [&_.agent-briefing-card]:!m-0 [&_.agent-briefing-card]:!rounded-none">
+                <AgentBriefingCard />
+              </div>
+            </div>
+          </div>
+
+          {/* Recommended Topics */}
+          <div className="order-5 lg:order-none">
+            <RecommendedTopicsWidget />
           </div>
         </div>
 

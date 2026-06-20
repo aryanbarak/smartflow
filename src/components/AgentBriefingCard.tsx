@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -41,6 +42,7 @@ function BriefingContent({ content }: Readonly<{ content: string }>) {
 // =============================================
 export function AgentBriefingCard() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [mode, setMode] = useState<Mode>('daily')
   const [briefing, setBriefing] = useState<Briefing | null>(null)
   const [loading, setLoading] = useState(true)
@@ -103,8 +105,8 @@ export function AgentBriefingCard() {
     : false
   const timeAgo = briefing ? formatTimeAgo(new Date(briefing.created_at)) : null
   const staleClass = briefing && !isToday ? 'agent-briefing-card--stale' : ''
-  const title = mode === 'daily' ? 'Daily Briefing' : 'Weekly Briefing'
-  const emptyText = mode === 'daily' ? 'No briefing yet for today.' : 'No weekly briefing yet.'
+  const title = 'Daily Briefing'
+  const emptyText = 'No briefing yet for today.'
 
   // =============================================
   // Render
@@ -137,9 +139,8 @@ export function AgentBriefingCard() {
             </button>
             <button
               type="button"
-              className={`agent-briefing-card__mode-btn${mode === 'weekly' ? ' agent-briefing-card__mode-btn--active' : ''}`}
-              onClick={() => setMode('weekly')}
-              aria-pressed={mode === 'weekly' ? 'true' : 'false'}
+              className="agent-briefing-card__mode-btn"
+              onClick={() => navigate('/briefing/weekly')}
             >
               This Week
             </button>

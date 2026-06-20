@@ -29,7 +29,7 @@ export function SmartAcademyWidget() {
   const { data, isLoading, error } = useLearnAiActivity();
 
   return (
-    <Card className="glass-card card-accent">
+    <Card className="glass-card card-accent h-full flex flex-col">
       <CardHeader className="px-4 py-3">
         <CardTitle className="text-sm font-semibold flex items-center gap-2.5">
           <div className="icon-tile w-7 h-7 rounded-md">
@@ -38,7 +38,7 @@ export function SmartAcademyWidget() {
           Smart Academy
         </CardTitle>
       </CardHeader>
-      <CardContent className="px-4 pb-3 pt-0 text-sm">
+      <CardContent className="px-4 pb-3 pt-0 text-sm flex-1">
         {error ? (
           <StatePanel
             variant="error"
@@ -64,8 +64,8 @@ export function SmartAcademyWidget() {
               </p>
             </div>
             {data.lastQuestion && (
-              <p className="text-[11px] text-muted-foreground truncate">
-                "{data.lastQuestion.content}" — {timeAgo(data.lastQuestion.createdAt)}
+              <p className="text-[11px] text-muted-foreground truncate min-w-0" dir="auto">
+                &ldquo;{data.lastQuestion.content}&rdquo; — {timeAgo(data.lastQuestion.createdAt)}
               </p>
             )}
             <Button
