@@ -1,5 +1,5 @@
 import type { Env, AgentBriefing, ExtractedFact, MemoryEntry, UserContext, BriefingMode, ChatMessage, ChatOptions } from './types'
-import { buildUserContext, fetchUserMemory, fetchUserLanguage, supabaseGet, supabasePost } from './context-builder'
+import { buildUserContext, fetchUserMemory, fetchUserLanguage, supabaseGet, supabasePost, supabasePatch } from './context-builder'
 import { buildPrompt, buildExtractionPrompt, buildChatExtractionPrompt, EXTRACTABLE_KEYS, buildChatSystemPrompt } from './prompt-builder'
 
 const ENABLE_AUTO_MEMORY_WRITE = true
@@ -146,13 +146,18 @@ async function handleChat(request: Request, env: Env, ctx: ExecutionContext): Pr
   }
 
   let message: string
+  let sessionId: string
   try {
-    const body = await request.json() as { message?: unknown }
+    const body = await request.json() as { message?: unknown; session_id?: unknown }
     const parsed = typeof body.message === 'string' ? body.message.trim() : ''
     if (parsed === '') {
       return json({ error: 'message must be a non-empty string' }, 400, origin)
     }
+    if (typeof body.session_id !== 'string' || body.session_id.trim() === '') {
+      return json({ error: 'session_id is required' }, 400, origin)
+    }
     message = parsed
+    sessionId = body.session_id.trim()
   } catch {
     return json({ error: 'Invalid JSON body' }, 400, origin)
   }
@@ -163,10 +168,10 @@ async function handleChat(request: Request, env: Env, ctx: ExecutionContext): Pr
       fetchUserMemory(userId, env),
     ])
 
-    // Last 20 messages, oldest first, to build the conversation history
+    // Last 20 messages from this session, oldest first
     const historyRows = await supabaseGet<Array<{ role: string; content: string }>>(
       env,
-      `agent_chat_messages?select=role,content&user_id=eq.${userId}&order=created_at.desc&limit=20`
+      `agent_chat_messages?select=role,content&user_id=eq.${userId}&session_id=eq.${sessionId}&order=created_at.desc&limit=20`
     )
     const history: ChatMessage[] = historyRows
       .filter(r => r.role === 'user' || r.role === 'assistant')
@@ -179,10 +184,17 @@ async function handleChat(request: Request, env: Env, ctx: ExecutionContext): Pr
     const reply = await callGeminiChat(system, fullHistory, env)
 
     // Persist both after a successful Gemini call so no orphaned turns are saved on error
-    await supabasePost(env, 'agent_chat_messages', { user_id: userId, role: 'user', content: message })
-    await supabasePost(env, 'agent_chat_messages', { user_id: userId, role: 'assistant', content: reply })
+    await supabasePost(env, 'agent_chat_messages', { user_id: userId, session_id: sessionId, role: 'user', content: message })
+    await supabasePost(env, 'agent_chat_messages', { user_id: userId, session_id: sessionId, role: 'assistant', content: reply })
 
-    console.log(`[Chat] userId=${userId} language=${language} history=${history.length} turns reply=${reply.length} chars`)
+    // Bump session's updated_at so sidebar sorts by most recently active
+    await supabasePatch(
+      env,
+      `chat_sessions?id=eq.${sessionId}&user_id=eq.${userId}`,
+      { updated_at: new Date().toISOString() }
+    )
+
+    console.log(`[Chat] userId=${userId} sessionId=${sessionId} language=${language} history=${history.length} turns reply=${reply.length} chars`)
 
     // Background memory extraction — does not delay the user's reply
     if (ENABLE_AUTO_MEMORY_WRITE) {

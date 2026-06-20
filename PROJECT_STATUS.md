@@ -75,6 +75,30 @@ Keep this file under 2 pages; update after every session.
 
 ---
 
+## Completed This Session (2026-06-20) — Flow AI Page Redesign
+
+### Flow AI Page — Phase 1 ✅
+
+- ✅ **Two-column layout**: center column (hero + quick actions + conversation) + right sidebar (280px, sticky) reusing existing Dashboard widgets (TodaysFocusWidget, AiInsightsWidget, SmartAcademyWidget — no duplicated code)
+- ✅ **Hero card**: greeting with user name (from useProfile), animated AI orb, 2 live stats (conversation count from messages, task count from useTasks) with icon-tiles
+- ✅ **Quick Actions grid**: 6 action cards (Study / Plan / Habits / Finance / Weekly / Career) with distinct colored icon-tiles; clicking sends the prompt directly via existing handleSend — no navigation, instant conversation start
+- ✅ **Conversation card**: glass-card styled, max-h scroll, assistant messages now have Bot avatar icon, glass-card bubble styling; user messages rounded with accent color
+- ✅ **Input area**: gradient Send button, inside the conversation card below messages
+- ✅ **All existing functionality preserved**: message history, Supabase persistence, auto-send from location.state.initialPrompt, keyboard handling
+- ✅ **i18n**: 18 new keys added (en/de/fa) for greeting, hero description, stats, quick action labels/descriptions, conversation title
+- ✅ **Responsive**: mobile stacks center + sidebar vertically; sidebar widgets below main content on mobile
+
+### Flow AI Page — Deferred (Phase 2+)
+
+- AI Suggestions section (requires real AI-powered recommendations — no fake data added)
+- Recent Documents widget (no existing hook/service — needs new backend query)
+- Conversation action buttons (Copy/Regenerate/Like/Dislike — needs backend support)
+- File upload / voice / code buttons in input (C3b still in backlog)
+- Animated orb with particles (cosmetic polish, not functional)
+- "New Chat" button (would need conversation threading — architecture change)
+
+---
+
 ## Completed This Session (2026-06-17/19) — Dashboard Redesign
 
 Branch: `redesign/ui-cleanup`

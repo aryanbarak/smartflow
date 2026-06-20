@@ -402,22 +402,14 @@ export default function Dashboard() {
           </div>
 
           {/* Daily Briefing */}
-          <div className="order-4 lg:order-none glass-card rounded-2xl shadow-elevated overflow-hidden [&_.agent-briefing-card\_\_title]:sm:invisible">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-0 p-4 sm:p-5">
-              <div className="hidden sm:flex sm:flex-col sm:items-center shrink-0 sm:mr-5 lg:mr-6">
-                <p className="text-[13px] font-medium text-[rgba(165,160,255,0.9)] flex items-center gap-2 mb-2">
-                  <span className="text-xs text-[rgba(165,160,255,0.7)]" aria-hidden="true">✦</span>
-                  Daily Briefing
-                </p>
-                <img
-                  src={briefingBg}
-                  alt=""
-                  className="w-36 lg:w-44 h-auto object-contain select-none"
-                />
-              </div>
-              <div className="flex-1 min-w-0 [&_.agent-briefing-card]:!bg-transparent [&_.agent-briefing-card]:!border-0 [&_.agent-briefing-card]:!p-0 [&_.agent-briefing-card]:!m-0 [&_.agent-briefing-card]:!rounded-none">
-                <AgentBriefingCard />
-              </div>
+          <div className="order-4 lg:order-none glass-card rounded-2xl shadow-elevated overflow-hidden relative">
+            <img
+              src={briefingBg}
+              alt=""
+              className="hidden sm:block absolute left-3 top-1/2 -translate-y-1/2 w-48 lg:w-56 h-auto object-contain select-none pointer-events-none opacity-90"
+            />
+            <div className="sm:pl-[220px] lg:pl-[260px] [&_.agent-briefing-card]:!bg-transparent [&_.agent-briefing-card]:!border-0 [&_.agent-briefing-card]:!p-0 [&_.agent-briefing-card]:!m-0 [&_.agent-briefing-card]:!rounded-none">
+              <AgentBriefingCard />
             </div>
           </div>
 

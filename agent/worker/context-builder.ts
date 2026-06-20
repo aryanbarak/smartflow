@@ -51,6 +51,32 @@ export async function supabasePost(
 }
 
 // =============================================
+// Generic REST helper — PATCH /rest/v1/<path>
+// =============================================
+export async function supabasePatch(
+  env: Env,
+  path: string,
+  body: Record<string, unknown>,
+  prefer = 'return=minimal'
+): Promise<void> {
+  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/${path}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': env.SUPABASE_SERVICE_KEY,
+      'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+      'Prefer': prefer,
+    },
+    body: JSON.stringify(body),
+  })
+
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Supabase PATCH error (${path}): ${err}`)
+  }
+}
+
+// =============================================
 // حافظه کاربر از user_context (read-only)
 // =============================================
 export async function fetchUserMemory(
