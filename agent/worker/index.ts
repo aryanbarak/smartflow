@@ -1,5 +1,5 @@
 import type { Env, AgentBriefing, ExtractedFact, MemoryEntry, UserContext, BriefingMode, ChatMessage, ChatOptions } from './types'
-import { buildUserContext, fetchUserMemory, fetchUserLanguage, fetchTaskSnapshot, supabaseGet, supabasePost, supabasePatch } from './context-builder'
+import { buildUserContext, fetchUserMemory, fetchUserLanguage, fetchTaskSnapshot, fetchCalendarSnapshot, supabaseGet, supabasePost, supabasePatch } from './context-builder'
 import { buildPrompt, buildExtractionPrompt, buildChatExtractionPrompt, EXTRACTABLE_KEYS, buildChatSystemPrompt } from './prompt-builder'
 
 const ENABLE_AUTO_MEMORY_WRITE = true
@@ -37,6 +37,10 @@ export default {
 
     if (pathname === '/tasks/suggestions') {
       return handleTaskSuggestions(request, env)
+    }
+
+    if (pathname === '/calendar/suggestions') {
+      return handleCalendarSuggestions(request, env)
     }
 
     return json({ error: 'Not found' }, 404, origin)
@@ -237,6 +241,124 @@ async function handleTaskSuggestions(request: Request, env: Env): Promise<Respon
     return json({ suggestions }, 200, origin)
   } catch (err) {
     console.error('[TaskSuggestions] Error:', err)
+    return json({ suggestions: [] }, 200, origin)
+  }
+}
+
+// =============================================
+// /calendar/suggestions handler
+// =============================================
+async function handleCalendarSuggestions(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin') ?? ''
+
+  const { userId, error: authError } = await requireAuth(request, env)
+  if (authError || !userId) {
+    return json({ error: authError ?? 'Unauthorized' }, 401, origin)
+  }
+
+  try {
+    const [snapshot, language] = await Promise.all([
+      fetchCalendarSnapshot(userId, env),
+      fetchUserLanguage(userId, env),
+    ])
+
+    if (snapshot.totalThisWeek === 0 && snapshot.freeDays.length === 7) {
+      return json({ suggestions: [] }, 200, origin)
+    }
+
+    const system = [
+      `You are a calendar schedule analyst. Analyze the user's real calendar data below and return 2-3 short, specific, actionable observations.`,
+      ``,
+      `RULES:`,
+      `- ONLY state patterns that are verifiably true from the provided data — no generic motivational filler, no fabricated claims.`,
+      `- Each observation must reference specific days, event counts, or event names from the data.`,
+      `- Keep each observation to 1 sentence, max 15 words.`,
+      `- Return ONLY a JSON array, no markdown, no preamble, no explanation.`,
+      `- Each item: { "text": "...", "type": "pattern" | "recommendation", "suggestedDate": "YYYY-MM-DD" or omit }`,
+      `- "pattern" = an observation about what the schedule shows. "recommendation" = a specific suggested action.`,
+      `- Include "suggestedDate" ONLY when the suggestion references a specific day — use the exact YYYY-MM-DD date string from the data (e.g. from the free days or busy days lists). Omit suggestedDate if the suggestion is not about a specific day.`,
+      `- Write in ${language === 'de' ? 'German' : language === 'fa' ? 'Persian (Farsi)' : 'English'}.`,
+    ].join('\n')
+
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const formatDay = (d: string) => {
+      const dt = new Date(d + 'T00:00:00')
+      return `${dayNames[dt.getDay()]} ${d}`
+    }
+
+    const dataLines = [
+      `Events this week: ${snapshot.totalThisWeek}`,
+      snapshot.freeDays.length > 0 ? `Free days (0 events): ${snapshot.freeDays.map(formatDay).join(', ')}` : 'No free days this week',
+      snapshot.busyDays.length > 0 ? `Busy days: ${snapshot.busyDays.map(d => `${formatDay(d.date)} (${d.count} events)`).join(', ')}` : null,
+      Object.keys(snapshot.categories).length > 0 ? `Categories: ${Object.entries(snapshot.categories).map(([k, v]) => `${k}: ${v}`).join(', ')}` : null,
+      snapshot.eventList.length > 0 ? `Upcoming events:\n${snapshot.eventList.map(e => `  ${e.date} ${e.time} — ${e.title}${e.type ? ` [${e.type}]` : ''}`).join('\n')}` : null,
+    ].filter(Boolean).join('\n')
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: system }] },
+          contents: [{ parts: [{ text: dataLines }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  text: { type: 'STRING' },
+                  type: { type: 'STRING', enum: ['pattern', 'recommendation'] },
+                  suggestedDate: { type: 'STRING' },
+                },
+                required: ['text', 'type'],
+              },
+            },
+            maxOutputTokens: 256,
+            temperature: 0.3,
+            thinkingConfig: { thinkingBudget: 0 },
+          },
+        }),
+      }
+    )
+
+    if (!res.ok) {
+      console.error('[CalendarSuggestions] Gemini error:', await res.text())
+      return json({ suggestions: [] }, 200, origin)
+    }
+
+    const data: unknown = await res.json()
+    const raw: string = (data as any)?.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]'
+
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/
+    let suggestions: Array<{ text: string; type: string; suggestedDate?: string }> = []
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) {
+        suggestions = parsed
+          .filter((s: any) => typeof s.text === 'string' && s.text.trim().length > 0)
+          .slice(0, 3)
+          .map((s: any) => {
+            const item: { text: string; type: string; suggestedDate?: string } = {
+              text: s.text.trim(),
+              type: s.type === 'recommendation' ? 'recommendation' : 'pattern',
+            }
+            if (typeof s.suggestedDate === 'string' && dateRe.test(s.suggestedDate)) {
+              item.suggestedDate = s.suggestedDate
+            }
+            return item
+          })
+      }
+    } catch {
+      console.error('[CalendarSuggestions] Failed to parse Gemini response:', raw)
+    }
+
+    console.log(`[CalendarSuggestions] userId=${userId} events=${snapshot.totalThisWeek} suggestions=${suggestions.length}`)
+    return json({ suggestions }, 200, origin)
+  } catch (err) {
+    console.error('[CalendarSuggestions] Error:', err)
     return json({ suggestions: [] }, 200, origin)
   }
 }

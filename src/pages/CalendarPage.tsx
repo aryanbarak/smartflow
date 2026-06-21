@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Calendar as CalendarIcon, MapPin, Pencil, StickyNote, Trash2 } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, CalendarDays, CheckSquare, Layers, ArrowRight, ArrowUpRight, Lightbulb, MapPin, Pencil, Sparkles, StickyNote, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,6 +23,9 @@ import { CalendarFormDialog } from "@/features/calendar/CalendarFormDialog";
 import { loadCalendarUiState, saveCalendarUiState } from "@/features/calendar/calendarUiState";
 import { AlarmPicker } from "@/features/calendar/components/AlarmPicker";
 import { getTasksAsEvents, type TaskAsEvent } from "@/features/tasks/taskCalendarBridge";
+import { useTasks } from "@/hooks/useTasks";
+import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
 import { formatDateTime, toDateOnly } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
@@ -117,6 +120,27 @@ function getEventState(now: Date, start: Date | null, end: Date | null) {
     return "upcoming" as const;
   }
   return "future" as const;
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  personal: 'bg-blue-400',
+  work: 'bg-emerald-400',
+  study: 'bg-orange-400',
+  family: 'bg-violet-400',
+  health: 'bg-rose-400',
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  personal: 'Personal',
+  work: 'Work',
+  family: 'Family',
+  health: 'Health',
+};
+
+function getCategoryDotColor(event: CalendarEvent): string {
+  if (event.type && CATEGORY_COLORS[event.type]) return CATEGORY_COLORS[event.type];
+  if (event.color) return '';
+  return 'bg-primary';
 }
 
 export default function CalendarPage() {
@@ -313,6 +337,80 @@ export default function CalendarPage() {
     return { count: monthEvents.length, minStart, maxStart };
   }, [monthEvents]);
 
+  const calendarKpi = useMemo(() => {
+    const todayKey = toDateOnly(today);
+    const nowMs = today.getTime();
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    const weekStartKey = toDateOnly(weekStart);
+    const weekEndKey = toDateOnly(weekEnd);
+    const eventsToday = monthEvents.filter(e => e.dateTimeStart.slice(0, 10) === todayKey).length;
+    const eventsThisWeek = monthEvents.filter(e => {
+      const dk = e.dateTimeStart.slice(0, 10);
+      return dk >= weekStartKey && dk <= weekEndKey;
+    }).length;
+    const categoriesUsed = new Set(monthEvents.filter(e => e.type).map(e => e.type)).size;
+    const upcoming = monthEvents.filter(e => {
+      const ms = new Date(e.dateTimeStart).getTime();
+      return ms > nowMs && ms <= nowMs + weekMs;
+    }).length;
+    return { eventsToday, eventsThisWeek, categoriesUsed, upcoming };
+  }, [monthEvents, today, weekStart, weekEnd]);
+
+  const { tasks: allTasks, toggleTaskCompleted } = useTasks();
+
+  const todaysAgenda = useMemo(() => {
+    const todayKey = toDateOnly(today);
+    return monthEvents
+      .filter(e => e.dateTimeStart.slice(0, 10) === todayKey)
+      .sort((a, b) => a.dateTimeStart.localeCompare(b.dateTimeStart));
+  }, [monthEvents, today]);
+
+  const todaysTasks = useMemo(() => {
+    const todayKey = toDateOnly(today);
+    return allTasks.filter(t => t.dueDate === todayKey);
+  }, [allTasks, today]);
+
+  const tasksDoneToday = todaysTasks.filter(t => t.completed).length;
+  const tasksTotalToday = todaysTasks.length;
+  const tasksPct = tasksTotalToday > 0 ? Math.round((tasksDoneToday / tasksTotalToday) * 100) : 0;
+
+  const upcomingEvents = useMemo(() => {
+    const todayKey = toDateOnly(today);
+    const limitDate = toDateOnly(addDays(today, 7));
+    return monthEvents
+      .filter(e => {
+        const dk = e.dateTimeStart.slice(0, 10);
+        return dk > todayKey && dk <= limitDate;
+      })
+      .sort((a, b) => a.dateTimeStart.localeCompare(b.dateTimeStart));
+  }, [monthEvents, today]);
+
+  // AI Suggestions — fetched from Gemini via worker
+  const [calSuggestions, setCalSuggestions] = useState<Array<{ text: string; type: string; suggestedDate?: string }>>([]);
+  const [dialogDefaultDate, setDialogDefaultDate] = useState<string | undefined>(undefined);
+  const [calSuggestionsLoading, setCalSuggestionsLoading] = useState(true);
+  const calSuggestionsLoaded = useRef(false);
+  const workerUrl = import.meta.env.VITE_AGENT_WORKER_URL as string;
+
+  useEffect(() => {
+    if (calSuggestionsLoaded.current || monthEvents.length === 0) return;
+    calSuggestionsLoaded.current = true;
+    setCalSuggestionsLoading(true);
+    supabase.auth.getSession().then(({ data: { session: authSession } }) => {
+      if (!authSession) { setCalSuggestionsLoading(false); return; }
+      fetch(`${workerUrl}/calendar/suggestions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession.access_token}` },
+      })
+        .then(res => res.ok ? res.json() : { suggestions: [] })
+        .then((body: { suggestions: Array<{ text: string; type: string; suggestedDate?: string }> }) => {
+          setCalSuggestions(body.suggestions ?? []);
+        })
+        .catch(() => setCalSuggestions([]))
+        .finally(() => setCalSuggestionsLoading(false));
+    });
+  }, [monthEvents.length, workerUrl]);
+
   useEffect(() => {
     if (!import.meta.env.DEV) return;
     console.debug("[calendar] month events", {
@@ -350,6 +448,13 @@ export default function CalendarPage() {
 
   const openNewEvent = () => {
     setEditingEvent(null);
+    setDialogDefaultDate(undefined);
+    setIsDialogOpen(true);
+  };
+
+  const openNewEventOnDate = (date: string) => {
+    setEditingEvent(null);
+    setDialogDefaultDate(date);
     setIsDialogOpen(true);
   };
 
@@ -364,6 +469,7 @@ export default function CalendarPage() {
     dateTimeEnd?: string;
     location?: string;
     notes?: string;
+    type?: string;
   }) => {
     if (editingEvent) {
       await calendarService.update(editingEvent.id, payload);
@@ -528,26 +634,81 @@ export default function CalendarPage() {
   const isInitialLoading = isLoading && rangeEvents.length === 0;
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+    <div className="px-4 sm:px-6 lg:px-8 pb-6">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-4"
+        className="flex items-center justify-between py-5"
       >
         <div>
           <h1 className="text-2xl lg:text-3xl font-semibold mb-1">Calendar</h1>
+          <p className="text-sm text-muted-foreground">Plan your day, stay on track</p>
         </div>
-        <Button className="gap-2 shadow-glow" onClick={openNewEvent}>
+        <Button className="gap-2" style={{ background: 'var(--gradient-primary)' }} onClick={openNewEvent}>
           <Plus className="w-4 h-4" />
           Add Event
         </Button>
       </motion.div>
+
+      {/* Two-column layout */}
+      <div className="flex flex-col lg:flex-row gap-5 lg:items-start">
+      {/* Left column — main calendar content */}
+      <div className="flex-1 min-w-0 space-y-4">
+
+      {/* KPI Stats Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="glass-card card-accent surface-elevated">
+          <CardContent className="p-3.5">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="icon-tile w-8 h-8 rounded-md">
+                <CalendarIcon className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">Events Today</span>
+            </div>
+            <p className="text-2xl font-bold tracking-tight">{calendarKpi.eventsToday}</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card card-accent surface-elevated">
+          <CardContent className="p-3.5">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="icon-tile w-8 h-8 rounded-md">
+                <CalendarDays className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">This Week</span>
+            </div>
+            <p className="text-2xl font-bold tracking-tight">{calendarKpi.eventsThisWeek}</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card card-accent surface-elevated">
+          <CardContent className="p-3.5">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="icon-tile w-8 h-8 rounded-md">
+                <Layers className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">Categories</span>
+            </div>
+            <p className="text-2xl font-bold tracking-tight">{calendarKpi.categoriesUsed}</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card card-accent surface-elevated">
+          <CardContent className="p-3.5">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="icon-tile w-8 h-8 rounded-md">
+                <ArrowUpRight className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">Upcoming</span>
+            </div>
+            <p className="text-2xl font-bold tracking-tight">{calendarKpi.upcoming}</p>
+          </CardContent>
+        </Card>
+      </div>
 
       <CalendarFormDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         mode={editingEvent ? "edit" : "create"}
         initialEvent={editingEvent}
+        defaultDate={dialogDefaultDate}
         onSubmit={handleSave}
       />
 
@@ -646,9 +807,13 @@ export default function CalendarPage() {
                 >
                   <span className="text-xs font-semibold">{day.getDate()}</span>
                   <div className="flex items-center gap-0.5 flex-wrap">
-                    {count > 0 && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    )}
+                    {(monthEventsByDay[key] ?? []).slice(0, 3).map((ev, i) => (
+                      <span
+                        key={i}
+                        className={cn("w-1.5 h-1.5 rounded-full", getCategoryDotColor(ev))}
+                        style={ev.color && !ev.type ? { backgroundColor: ev.color } : undefined}
+                      />
+                    ))}
                     {taskCount > 0 && (
                       <span className={cn(
                         "w-1.5 h-1.5 rounded-full",
@@ -660,6 +825,15 @@ export default function CalendarPage() {
               );
             })}
           </div>
+        </div>
+        {/* Category legend */}
+        <div className="flex flex-wrap items-center gap-4 mt-2">
+          {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+            <div key={key} className="flex items-center gap-1.5">
+              <span className={cn("w-2 h-2 rounded-full", CATEGORY_COLORS[key])} />
+              <span className="text-[11px] text-muted-foreground">{label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -858,12 +1032,235 @@ export default function CalendarPage() {
         </div>
       )}
 
+      </div>
+
+      {/* Right sidebar */}
+      <div className="w-full lg:w-[300px] shrink-0 space-y-4 lg:sticky lg:top-4 lg:self-start">
+        {/* Today's Agenda — events + tasks */}
+        <Card className="glass-card card-accent">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="icon-tile w-7 h-7 rounded-md">
+                  <CalendarIcon className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <span className="text-sm font-semibold">Today&apos;s Agenda</span>
+              </div>
+              {tasksTotalToday > 0 && (
+                <div className="flex flex-col items-center shrink-0">
+                  <div className="relative w-11 h-11">
+                    <svg viewBox="0 0 44 44" className="w-full h-full -rotate-90">
+                      <circle cx="22" cy="22" r="18" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
+                      <circle
+                        cx="22" cy="22" r="18" fill="none"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeDasharray={`${(tasksDoneToday / tasksTotalToday) * 113.1} 113.1`}
+                      />
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">
+                      {tasksDoneToday}/{tasksTotalToday}
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground">Tasks</p>
+                </div>
+              )}
+            </div>
+
+            {/* Events section */}
+            {todaysAgenda.length > 0 && (
+              <ul className="space-y-1.5">
+                {todaysAgenda.map(ev => {
+                  const timeStart = formatTime(ev.dateTimeStart);
+                  const timeEnd = ev.dateTimeEnd ? formatTime(ev.dateTimeEnd) : null;
+                  const dotColor = ev.type && CATEGORY_COLORS[ev.type] ? CATEGORY_COLORS[ev.type] : 'bg-primary';
+                  const badgeLabel = ev.type && CATEGORY_LABELS[ev.type] ? CATEGORY_LABELS[ev.type] : null;
+                  return (
+                    <li key={ev.id} className="flex items-start gap-3 rounded-lg bg-secondary/20 px-3 py-2">
+                      <div className="min-w-[44px] text-[11px] font-medium text-muted-foreground pt-0.5">
+                        {timeStart ?? 'All day'}
+                        {timeEnd && (
+                          <span className="block text-[10px]">{timeEnd}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{ev.title}</p>
+                        {ev.location && (
+                          <p className="text-[10px] text-muted-foreground truncate flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-2.5 h-2.5 shrink-0" />
+                            {ev.location}
+                          </p>
+                        )}
+                      </div>
+                      {badgeLabel && (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className={cn("w-2 h-2 rounded-full", dotColor)} />
+                          <span className="text-[10px] text-muted-foreground">{badgeLabel}</span>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {/* Tasks section */}
+            {tasksTotalToday > 0 && (
+              <>
+                {todaysAgenda.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div className="h-px flex-1 bg-border/40" />
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <CheckSquare className="w-2.5 h-2.5" /> Tasks
+                    </span>
+                    <div className="h-px flex-1 bg-border/40" />
+                  </div>
+                )}
+                <ul className="space-y-1.5">
+                  {todaysTasks.map(task => (
+                    <li key={task.id} className="flex items-center gap-2.5 rounded-lg bg-secondary/20 px-3 py-2">
+                      <Checkbox
+                        checked={task.completed}
+                        onCheckedChange={() => toggleTaskCompleted(task.id)}
+                        className="shrink-0"
+                      />
+                      <span className={cn(
+                        "text-xs font-medium truncate flex-1 min-w-0",
+                        task.completed && "line-through text-muted-foreground"
+                      )}>
+                        {task.title}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {todaysAgenda.length === 0 && tasksTotalToday === 0 && (
+              <p className="text-xs text-muted-foreground">Nothing scheduled for today.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Upcoming Events */}
+        <Card className="glass-card card-accent">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="icon-tile w-7 h-7 rounded-md">
+                  <CalendarDays className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <span className="text-sm font-semibold">Upcoming Events</span>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {upcomingEvents.length}
+              </span>
+            </div>
+            {upcomingEvents.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No upcoming events in the next 7 days.</p>
+            ) : (
+              <>
+                <ul className="space-y-2">
+                  {upcomingEvents.slice(0, 5).map(ev => {
+                    const evDate = parseDayKeyLocal(ev.dateTimeStart.slice(0, 10));
+                    const tomorrow = addDays(today, 1);
+                    const dateLabel = isSameDay(evDate, tomorrow)
+                      ? 'Tomorrow'
+                      : evDate.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+                    const timeStart = formatTime(ev.dateTimeStart);
+                    const dotColor = ev.type && CATEGORY_COLORS[ev.type] ? CATEGORY_COLORS[ev.type] : 'bg-primary';
+                    const badgeLabel = ev.type && CATEGORY_LABELS[ev.type] ? CATEGORY_LABELS[ev.type] : null;
+                    return (
+                      <li key={ev.id} className="flex items-start gap-3 rounded-lg bg-secondary/20 px-3 py-2">
+                        <div className="min-w-[48px] pt-0.5">
+                          <p className="text-[11px] font-medium text-muted-foreground">{dateLabel}</p>
+                          {timeStart && (
+                            <p className="text-[10px] text-muted-foreground">{timeStart}</p>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{ev.title}</p>
+                        </div>
+                        {badgeLabel && (
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className={cn("w-2 h-2 rounded-full", dotColor)} />
+                            <span className="text-[10px] text-muted-foreground">{badgeLabel}</span>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {upcomingEvents.length > 5 && (
+                  <button
+                    type="button"
+                    onClick={() => { setFilter('all'); handleTodayClick(); }}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    View all {upcomingEvents.length} events →
+                  </button>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* AI Suggestions — Gemini-generated */}
+        {(calSuggestionsLoading || calSuggestions.length > 0) && (
+          <Card className="glass-card card-accent">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div className="icon-tile w-7 h-7 rounded-md">
+                  <Sparkles className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <span className="text-sm font-semibold">AI Suggestions</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">Based on your schedule</p>
+              {calSuggestionsLoading ? (
+                <div className="space-y-2">
+                  <SkeletonBlock className="h-10 w-full" />
+                  <SkeletonBlock className="h-10 w-full" />
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {calSuggestions.map((s, i) => {
+                    const clickable = !!s.suggestedDate;
+                    const Row = clickable ? 'button' : 'div';
+                    return (
+                      <li key={i}>
+                        <Row
+                          type={clickable ? 'button' : undefined}
+                          onClick={clickable ? () => openNewEventOnDate(s.suggestedDate!) : undefined}
+                          className={cn(
+                            "w-full flex items-start gap-3 rounded-lg bg-secondary/20 px-3 py-2.5 text-left",
+                            clickable && "cursor-pointer transition-colors hover:bg-secondary/40 hover:border-primary/25"
+                          )}
+                        >
+                          <div className={cn("icon-tile w-7 h-7 rounded-lg shrink-0 mt-0.5", s.type === 'recommendation' ? 'bg-emerald-500/15' : 'bg-violet-500/15')}>
+                            {s.type === 'recommendation'
+                              ? <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
+                              : <Lightbulb className="w-3.5 h-3.5 text-violet-400" />}
+                          </div>
+                          <p className="text-xs leading-relaxed">{s.text}</p>
+                        </Row>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+      </div>
+
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete event?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove "{deleteTarget?.title}" from your calendar.
+              This will permanently remove &ldquo;{deleteTarget?.title}&rdquo; from your calendar.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -872,7 +1269,6 @@ export default function CalendarPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <p className="mt-6 text-sm text-muted-foreground">Your agenda at a glance</p>
     </div>
   );
 }

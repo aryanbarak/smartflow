@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarEvent } from "@/features/calendar/calendarService";
 import { RecurrencePicker } from "@/components/RecurrencePicker";
 import type { RecurrenceRule } from "@/lib/recurrence";
@@ -21,12 +22,14 @@ interface CalendarFormDialogProps {
   onOpenChange: (open: boolean) => void;
   mode: CalendarFormMode;
   initialEvent?: CalendarEvent | null;
+  defaultDate?: string;
   onSubmit: (payload: {
     title: string;
     dateTimeStart: string;
     dateTimeEnd?: string;
     location?: string;
     notes?: string;
+    type?: string;
     recurrenceRule?: RecurrenceRule;
     recurrenceEndDate?: string;
   }) => Promise<void> | void;
@@ -95,6 +98,7 @@ export function CalendarFormDialog({
   onOpenChange,
   mode,
   initialEvent,
+  defaultDate,
   onSubmit,
   isSaving = false,
 }: CalendarFormDialogProps) {
@@ -104,6 +108,7 @@ export function CalendarFormDialog({
   const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
+  const [eventType, setEventType] = useState("personal");
   const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule | ''>('');
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -127,18 +132,21 @@ export function CalendarFormDialog({
       setEndTime(end ? formatInputTime(end) : "");
       setLocation(initialEvent.location ?? "");
       setNotes(initialEvent.notes ?? "");
+      setEventType(initialEvent.type ?? "personal");
       setRecurrenceRule('');
       setRecurrenceEndDate('');
       setError(null);
       return;
     }
-    const now = new Date();
+    const fallbackDate = defaultDate ? parseDateInput(defaultDate) : null;
+    const now = fallbackDate ?? new Date();
     setTitle("");
     setDate(formatInputDate(now));
     setStartTime(formatInputTime(now));
     setEndTime("");
     setLocation("");
     setNotes("");
+    setEventType("personal");
     setRecurrenceRule('');
     setRecurrenceEndDate('');
     setError(null);
@@ -184,6 +192,7 @@ export function CalendarFormDialog({
         dateTimeEnd: end,
         location,
         notes,
+        type: eventType,
         recurrenceRule: recurrenceRule || undefined,
         recurrenceEndDate: recurrenceEndDate || undefined,
       });
@@ -223,9 +232,25 @@ export function CalendarFormDialog({
             <Label>End Time</Label>
             <Input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
           </div>
-          <div className="space-y-2">
-            <Label>Location</Label>
-            <Input value={location} onChange={(event) => setLocation(event.target.value)} />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Location</Label>
+              <Input value={location} onChange={(event) => setLocation(event.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={eventType} onValueChange={setEventType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="personal">Personal</SelectItem>
+                  <SelectItem value="work">Work</SelectItem>
+                  <SelectItem value="family">Family</SelectItem>
+                  <SelectItem value="health">Health</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="space-y-2">
             <Label>Notes</Label>

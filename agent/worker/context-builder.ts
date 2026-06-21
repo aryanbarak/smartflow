@@ -210,6 +210,54 @@ export async function fetchTaskSnapshot(userId: string, env: Env): Promise<TaskS
 }
 
 // =============================================
+// Calendar — snapshot for AI schedule suggestions
+// =============================================
+export interface CalendarSnapshot {
+  totalThisWeek: number
+  freeDays: string[]
+  busyDays: { date: string; count: number }[]
+  categories: Record<string, number>
+  eventList: { title: string; date: string; time: string; type: string | null }[]
+}
+
+export async function fetchCalendarSnapshot(userId: string, env: Env): Promise<CalendarSnapshot> {
+  const now = new Date()
+  const today = now.toISOString().slice(0, 10)
+  const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+
+  const rows = await supabaseGet<Array<{
+    title: string
+    date: string
+    start_time: string | null
+    type: string | null
+  }>>(env, `calendar_events?select=title,date,start_time,type&user_id=eq.${userId}&date=gte.${today}&date=lte.${weekEnd}&order=date.asc,start_time.asc&limit=50`)
+
+  const byDate: Record<string, number> = {}
+  const categories: Record<string, number> = {}
+  const eventList: CalendarSnapshot['eventList'] = []
+
+  for (const r of rows) {
+    byDate[r.date] = (byDate[r.date] ?? 0) + 1
+    if (r.type) categories[r.type] = (categories[r.type] ?? 0) + 1
+    eventList.push({ title: r.title, date: r.date, time: r.start_time ?? 'all-day', type: r.type })
+  }
+
+  const allDays: string[] = []
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now.getTime() + i * 24 * 60 * 60 * 1000)
+    allDays.push(d.toISOString().slice(0, 10))
+  }
+
+  const freeDays = allDays.filter(d => !byDate[d])
+  const busyDays = Object.entries(byDate)
+    .filter(([, count]) => count >= 2)
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => b.count - a.count)
+
+  return { totalThisWeek: rows.length, freeDays, busyDays, categories, eventList: eventList.slice(0, 15) }
+}
+
+// =============================================
 // Habits — completion rate this week (weekly)
 // =============================================
 export async function fetchHabitContext(
