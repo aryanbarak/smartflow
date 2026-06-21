@@ -9,7 +9,14 @@ const QUERY_KEY = ['habits'];
 export function useHabits() {
   return useQuery({
     queryKey: QUERY_KEY,
-    queryFn: habitsService.getAll,
+    queryFn: () => habitsService.getAll(),
+  });
+}
+
+export function useAllHabits() {
+  return useQuery({
+    queryKey: ['habits', 'all'],
+    queryFn: () => habitsService.getAll(true),
   });
 }
 
@@ -19,7 +26,7 @@ export function useToggleHabit() {
   return useMutation({
     mutationFn: ({ habitId, date }: { habitId: string; date?: string }) =>
       habitsService.toggle(habitId, date),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY, exact: false }),
     onError: () => toast.error(t('error_save')),
   });
 }
@@ -31,7 +38,7 @@ export function useCreateHabit() {
     mutationFn: (data: Omit<Habit, 'id' | 'user_id' | 'created_at' | 'updated_at'>) =>
       habitsService.create(data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEY });
+      qc.invalidateQueries({ queryKey: QUERY_KEY, exact: false });
       toast.success(t('habits_habit_added'));
     },
     onError: () => toast.error(t('error_save')),
@@ -44,7 +51,7 @@ export function useDeleteHabit() {
   return useMutation({
     mutationFn: (id: string) => habitsService.delete(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEY });
+      qc.invalidateQueries({ queryKey: QUERY_KEY, exact: false });
       toast.success(t('habits_habit_deleted'));
     },
   });

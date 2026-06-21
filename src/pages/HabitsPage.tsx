@@ -1,13 +1,18 @@
-import { useEffect, useState } from 'react';
-import { Plus, Flame, Bell } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Plus, Flame, Bell, CheckCircle2, Calendar, Trophy, Sparkles, Lightbulb, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useHabits, useToggleHabit, useDeleteHabit } from '@/features/habits/useHabits';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { useAllHabits, useToggleHabit, useDeleteHabit } from '@/features/habits/useHabits';
+import { cn } from '@/lib/utils';
 import { HabitCard } from '@/features/habits/components/HabitCard';
 import { AddHabitModal } from '@/features/habits/components/AddHabitModal';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useT } from '@/i18n';
 import { getThisWeekMoodSummary } from '@/features/habits/habitMoodService';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { SkeletonBlock } from '@/components/common/Skeletons';
 
 export default function HabitsPage() {
   const [showAdd, setShowAdd] = useState(false);
@@ -18,15 +23,49 @@ export default function HabitsPage() {
     if (!user) return;
     getThisWeekMoodSummary(user.id).then(setWeekMood).catch(console.error);
   }, [user]);
-  const { data: habits = [], isLoading } = useHabits();
+  const [habitFilter, setHabitFilter] = useState<'all' | 'active' | 'paused'>('active');
+  const { data: allHabits = [], isLoading } = useAllHabits();
+  const habits = allHabits.filter(h => {
+    if (habitFilter === 'active') return h.is_active;
+    if (habitFilter === 'paused') return !h.is_active;
+    return true;
+  });
+  const activeHabits = allHabits.filter(h => h.is_active);
   const { mutate: toggle } = useToggleHabit();
   const { mutate: remove } = useDeleteHabit();
   const { permission, isSupported, request: requestNotifications } = useNotifications();
   const { t } = useT();
 
-  const todayDone = habits.filter(h => h.completedToday).length;
-  const totalStreak = habits.reduce((sum, h) => sum + h.currentStreak, 0);
-  const progressPct = habits.length > 0 ? Math.round((todayDone / habits.length) * 100) : 0;
+  const todayDone = activeHabits.filter(h => h.completedToday).length;
+  const avgRate = activeHabits.length > 0 ? Math.round(activeHabits.reduce((s, h) => s + h.completionRate, 0) / activeHabits.length) : 0;
+  const bestCurrentStreak = activeHabits.reduce((max, h) => Math.max(max, h.currentStreak), 0);
+  const bestEverStreak = allHabits.reduce((max, h) => Math.max(max, h.longestStreak), 0);
+  const progressPct = activeHabits.length > 0 ? Math.round((todayDone / activeHabits.length) * 100) : 0;
+
+  // AI Suggestions — fetched from Gemini via worker
+  const [habitSuggestions, setHabitSuggestions] = useState<Array<{ text: string; type: string }>>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(true);
+  const suggestionsLoaded = useRef(false);
+  const workerUrl = import.meta.env.VITE_AGENT_WORKER_URL as string;
+
+  useEffect(() => {
+    if (suggestionsLoaded.current || allHabits.length === 0 || isLoading) return;
+    suggestionsLoaded.current = true;
+    setSuggestionsLoading(true);
+    supabase.auth.getSession().then(({ data: { session: authSession } }) => {
+      if (!authSession) { setSuggestionsLoading(false); return; }
+      fetch(`${workerUrl}/habits/suggestions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession.access_token}` },
+      })
+        .then(res => res.ok ? res.json() : { suggestions: [] })
+        .then((body: { suggestions: Array<{ text: string; type: string }> }) => {
+          setHabitSuggestions(body.suggestions ?? []);
+        })
+        .catch(() => setHabitSuggestions([]))
+        .finally(() => setSuggestionsLoading(false));
+    });
+  }, [allHabits.length, isLoading, workerUrl]);
 
   function renderBody() {
     if (isLoading) {
@@ -58,73 +97,250 @@ export default function HabitsPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="px-4 sm:px-6 lg:px-8 pb-6">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-between py-5"
+      >
         <div>
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <Flame className="text-orange-400" size={22} />
-            {t('habits_title')}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {todayDone}/{habits.length} · {t('habits_days', { count: totalStreak })}
-          </p>
+          <h1 className="text-2xl lg:text-3xl font-semibold mb-1">{t('habits_title')}</h1>
+          <p className="text-sm text-muted-foreground">Build better habits, shape your life</p>
         </div>
         <div className="flex items-center gap-2">
           {isSupported && permission !== 'granted' && (
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={requestNotifications}
               title="Enable daily reminder"
-              className="p-2 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             >
-              <Bell size={15} />
-            </button>
+              <Bell className="w-4 h-4" />
+            </Button>
           )}
-          <button
-            type="button"
-            onClick={() => setShowAdd(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            <Plus size={16} />
+          <Button className="gap-2" style={{ background: 'var(--gradient-primary)' }} onClick={() => setShowAdd(true)}>
+            <Plus className="w-4 h-4" />
             {t('habits_add')}
-          </button>
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* Two-column layout */}
+      <div className="flex flex-col lg:flex-row gap-5 lg:items-start">
+        {/* Left column */}
+        <div className="flex-1 min-w-0 space-y-4">
+          {/* KPI Stats Row */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="glass-card card-accent surface-elevated">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="icon-tile w-8 h-8 rounded-md">
+                    <Flame className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">Current Streak</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight">
+                  {bestCurrentStreak} <span className="text-sm font-normal text-muted-foreground">days</span>
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="glass-card card-accent surface-elevated">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="icon-tile w-8 h-8 rounded-md">
+                    <CheckCircle2 className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">Completion Rate</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight">{avgRate}%</p>
+              </CardContent>
+            </Card>
+            <Card className="glass-card card-accent surface-elevated">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="icon-tile w-8 h-8 rounded-md">
+                    <Calendar className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">Habits Today</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight">
+                  {todayDone} <span className="text-sm font-normal text-muted-foreground">/ {activeHabits.length}</span>
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="glass-card card-accent surface-elevated">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="icon-tile w-8 h-8 rounded-md">
+                    <Trophy className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">Best Streak</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight">
+                  {bestEverStreak} <span className="text-sm font-normal text-muted-foreground">days</span>
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Progress bar */}
+          {activeHabits.length > 0 && (
+            <Card className="glass-card card-accent">
+              <CardContent className="p-4">
+                <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                  <span>{t('today')}</span>
+                  <span>{todayDone}/{activeHabits.length} · {progressPct}%</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-primary to-orange-400 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPct}%` }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Mood summary */}
+          {weekMood && weekMood.entries > 0 && (
+            <Card className="glass-card card-accent">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="text-3xl">{weekMood.emoji}</div>
+                <div>
+                  <p className="text-sm font-medium">{t('habits_mood_this_week')}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Avg. {weekMood.avgMood.toFixed(1)}/5 · {weekMood.entries} {weekMood.entries === 1 ? 'entry' : 'entries'}
+                  </p>
+                </div>
+                <div className="ml-auto text-right">
+                  <p className="text-2xl font-semibold">{weekMood.avgMood.toFixed(1)}</p>
+                  <p className="text-xs text-muted-foreground">/ 5</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Filter tabs */}
+          <div className="flex flex-wrap gap-1.5">
+            {([
+              { value: 'all' as const, label: 'All', count: allHabits.length },
+              { value: 'active' as const, label: 'Active', count: allHabits.filter(h => h.is_active).length },
+              { value: 'paused' as const, label: 'Paused', count: allHabits.filter(h => !h.is_active).length },
+            ]).map(f => (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => setHabitFilter(f.value)}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                  habitFilter === f.value
+                    ? "bg-primary/15 text-primary border border-primary/25"
+                    : "glass-card hover:bg-secondary/40"
+                )}
+              >
+                {f.label} ({f.count})
+              </button>
+            ))}
+          </div>
+
+          {/* AI Suggestions — Gemini-generated */}
+          {(suggestionsLoading || habitSuggestions.length > 0) && (
+            <Card className="glass-card card-accent">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="icon-tile w-7 h-7 rounded-md">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                  <span className="text-sm font-semibold">AI Suggestions</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">Based on your habits</p>
+                {suggestionsLoading ? (
+                  <div className="space-y-2">
+                    <SkeletonBlock className="h-10 w-full" />
+                    <SkeletonBlock className="h-10 w-full" />
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {habitSuggestions.map((s, i) => (
+                      <li key={i} className="flex items-start gap-3 rounded-lg bg-secondary/20 px-3 py-2.5">
+                        <div className={cn("icon-tile w-7 h-7 rounded-lg shrink-0 mt-0.5", s.type === 'recommendation' ? 'bg-emerald-500/15' : 'bg-violet-500/15')}>
+                          {s.type === 'recommendation'
+                            ? <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
+                            : <Lightbulb className="w-3.5 h-3.5 text-violet-400" />}
+                        </div>
+                        <p className="text-xs leading-relaxed">{s.text}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Habit list */}
+          {renderBody()}
+        </div>
+
+        {/* Right sidebar */}
+        <div className="w-full lg:w-[300px] shrink-0 space-y-4 lg:sticky lg:top-4 lg:self-start">
+          {/* Today's Progress */}
+          <Card className="glass-card card-accent">
+            <CardContent className="p-4 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="icon-tile w-7 h-7 rounded-md">
+                  <Flame className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <span className="text-sm font-semibold">Today&apos;s Progress</span>
+              </div>
+
+              {/* Progress ring */}
+              <div className="flex flex-col items-center">
+                <div className="relative w-28 h-28">
+                  <svg viewBox="0 0 112 112" className="w-full h-full -rotate-90">
+                    <circle cx="56" cy="56" r="48" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
+                    <circle
+                      cx="56" cy="56" r="48" fill="none"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth="8"
+                      strokeLinecap="round"
+                      strokeDasharray={`${activeHabits.length > 0 ? (todayDone / activeHabits.length) * 301.6 : 0} 301.6`}
+                    />
+                  </svg>
+                  <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold">
+                    {progressPct}%
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {progressPct === 100
+                    ? 'All done — nice work!'
+                    : progressPct > 0
+                      ? 'Great start! Keep it up.'
+                      : "Let's get going!"}
+                </p>
+              </div>
+
+              {/* Mini stats */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p className="text-lg font-bold text-emerald-400">{todayDone}</p>
+                  <p className="text-[10px] text-muted-foreground">Completed</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-orange-400">{activeHabits.length - todayDone}</p>
+                  <p className="text-[10px] text-muted-foreground">Remaining</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-primary">{activeHabits.length}</p>
+                  <p className="text-[10px] text-muted-foreground">Total Habits</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
-
-      {habits.length > 0 && (
-        <div className="bg-card border border-border rounded-xl p-4">
-          <div className="flex justify-between text-xs text-muted-foreground mb-2">
-            <span>{t('today')}</span>
-            <span>{progressPct}%</span>
-          </div>
-          <div className="h-2 bg-muted rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-gradient-to-r from-primary to-orange-400 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${progressPct}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
-            />
-          </div>
-        </div>
-      )}
-
-      {weekMood && weekMood.entries > 0 && (
-        <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-4">
-          <div className="text-3xl">{weekMood.emoji}</div>
-          <div>
-            <p className="text-sm font-medium">{t('habits_mood_this_week')}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Avg. {weekMood.avgMood.toFixed(1)}/5 · {weekMood.entries} {weekMood.entries === 1 ? 'entry' : 'entries'}
-            </p>
-          </div>
-          <div className="ml-auto text-right">
-            <p className="text-2xl font-semibold">{weekMood.avgMood.toFixed(1)}</p>
-            <p className="text-xs text-muted-foreground">/ 5</p>
-          </div>
-        </div>
-      )}
-
-      {renderBody()}
 
       {showAdd && <AddHabitModal onClose={() => setShowAdd(false)} />}
     </div>

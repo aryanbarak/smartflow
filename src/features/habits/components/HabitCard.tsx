@@ -1,6 +1,20 @@
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Flame, Trophy, Check, Trash2 } from 'lucide-react';
 import type { HabitWithStats } from '../types';
+
+const WEEKDAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
+
+function getCurrentWeekDays(): string[] {
+  const today = new Date();
+  const day = today.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + mondayOffset + i);
+    return d.toISOString().split('T')[0];
+  });
+}
 
 interface Props {
   readonly habit: HabitWithStats;
@@ -9,17 +23,19 @@ interface Props {
 }
 
 export function HabitCard({ habit, onToggle, onDelete }: Props) {
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(Date.now() - (6 - i) * 86400000);
-    return d.toISOString().split('T')[0];
-  });
+  const weekDays = useMemo(() => getCurrentWeekDays(), []);
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const completionSet = useMemo(
+    () => new Set(habit.completions.map(c => c.completed_date)),
+    [habit.completions],
+  );
 
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3"
+      className="glass-card rounded-xl p-4 flex flex-col gap-3"
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -61,21 +77,25 @@ export function HabitCard({ habit, onToggle, onDelete }: Props) {
         </div>
       </div>
 
-      {/* 7-day mini calendar */}
-      <div className="flex gap-1">
-        {last7Days.map(date => {
-          const done = habit.completions.some(c => c.completed_date === date);
-          const isToday = date === new Date().toISOString().split('T')[0];
+      {/* Weekly heatmap — Mon to Sun */}
+      <div className="flex gap-1.5 items-end">
+        {weekDays.map((date, i) => {
+          const done = completionSet.has(date);
+          const isFuture = date > todayStr;
+          const isToday = date === todayStr;
           return (
-            <div
-              key={date}
-              className="flex-1 h-7 rounded-md flex items-center justify-center transition-all"
-              style={{
-                backgroundColor: done ? habit.color : habit.color + '15',
-                border: isToday ? `1.5px solid ${habit.color}` : '1.5px solid transparent',
-              }}
-            >
-              {done && <Check size={10} color="white" />}
+            <div key={date} className="flex-1 flex flex-col items-center gap-1">
+              <span className="text-[9px] text-muted-foreground leading-none">{WEEKDAY_LABELS[i]}</span>
+              <div
+                className="w-full h-6 rounded-md flex items-center justify-center transition-all"
+                style={{
+                  backgroundColor: done ? habit.color : isFuture ? 'transparent' : habit.color + '15',
+                  border: isToday ? `1.5px solid ${habit.color}` : '1.5px solid transparent',
+                  opacity: isFuture ? 0.3 : 1,
+                }}
+              >
+                {done && <Check size={10} color="white" />}
+              </div>
             </div>
           );
         })}

@@ -210,6 +210,93 @@ export async function fetchTaskSnapshot(userId: string, env: Env): Promise<TaskS
 }
 
 // =============================================
+// Habits — snapshot for AI habit suggestions
+// =============================================
+export interface HabitSnapshotItem {
+  title: string
+  completionRate: number
+  currentStreak: number
+  longestStreak: number
+  atBestStreak: boolean
+  notCompletedIn3Days: boolean
+}
+
+export interface HabitSnapshot {
+  total: number
+  habits: HabitSnapshotItem[]
+  atRiskCount: number
+  bestStreakCount: number
+}
+
+export async function fetchHabitSnapshot(userId: string, env: Env): Promise<HabitSnapshot> {
+  const now = new Date()
+  const today = now.toISOString().slice(0, 10)
+  const yesterday = new Date(now.getTime() - 86400000).toISOString().slice(0, 10)
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000).toISOString().slice(0, 10)
+  const threeDaysAgo = new Date(now.getTime() - 3 * 86400000).toISOString().slice(0, 10)
+
+  const [habitRows, completionRows] = await Promise.all([
+    supabaseGet<Array<{ id: string; title: string; created_at: string }>>(
+      env, `habits?select=id,title,created_at&user_id=eq.${userId}&is_active=eq.true&order=created_at.asc`
+    ),
+    supabaseGet<Array<{ habit_id: string; completed_date: string }>>(
+      env, `habit_completions?select=habit_id,completed_date&user_id=eq.${userId}&completed_date=gte.${thirtyDaysAgo}`
+    ),
+  ])
+
+  const habits: HabitSnapshotItem[] = habitRows.map(h => {
+    const comps = completionRows.filter(c => c.habit_id === h.id)
+    const dates = comps.map(c => c.completed_date).sort().reverse()
+
+    // Streak calculation — same logic as frontend habitsService.ts
+    let currentStreak = 0
+    if (dates.length > 0 && (dates[0] === today || dates[0] === yesterday)) {
+      let checkDate = dates[0]
+      for (const date of dates) {
+        if (currentStreak === 0) {
+          currentStreak = 1
+          checkDate = date
+        } else {
+          const expected = new Date(checkDate + 'T00:00:00')
+          expected.setDate(expected.getDate() - 1)
+          const expectedStr = expected.toISOString().slice(0, 10)
+          if (date === expectedStr) { currentStreak++; checkDate = date }
+          else break
+        }
+      }
+    }
+
+    let longestStreak = currentStreak
+    let streak = 1
+    for (let i = 1; i < dates.length; i++) {
+      const prev = new Date(dates[i - 1] + 'T00:00:00')
+      const curr = new Date(dates[i] + 'T00:00:00')
+      const diff = Math.round((prev.getTime() - curr.getTime()) / 86400000)
+      if (diff === 1) { streak++; if (streak > longestStreak) longestStreak = streak }
+      else streak = 1
+    }
+
+    // Completion rate — same formula as frontend
+    const daysSinceCreation = Math.ceil((now.getTime() - new Date(h.created_at).getTime()) / 86400000)
+    const ratePeriodDays = Math.max(1, Math.min(30, daysSinceCreation))
+    const completionRate = Math.round((comps.length / ratePeriodDays) * 100)
+
+    const mostRecent = dates[0] ?? null
+    const notCompletedIn3Days = !mostRecent || mostRecent < threeDaysAgo
+    const atBestStreak = currentStreak === longestStreak && longestStreak > 1
+
+    return { title: h.title, completionRate, currentStreak, longestStreak, atBestStreak, notCompletedIn3Days }
+  })
+
+  return {
+    total: habits.length,
+    habits,
+    atRiskCount: habits.filter(h => h.notCompletedIn3Days).length,
+    bestStreakCount: habits.filter(h => h.atBestStreak).length,
+  }
+}
+
+// =============================================
 // Calendar — snapshot for AI schedule suggestions
 // =============================================
 export interface CalendarSnapshot {

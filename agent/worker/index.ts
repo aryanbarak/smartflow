@@ -1,5 +1,5 @@
 import type { Env, AgentBriefing, ExtractedFact, MemoryEntry, UserContext, BriefingMode, ChatMessage, ChatOptions } from './types'
-import { buildUserContext, fetchUserMemory, fetchUserLanguage, fetchTaskSnapshot, fetchCalendarSnapshot, supabaseGet, supabasePost, supabasePatch } from './context-builder'
+import { buildUserContext, fetchUserMemory, fetchUserLanguage, fetchTaskSnapshot, fetchCalendarSnapshot, fetchHabitSnapshot, supabaseGet, supabasePost, supabasePatch } from './context-builder'
 import { buildPrompt, buildExtractionPrompt, buildChatExtractionPrompt, EXTRACTABLE_KEYS, buildChatSystemPrompt } from './prompt-builder'
 
 const ENABLE_AUTO_MEMORY_WRITE = true
@@ -41,6 +41,10 @@ export default {
 
     if (pathname === '/calendar/suggestions') {
       return handleCalendarSuggestions(request, env)
+    }
+
+    if (pathname === '/habits/suggestions') {
+      return handleHabitSuggestions(request, env)
     }
 
     return json({ error: 'Not found' }, 404, origin)
@@ -359,6 +363,117 @@ async function handleCalendarSuggestions(request: Request, env: Env): Promise<Re
     return json({ suggestions }, 200, origin)
   } catch (err) {
     console.error('[CalendarSuggestions] Error:', err)
+    return json({ suggestions: [] }, 200, origin)
+  }
+}
+
+// =============================================
+// /habits/suggestions handler
+// =============================================
+async function handleHabitSuggestions(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin') ?? ''
+
+  const { userId, error: authError } = await requireAuth(request, env)
+  if (authError || !userId) {
+    return json({ error: authError ?? 'Unauthorized' }, 401, origin)
+  }
+
+  try {
+    const [snapshot, language] = await Promise.all([
+      fetchHabitSnapshot(userId, env),
+      fetchUserLanguage(userId, env),
+    ])
+
+    if (snapshot.total === 0) {
+      return json({ suggestions: [] }, 200, origin)
+    }
+
+    const system = [
+      `You are a habit tracking analyst. Analyze the user's real habit data below and return 2-3 short, specific, actionable observations.`,
+      ``,
+      `RULES:`,
+      `- ONLY state patterns that are verifiably true from the provided data — no generic motivational filler, no fabricated claims.`,
+      `- Each observation must reference specific habit names, streak counts, or completion rates from the data.`,
+      `- Keep each observation to 1 sentence, max 15 words.`,
+      `- Return ONLY a JSON array, no markdown, no preamble, no explanation.`,
+      `- Each item: { "text": "...", "type": "pattern" | "recommendation" }`,
+      `- "pattern" = an observation about what the data shows. "recommendation" = a specific suggested action.`,
+      `- Do NOT claim any time-of-day patterns — no time data is available.`,
+      `- Do NOT claim habits affect productivity, mood, or other unrelated metrics.`,
+      `- If nothing notable exists in the data, return an empty array [].`,
+      `- Write in ${language === 'de' ? 'German' : language === 'fa' ? 'Persian (Farsi)' : 'English'}.`,
+    ].join('\n')
+
+    const habitLines = snapshot.habits.map(h => {
+      const flags: string[] = []
+      if (h.atBestStreak) flags.push('AT BEST STREAK')
+      if (h.notCompletedIn3Days) flags.push('NOT DONE IN 3+ DAYS')
+      return `  ${h.title}: ${h.currentStreak}-day streak, best ${h.longestStreak}, rate ${h.completionRate}%${flags.length > 0 ? ` [${flags.join(', ')}]` : ''}`
+    }).join('\n')
+
+    const dataLines = [
+      `Active habits: ${snapshot.total}`,
+      `At risk (not completed in 3+ days): ${snapshot.atRiskCount}`,
+      `At best-ever streak: ${snapshot.bestStreakCount}`,
+      ``,
+      `Per-habit details:`,
+      habitLines,
+    ].join('\n')
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: system }] },
+          contents: [{ parts: [{ text: dataLines }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  text: { type: 'STRING' },
+                  type: { type: 'STRING', enum: ['pattern', 'recommendation'] },
+                },
+                required: ['text', 'type'],
+              },
+            },
+            maxOutputTokens: 256,
+            temperature: 0.3,
+            thinkingConfig: { thinkingBudget: 0 },
+          },
+        }),
+      }
+    )
+
+    if (!res.ok) {
+      console.error('[HabitSuggestions] Gemini error:', await res.text())
+      return json({ suggestions: [] }, 200, origin)
+    }
+
+    const data: unknown = await res.json()
+    const raw: string = (data as any)?.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]'
+
+    let suggestions: Array<{ text: string; type: string }> = []
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) {
+        suggestions = parsed
+          .filter((s: any) => typeof s.text === 'string' && s.text.trim().length > 0)
+          .slice(0, 3)
+          .map((s: any) => ({ text: s.text.trim(), type: s.type === 'recommendation' ? 'recommendation' : 'pattern' }))
+      }
+    } catch {
+      console.error('[HabitSuggestions] Failed to parse Gemini response:', raw)
+    }
+
+    console.log(`[HabitSuggestions] userId=${userId} habits=${snapshot.total} suggestions=${suggestions.length}`)
+    return json({ suggestions }, 200, origin)
+  } catch (err) {
+    console.error('[HabitSuggestions] Error:', err)
     return json({ suggestions: [] }, 200, origin)
   }
 }

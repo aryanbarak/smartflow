@@ -51,14 +51,19 @@ function calculateStreak(completions: HabitCompletion[]): { current: number; lon
 }
 
 export const habitsService = {
-  async getAll(): Promise<HabitWithStats[]> {
+  async getAll(includeInactive = false): Promise<HabitWithStats[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
 
+    let habitsQuery = supabase.from('habits').select('*').eq('user_id', user.id).order('created_at');
+    if (!includeInactive) {
+      habitsQuery = habitsQuery.eq('is_active', true);
+    }
+
     const [{ data: habits, error: hErr }, { data: completions, error: cErr }] = await Promise.all([
-      supabase.from('habits').select('*').eq('user_id', user.id).eq('is_active', true).order('created_at'),
+      habitsQuery,
       supabase.from('habit_completions').select('*').eq('user_id', user.id).gte('completed_date', thirtyDaysAgo),
     ]);
 
@@ -69,7 +74,11 @@ export const habitsService = {
     return (habits || []).map(habit => {
       const habitCompletions = (completions || []).filter(c => c.habit_id === habit.id);
       const { current, longest } = calculateStreak(habitCompletions);
-      const completionRate = Math.round((habitCompletions.length / 30) * 100);
+      const daysSinceCreation = Math.ceil(
+        (Date.now() - new Date(habit.created_at).getTime()) / 86400000
+      );
+      const ratePeriodDays = Math.max(1, Math.min(30, daysSinceCreation));
+      const completionRate = Math.round((habitCompletions.length / ratePeriodDays) * 100);
       const completedToday = habitCompletions.some(c => c.completed_date === today);
 
       return {
