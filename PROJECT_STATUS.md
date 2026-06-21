@@ -75,59 +75,81 @@ Keep this file under 2 pages; update after every session.
 
 ---
 
-## Completed This Session (2026-06-20) — Tasks Page Redesign
+## Completed This Session (2026-06-17/21) — Full UI Redesign
 
-### Tasks Page — Full Redesign ✅
+### Dashboard Redesign ✅
 
-- ✅ **Two-column layout**: left column (stats + focus + filters + task list) + right sidebar (300px, sticky) with AI Suggestions, Productivity Stats, Smart Academy
-- ✅ **4 KPI stat cards** (inside left column, above Today's Focus): Total Tasks, Open Tasks, Due This Week, Completion Rate — all computed from real `useTasks()` data, using `glass-card card-accent surface-elevated` + `icon-tile` pattern from Dashboard
-- ✅ **Today's Focus horizontal card**: matches mockup — left (Target icon + title + subtitle), middle (up to 3 tasks with interactive checkboxes in 2-col grid), right (SVG circular progress ring showing X/Y + "Completed"). Hidden when no tasks are due today/overdue
-- ✅ **"Upcoming" filter tab** added: tasks due in next 2-7 days (not today, not overdue, not completed) — inserted between Today and Overdue tabs
-- ✅ **Filter tabs restyled**: replaced shadcn `TabsList`/`TabsTrigger` with custom pill buttons (`bg-primary/15 text-primary border-primary/25` active, `glass-card` inactive) matching Dashboard toggle style
-- ✅ **Task list rows restyled**: `bg-secondary` → `glass-card rounded-xl`, completed tasks get `opacity-60`, badge colors accent-driven (`border-primary/30 text-primary` for open), task `notes` shown as truncated subtitle below title
-- ✅ **AI Suggestions sidebar widget** (inline, not a reusable component): derives 3 real suggestions from user's actual tasks — overdue tasks (rose), upcoming tasks (violet), undated tasks (emerald). No fake data
-- ✅ **Productivity Stats sidebar widget** (inline): 3 stats with colored icon-tiles — Completed (X of Y tasks), Due This Week (N upcoming), Completion Rate (X% overall). All computed from real data
-- ✅ **SmartAcademyWidget** reused in sidebar (same import as Dashboard, no code duplication)
-- ✅ **Empty state**: constrained to `max-w-md mx-auto` for compact centered appearance
-- ✅ **"Add Task" button**: restyled with `var(--gradient-primary)` gradient matching Dashboard CTAs
-- ✅ **Full-width layout**: removed `max-w-4xl` constraint, now uses `px-4 sm:px-6 lg:px-8` matching Dashboard
-- ✅ **Mobile responsive**: sidebar stacks below on mobile, stats go `grid-cols-2`, Today's Focus stacks vertically
+- ✅ Removed DesktopHeader (title/date/search bar); moved GlobalSearch into Sidebar above user profile
+- ✅ Replaced inline Today/Tasks/Finance widgets with 3 new honest-data widgets: SmartAcademyWidget (real Learn AI activity), TodaysFocusWidget (interactive task checkboxes), AiInsightsWidget (frontend-computed spending/habit/task insights — no AI call)
+- ✅ Reordered layout: stats → three-widget grid → Daily Briefing → Recommended Topics
+- ✅ Daily Briefing: shortened prompt (1 paragraph + 2 bullets, all 3 languages), side-by-side image layout, removed redundant "Today/Yesterday" badge
+- ✅ Built Weekly Briefing page (`/briefing/weekly`) — manual generation only, cron is intentionally dormant
+- ✅ Built and fully reverted "AI News" RSS feature (decision: didn't want it)
+- ✅ Recommended Topics widget: 4 static FIAE/IHK topics with "Start" buttons linking to Flow AI Chat
+
+### Flow AI Chat — Session System ✅
+
+- ✅ New `chat_sessions` table + `session_id` column on `agent_chat_messages` (migration `20260620120000`; old pre-session messages intentionally orphaned)
+- ✅ Worker `/chat` endpoint scopes history fetch + writes to `session_id`; bumps `chat_sessions.updated_at` after each message
+- ✅ Frontend: "New Chat" button, session list sidebar (clickable, highlighted active), per-session message loading
+- ✅ Quick Actions grid (6 cards: Study/Plan/Habits/Finance/Weekly/Career) — sends prompts directly via handleSend
+- ✅ Redesigned empty state: Hero card with real stats (conversation count, task count)
+- ✅ Chat bubbles restyled: Bot avatar on assistant messages, glass-card bubble styling
+- ✅ Markdown rendering in assistant responses (ReactMarkdown with bullet preprocessing)
+
+### Flow AI Chat — Deferred
+
+- Recent Documents widget (no existing hook/service)
+- Conversation action buttons (Copy/Regenerate/Like/Dislike — needs backend support)
+- File upload / voice / code buttons in input (C3b still in backlog)
+
+### Tasks Page Redesign ✅
+
+- ✅ 4 KPI stat cards (Total/Open/Due This Week/Completion Rate) with icon-tiles
+- ✅ "Upcoming" filter tab (2-7 days out); filter tabs restyled as pill buttons
+- ✅ Today's Focus horizontal card with SVG progress ring + interactive checkboxes
+- ✅ AI Suggestions: real Gemini-generated insights via `POST /tasks/suggestions` worker endpoint (`fetchTaskSnapshot`, strict no-hallucination prompt)
+- ✅ "Ask about your tasks" compact chat box: creates chat session, injects real task context (due today/tomorrow/this week/overdue) into Gemini prompt — answers grounded in actual data
+- ✅ Productivity Stats with time-range selector (This Week / This Month / All Time): real week-over-week trends backed by new `tasks.completed_at` column (migration `20260620140000`)
+- ✅ Task list rows restyled: glass-card, notes shown, accent-driven badges
 
 ### Tasks Page — Deferred
 
-- Priority field (High/Medium/Low) — requires DB schema change (`ALTER TABLE tasks ADD COLUMN priority`)
+- Priority field (High/Medium/Low) — requires DB schema change
 - Star/favorite toggle — requires DB schema change
-- Board View (Kanban) — significant new feature, deferred
-- List View / Board View toggle — depends on Board View implementation
-- "vs last week" comparisons in Productivity Stats — no `completed_at` timestamp available
+- Board View (Kanban) — significant new feature
+
+### Calendar Page Redesign ✅
+
+- ✅ 4 KPI stat cards (Events Today/This Week/Categories/Upcoming)
+- ✅ Category color legend + category selector added to CalendarFormDialog (`type` column was unused — now set to personal/work/family/health on create/edit)
+- ✅ Month grid dots color-coded by event category (was single blue dot for all)
+- ✅ Today's Agenda sidebar: combines calendar events + tasks due today, honest progress ring (tasks-only — events have no completion concept), interactive checkboxes
+- ✅ Upcoming Events sidebar: next 7 days, chronological, category badges, "View all" link
+- ✅ AI Suggestions: real Gemini-generated schedule insights via `POST /calendar/suggestions` worker endpoint (`fetchCalendarSnapshot`), clickable suggestions open Add Event dialog pre-filled with suggested date
+- ✅ Explicitly skipped: "Focus Time" tracking + "Productivity Score" — no data/infrastructure, avoided fabricating metrics
+
+### Cross-Cutting Fixes ✅
+
+- ✅ Fixed Sidebar profile block scrolling away on long pages (`sticky top-0` on `<aside>`)
+- ✅ Cleaned up accidentally committed `.wrangler/` cache files, added to `.gitignore`
+- ✅ Daily Briefing title enlarged (13px→16px, weight 500→600)
+
+### New Migrations This Session
+
+- `20260620120000_chat_sessions.sql` — `chat_sessions` table + `agent_chat_messages.session_id`
+- `20260620140000_tasks_completed_at.sql` — `tasks.completed_at` column (no backfill, NULL for existing)
+- `20260619120000_ai_news_items.sql` + `20260619140000_drop_ai_news_items.sql` — created then dropped (feature reverted)
+
+### New Worker Endpoints This Session
+
+- `POST /tasks/suggestions` — Gemini-analyzed task patterns, structured JSON
+- `POST /calendar/suggestions` — Gemini-analyzed schedule patterns, structured JSON with optional `suggestedDate`
+- `POST /chat` updated — now requires `session_id`, scoped history, bumps session `updated_at`
 
 ---
 
-## Completed This Session (2026-06-20) — Flow AI Page Redesign
-
-### Flow AI Page — Phase 1 ✅
-
-- ✅ **Two-column layout**: center column (hero + quick actions + conversation) + right sidebar (280px, sticky) reusing existing Dashboard widgets (TodaysFocusWidget, AiInsightsWidget, SmartAcademyWidget — no duplicated code)
-- ✅ **Hero card**: greeting with user name (from useProfile), animated AI orb, 2 live stats (conversation count from messages, task count from useTasks) with icon-tiles
-- ✅ **Quick Actions grid**: 6 action cards (Study / Plan / Habits / Finance / Weekly / Career) with distinct colored icon-tiles; clicking sends the prompt directly via existing handleSend — no navigation, instant conversation start
-- ✅ **Conversation card**: glass-card styled, max-h scroll, assistant messages now have Bot avatar icon, glass-card bubble styling; user messages rounded with accent color
-- ✅ **Input area**: gradient Send button, inside the conversation card below messages
-- ✅ **All existing functionality preserved**: message history, Supabase persistence, auto-send from location.state.initialPrompt, keyboard handling
-- ✅ **i18n**: 18 new keys added (en/de/fa) for greeting, hero description, stats, quick action labels/descriptions, conversation title
-- ✅ **Responsive**: mobile stacks center + sidebar vertically; sidebar widgets below main content on mobile
-
-### Flow AI Page — Deferred (Phase 2+)
-
-- AI Suggestions section (requires real AI-powered recommendations — no fake data added)
-- Recent Documents widget (no existing hook/service — needs new backend query)
-- Conversation action buttons (Copy/Regenerate/Like/Dislike — needs backend support)
-- File upload / voice / code buttons in input (C3b still in backlog)
-- Animated orb with particles (cosmetic polish, not functional)
-- "New Chat" button (would need conversation threading — architecture change)
-
----
-
-## Completed This Session (2026-06-17/19) — Dashboard Redesign
+## Completed Previously (2026-06-17/19) — Dashboard Redesign
 
 Branch: `redesign/ui-cleanup`
 
