@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Plus,
   Send,
+  Trash2,
   Wallet,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
@@ -171,7 +172,7 @@ export default function ChatPage() {
   const { t } = useT()
   const location = useLocation()
   const nav = useNavigate()
-  const { sessions, refresh: refreshSessions, createSession } = useChatSessions()
+  const { sessions, refresh: refreshSessions, createSession, deleteSession } = useChatSessions()
 
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMsg[]>([])
@@ -480,12 +481,12 @@ export default function ChatPage() {
               ) : (
                 <ul className="max-h-[500px] overflow-y-auto space-y-1 -mx-1">
                   {sessions.map(s => (
-                    <li key={s.id}>
+                    <li key={s.id} className="group flex items-center">
                       <button
                         type="button"
                         onClick={() => selectSession(s.id)}
                         className={cn(
-                          'w-full text-left rounded-lg px-2.5 py-2 transition-colors',
+                          'flex-1 min-w-0 text-left rounded-lg px-2.5 py-2 transition-colors',
                           s.id === activeSessionId
                             ? 'bg-primary/10 border border-primary/20'
                             : 'hover:bg-secondary/30'
@@ -497,6 +498,17 @@ export default function ChatPage() {
                         <p className="text-[10px] text-muted-foreground mt-0.5">
                           {timeAgo(s.updated_at)}
                         </p>
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Delete conversation"
+                        onClick={async () => {
+                          const ok = await deleteSession(s.id);
+                          if (ok && activeSessionId === s.id) startNewChat();
+                        }}
+                        className="shrink-0 p-1.5 rounded-md opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+                      >
+                        <Trash2 className="w-3 h-3" />
                       </button>
                     </li>
                   ))}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Flame, Bell, CheckCircle2, Calendar, Trophy, Sparkles, Lightbulb, ArrowRight } from 'lucide-react';
+import { Plus, Flame, Bell, Check, CheckCircle2, Calendar, Trophy, Sparkles, Lightbulb, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { SkeletonBlock } from '@/components/common/Skeletons';
 
 export default function HabitsPage() {
+  const navigate = useNavigate();
   const [showAdd, setShowAdd] = useState(false);
   const { user } = useAuth();
   const [weekMood, setWeekMood] = useState<{ avgMood: number; entries: number; emoji: string } | null>(null);
@@ -204,6 +206,56 @@ export default function HabitsPage() {
             </Card>
           )}
 
+          {/* Today's Habits — horizontal cards */}
+          {activeHabits.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">Today&apos;s Habits</h3>
+                <span className="text-xs text-muted-foreground">{todayDone} / {activeHabits.length} completed · {progressPct}%</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                {activeHabits.map(habit => (
+                  <button
+                    key={habit.id}
+                    type="button"
+                    onClick={() => toggle({ habitId: habit.id })}
+                    className="glass-card rounded-xl p-3 text-left transition-all hover:scale-[1.02] hover:shadow-elevated"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0"
+                          style={{ backgroundColor: habit.color + '22', border: `1.5px solid ${habit.color}44` }}
+                        >
+                          {habit.icon}
+                        </div>
+                        <span className="text-xs font-medium truncate">{habit.title}</span>
+                      </div>
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
+                        style={{
+                          backgroundColor: habit.completedToday ? habit.color : 'transparent',
+                          border: `1.5px solid ${habit.color}`,
+                        }}
+                      >
+                        {habit.completedToday && <Check size={12} color="white" />}
+                      </div>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: habit.completedToday ? '100%' : '0%',
+                          backgroundColor: habit.color,
+                        }}
+                      />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Mood summary */}
           {weekMood && weekMood.entries > 0 && (
             <Card className="glass-card card-accent">
@@ -245,40 +297,6 @@ export default function HabitsPage() {
               </button>
             ))}
           </div>
-
-          {/* AI Suggestions — Gemini-generated */}
-          {(suggestionsLoading || habitSuggestions.length > 0) && (
-            <Card className="glass-card card-accent">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="icon-tile w-7 h-7 rounded-md">
-                    <Sparkles className="w-3.5 h-3.5 text-primary" />
-                  </div>
-                  <span className="text-sm font-semibold">AI Suggestions</span>
-                </div>
-                <p className="text-[11px] text-muted-foreground">Based on your habits</p>
-                {suggestionsLoading ? (
-                  <div className="space-y-2">
-                    <SkeletonBlock className="h-10 w-full" />
-                    <SkeletonBlock className="h-10 w-full" />
-                  </div>
-                ) : (
-                  <ul className="space-y-2">
-                    {habitSuggestions.map((s, i) => (
-                      <li key={i} className="flex items-start gap-3 rounded-lg bg-secondary/20 px-3 py-2.5">
-                        <div className={cn("icon-tile w-7 h-7 rounded-lg shrink-0 mt-0.5", s.type === 'recommendation' ? 'bg-emerald-500/15' : 'bg-violet-500/15')}>
-                          {s.type === 'recommendation'
-                            ? <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
-                            : <Lightbulb className="w-3.5 h-3.5 text-violet-400" />}
-                        </div>
-                        <p className="text-xs leading-relaxed">{s.text}</p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-          )}
 
           {/* Habit list */}
           {renderBody()}
@@ -339,6 +357,53 @@ export default function HabitsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* AI Suggestions — Gemini-generated */}
+          {(suggestionsLoading || habitSuggestions.length > 0) && (
+            <Card className="glass-card card-accent">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="icon-tile w-7 h-7 rounded-md">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                  <span className="text-sm font-semibold">AI Suggestions</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">Based on your habits</p>
+                {suggestionsLoading ? (
+                  <div className="space-y-2">
+                    <SkeletonBlock className="h-10 w-full" />
+                    <SkeletonBlock className="h-10 w-full" />
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {habitSuggestions.map((s, i) => {
+                      const isAction = s.type === 'recommendation';
+                      const Row = isAction ? 'button' : 'div';
+                      return (
+                        <li key={i}>
+                          <Row
+                            type={isAction ? 'button' : undefined}
+                            onClick={isAction ? () => navigate('/chat', { state: { initialPrompt: s.text } }) : undefined}
+                            className={cn(
+                              "w-full flex items-start gap-3 rounded-lg bg-secondary/20 px-3 py-2.5 text-left",
+                              isAction && "cursor-pointer transition-colors hover:bg-white/5"
+                            )}
+                          >
+                            <div className={cn("icon-tile w-7 h-7 rounded-lg shrink-0 mt-0.5", isAction ? 'bg-emerald-500/15' : 'bg-violet-500/15')}>
+                              {isAction
+                                ? <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
+                                : <Lightbulb className="w-3.5 h-3.5 text-violet-400" />}
+                            </div>
+                            <p className="text-xs leading-relaxed">{s.text}</p>
+                          </Row>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useCreateHabit } from '../useHabits';
+import { cn } from '@/lib/utils';
 
 const ICONS = ['⭐', '💪', '📚', '🏃', '🧘', '🧠', '🎯', '🌱', '😴', '🎵'];
 const COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444', '#14b8a6'];
+const TARGET_UNITS = ['days', 'sessions', 'hours', 'times'] as const;
 
 interface Props {
   readonly onClose: () => void;
@@ -14,12 +16,26 @@ export function AddHabitModal({ onClose }: Props) {
   const [description, setDescription] = useState('');
   const [icon, setIcon] = useState('⭐');
   const [color, setColor] = useState('#6366f1');
+  const [habitType, setHabitType] = useState<'ongoing' | 'goal'>('ongoing');
+  const [targetValue, setTargetValue] = useState('');
+  const [targetUnit, setTargetUnit] = useState<string>('days');
   const { mutate: create, isPending } = useCreateHabit();
 
   const handleSubmit = () => {
     if (!title.trim()) return;
     create(
-      { title: title.trim(), description: description.trim() || undefined, icon, color, frequency: 'daily', target_days: 1, is_active: true },
+      {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        icon,
+        color,
+        frequency: 'daily',
+        target_days: 1,
+        is_active: true,
+        habit_type: habitType,
+        target_value: habitType === 'goal' && targetValue ? Number(targetValue) : undefined,
+        target_unit: habitType === 'goal' && targetValue ? targetUnit : undefined,
+      },
       { onSuccess: onClose }
     );
   };
@@ -35,13 +51,49 @@ export function AddHabitModal({ onClose }: Props) {
         </div>
 
         <div className="space-y-4">
+          {/* Habit type toggle */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-2 block">Type</label>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => setHabitType('ongoing')}
+                className={cn(
+                  "flex-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors",
+                  habitType === 'ongoing'
+                    ? "bg-primary/15 text-primary border border-primary/25"
+                    : "bg-muted hover:bg-muted/80"
+                )}
+              >
+                Ongoing
+              </button>
+              <button
+                type="button"
+                onClick={() => setHabitType('goal')}
+                className={cn(
+                  "flex-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors",
+                  habitType === 'goal'
+                    ? "bg-primary/15 text-primary border border-primary/25"
+                    : "bg-muted hover:bg-muted/80"
+                )}
+              >
+                Goal
+              </button>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1.5">
+              {habitType === 'ongoing'
+                ? 'Recurring habit like exercise or meditation — never ends.'
+                : 'Finite goal like "read 20 books" — achieved when target is reached.'}
+            </p>
+          </div>
+
           <div>
             <label className="text-xs text-muted-foreground mb-1.5 block">Title *</label>
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-              placeholder="e.g. 30 min exercise"
+              placeholder={habitType === 'ongoing' ? 'e.g. 30 min exercise' : 'e.g. Read 20 books'}
               className="w-full bg-muted rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"
               autoFocus
             />
@@ -56,6 +108,38 @@ export function AddHabitModal({ onClose }: Props) {
               className="w-full bg-muted rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
+
+          {/* Goal target — only shown for goal type */}
+          {habitType === 'goal' && (
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label htmlFor="habit-target" className="text-xs text-muted-foreground mb-1.5 block">Target</label>
+                <input
+                  id="habit-target"
+                  type="number"
+                  min="1"
+                  value={targetValue}
+                  onChange={e => setTargetValue(e.target.value)}
+                  placeholder="e.g. 20"
+                  className="w-full bg-muted rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
+              <div className="flex-1">
+                <label htmlFor="habit-unit" className="text-xs text-muted-foreground mb-1.5 block">Unit</label>
+                <select
+                  id="habit-unit"
+                  title="Target unit"
+                  value={targetUnit}
+                  onChange={e => setTargetUnit(e.target.value)}
+                  className="w-full bg-muted rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+                >
+                  {TARGET_UNITS.map(u => (
+                    <option key={u} value={u}>{u}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="text-xs text-muted-foreground mb-2 block">Icon</label>

@@ -54,5 +54,17 @@ export function useChatSessions() {
     return data.id;
   }, [user, refresh]);
 
-  return { sessions, isLoading, refresh, createSession };
+  const deleteSession = useCallback(async (sessionId: string): Promise<boolean> => {
+    if (!user) return false;
+    const { error } = await supabase
+      .from('chat_sessions')
+      .delete()
+      .eq('id', sessionId)
+      .eq('user_id', user.id);
+    if (error) return false;
+    void refresh();
+    return true;
+  }, [user, refresh]);
+
+  return { sessions, isLoading, refresh, createSession, deleteSession };
 }

@@ -7,6 +7,10 @@ export interface Habit {
   icon: string;
   frequency: 'daily' | 'weekly';
   target_days: number;
+  habit_type: 'ongoing' | 'goal';
+  target_value?: number | null;
+  target_unit?: string | null;
+  achieved_at?: string | null;
   created_at: string;
   updated_at: string;
   is_active: boolean;

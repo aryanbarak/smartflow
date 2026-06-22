@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Flame, Trophy, Check, Trash2 } from 'lucide-react';
 import type { HabitWithStats } from '../types';
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function HabitCard({ habit, onToggle, onDelete }: Props) {
+  const navigate = useNavigate();
   const weekDays = useMemo(() => getCurrentWeekDays(), []);
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const completionSet = useMemo(
@@ -38,7 +40,11 @@ export function HabitCard({ habit, onToggle, onDelete }: Props) {
       className="glass-card rounded-xl p-4 flex flex-col gap-3"
     >
       <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => navigate(`/habits/${habit.id}`)}
+          className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity"
+        >
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
             style={{ backgroundColor: habit.color + '22', border: `1.5px solid ${habit.color}44` }}
@@ -51,7 +57,7 @@ export function HabitCard({ habit, onToggle, onDelete }: Props) {
               <p className="text-xs text-muted-foreground mt-0.5">{habit.description}</p>
             )}
           </div>
-        </div>
+        </button>
         <div className="flex gap-1 flex-shrink-0">
           <button
             type="button"
