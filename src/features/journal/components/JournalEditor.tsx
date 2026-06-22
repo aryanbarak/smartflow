@@ -6,11 +6,12 @@ import { useDebounce } from '@/hooks/useDebounce';
 
 interface Props {
   readonly date: string;
+  readonly promptInsert?: string | null;
 }
 
 const PLACEHOLDER = 'What happened today? How did you feel?';
 
-export function JournalEditor({ date }: Props) {
+export function JournalEditor({ date, promptInsert }: Props) {
   const { data: entry, isLoading } = useJournalEntry(date);
   const { mutate: upsert } = useUpsertJournalEntry();
 
@@ -26,6 +27,13 @@ export function JournalEditor({ date }: Props) {
       initialized.current = true;
     }
   }, [entry, isLoading]);
+
+  useEffect(() => {
+    if (promptInsert) {
+      setContent(prev => prev + (prev.endsWith('\n') || prev === '' ? '' : '\n\n') + promptInsert);
+      initialized.current = true;
+    }
+  }, [promptInsert]);
 
   const debouncedContent = useDebounce(content, 1200);
   const debouncedMood = useDebounce(mood, 1200);

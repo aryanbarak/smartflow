@@ -26,7 +26,7 @@ export const journalService = {
 
     const { data, error } = await supabase
       .from('journal_entries')
-      .select('id, date, mood')
+      .select('id, date, mood, content')
       .eq('user_id', user.id)
       .gte('date', start)
       .lte('date', end)

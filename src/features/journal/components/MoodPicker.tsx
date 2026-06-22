@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import type { Mood } from '../types';
 
 const MOODS: { value: Mood; emoji: string; label: string }[] = [
@@ -17,19 +18,22 @@ export function MoodPicker({ value, onChange }: Props) {
   return (
     <div className="flex gap-2">
       {MOODS.map(m => (
-        <button
+        <motion.button
           key={m.value}
           type="button"
           title={m.label}
           onClick={() => onChange(m.value)}
-          className={`text-2xl rounded-xl p-2 transition-all ${
+          whileHover={{ scale: 1.2 }}
+          whileTap={{ scale: 0.9 }}
+          animate={value === m.value ? { scale: 1.3 } : { scale: 1 }}
+          className={`text-2xl rounded-xl p-2 transition-colors ${
             value === m.value
-              ? 'bg-primary/15 ring-2 ring-primary scale-110'
+              ? 'bg-primary/15 ring-2 ring-indigo-400'
               : 'hover:bg-muted'
           }`}
         >
           {m.emoji}
-        </button>
+        </motion.button>
       ))}
     </div>
   );
