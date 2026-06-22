@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useJournalMonth } from '../useJournal';
 import { moodEmoji } from './MoodPicker';
-import type { Mood } from '../types';
+
 
 interface Props {
   readonly selectedDate: string;
@@ -13,13 +13,21 @@ function toKey(date: Date) {
   return date.toISOString().split('T')[0];
 }
 
+const MOOD_DOT_COLOR: Record<string, string> = {
+  great: 'bg-emerald-400',
+  good: 'bg-emerald-400/70',
+  okay: 'bg-amber-400',
+  bad: 'bg-orange-400',
+  terrible: 'bg-rose-400',
+};
+
 export function JournalCalendar({ selectedDate, onSelect }: Props) {
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
 
   const { data: entries = [] } = useJournalMonth(viewYear, viewMonth);
-  const entryMap = new Map(entries.map(e => [e.date, e.mood]));
+  const entryMap = new Map(entries.map(e => [e.date, e]));
 
   const firstDay = new Date(viewYear, viewMonth - 1, 1);
   const lastDay = new Date(viewYear, viewMonth, 0);
@@ -55,7 +63,13 @@ export function JournalCalendar({ selectedDate, onSelect }: Props) {
         {days.map((day, idx) => {
           if (!day) return <div key={`pad-${idx}`} />;
           const key = toKey(day);
-          const emoji = moodEmoji(entryMap.get(key) as Mood | undefined ?? null);
+          const entry = entryMap.get(key);
+          const hasEntry = !!entry;
+          const mood = entry?.mood ?? null;
+          const emoji = mood ? moodEmoji(mood) : '';
+          const dotColor = mood
+            ? (MOOD_DOT_COLOR[mood] ?? 'bg-emerald-400')
+            : hasEntry ? 'bg-blue-400' : '';
           const isSelected = key === selectedDate;
           const isToday = key === toKey(today);
           return (
@@ -64,17 +78,35 @@ export function JournalCalendar({ selectedDate, onSelect }: Props) {
               type="button"
               aria-label={`Select ${key}`}
               onClick={() => onSelect(key)}
-              className={`relative flex flex-col items-center justify-center rounded-lg py-1.5 text-xs transition-colors ${
+              className={`relative flex flex-col items-center justify-center rounded-lg py-1 text-xs transition-colors min-h-[40px] ${
                 isSelected ? 'bg-primary text-primary-foreground' :
                 isToday ? 'bg-primary/10 text-primary font-semibold' :
-                'hover:bg-muted text-foreground'
+                hasEntry ? 'hover:bg-muted/80 text-foreground' :
+                'hover:bg-muted text-muted-foreground'
               }`}
             >
-              <span>{day.getDate()}</span>
-              {emoji && <span className="text-[10px] leading-none">{emoji}</span>}
+              <span className={hasEntry && !isSelected ? 'font-medium text-foreground' : ''}>{day.getDate()}</span>
+              {emoji ? (
+                <span className="text-[10px] leading-none mt-0.5">{emoji}</span>
+              ) : hasEntry ? (
+                <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${dotColor}`} />
+              ) : null}
             </button>
           );
         })}
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-3 mt-3 pt-2 border-t border-border/40">
+        <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> Entry
+        </span>
+        <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+          😄 Mood
+        </span>
+        <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" /> Empty
+        </span>
       </div>
     </div>
   );

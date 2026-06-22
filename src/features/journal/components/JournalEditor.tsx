@@ -18,28 +18,39 @@ export function JournalEditor({ date, promptInsert }: Props) {
   const [content, setContent] = useState('');
   const [mood, setMood] = useState<Mood | null>(null);
   const [saved, setSaved] = useState(false);
-  const initialized = useRef(false);
+  const dirty = useRef(false);
+  const loadedDate = useRef('');
 
+  // When date changes, immediately block auto-save until new data loads
   useEffect(() => {
-    if (!isLoading && !initialized.current) {
-      setContent(entry?.content ?? '');
-      setMood(entry?.mood ?? null);
-      initialized.current = true;
+    if (loadedDate.current !== date) {
+      dirty.current = false;
     }
-  }, [entry, isLoading]);
+  }, [date]);
+
+  // Sync editor state when the entry for the selected date finishes loading
+  useEffect(() => {
+    if (isLoading) return;
+    if (loadedDate.current === date) return;
+    loadedDate.current = date;
+    setContent(entry?.content ?? '');
+    setMood(entry?.mood ?? null);
+    dirty.current = false;
+  }, [date, entry, isLoading]);
 
   useEffect(() => {
     if (promptInsert) {
       setContent(prev => prev + (prev.endsWith('\n') || prev === '' ? '' : '\n\n') + promptInsert);
-      initialized.current = true;
+      dirty.current = true;
     }
   }, [promptInsert]);
 
   const debouncedContent = useDebounce(content, 1200);
   const debouncedMood = useDebounce(mood, 1200);
 
+  // Auto-save only after user edits, never during date-switch transitions
   useEffect(() => {
-    if (!initialized.current) return;
+    if (!dirty.current) return;
     upsert({ date, content: debouncedContent, mood: debouncedMood }, {
       onSuccess: () => {
         setSaved(true);
@@ -53,7 +64,7 @@ export function JournalEditor({ date, promptInsert }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <MoodPicker value={mood} onChange={(m) => { setMood(m); initialized.current = true; }} />
+        <MoodPicker value={mood} onChange={(m) => { setMood(m); dirty.current = true; }} />
         <span className={`text-xs transition-opacity ${saved ? 'opacity-100 text-green-500' : 'opacity-0'}`}>
           Saved ✓
         </span>
@@ -62,7 +73,7 @@ export function JournalEditor({ date, promptInsert }: Props) {
         className="w-full min-h-[280px] bg-transparent border border-border rounded-xl p-4 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground leading-relaxed"
         placeholder={PLACEHOLDER}
         value={content}
-        onChange={e => { setContent(e.target.value); initialized.current = true; }}
+        onChange={e => { setContent(e.target.value); dirty.current = true; }}
         dir="auto"
         aria-label="Journal entry"
       />

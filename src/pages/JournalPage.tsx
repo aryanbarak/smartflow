@@ -40,15 +40,16 @@ export default function JournalPage() {
   const { user } = useAuth();
   const { tasks } = useTasks();
 
-  // Habit summary for today
-  const [todayHabits, setTodayHabits] = useState<{ completed: number; total: number; rate: number } | null>(null);
+  // Habit summary for selected date
+  const [dateHabits, setDateHabits] = useState<{ completed: number; total: number; rate: number } | null>(null);
   useEffect(() => {
     if (!user) return;
-    getTodayHabitSummary(user.id).then(setTodayHabits).catch(console.error);
-  }, [user]);
+    getTodayHabitSummary(user.id, selectedDate).then(setDateHabits).catch(console.error);
+  }, [user, selectedDate]);
 
-  // Today's journal entry (for KPI + reflection card)
-  const { data: todayEntry } = useJournalEntry(todayStr());
+  // Selected date's journal entry (for KPI + reflection card)
+  const { data: selectedEntry } = useJournalEntry(selectedDate);
+  const isToday = selectedDate === todayStr();
 
   // Current month entries (for streak + entries count)
   const now = useMemo(() => new Date(), []);
@@ -75,12 +76,11 @@ export default function JournalPage() {
     return count;
   }, [monthEntries]);
 
-  // Tasks due today
-  const todayTasks = useMemo(() => {
-    const key = todayStr();
-    const due = tasks.filter(t2 => t2.dueDate === key);
+  // Tasks due on selected date
+  const dateTasks = useMemo(() => {
+    const due = tasks.filter(t2 => t2.dueDate === selectedDate);
     return { total: due.length, done: due.filter(t2 => t2.completed).length };
-  }, [tasks]);
+  }, [tasks, selectedDate]);
 
   // Mood trend (last 14 days from journal_entries)
   const [moodTrend, setMoodTrend] = useState<Array<{ date: string; value: number }>>([]);
@@ -120,10 +120,16 @@ export default function JournalPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between py-5">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-semibold mb-1">{t('journal_title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('journal_subtitle')}</p>
+          <h1 className="text-2xl lg:text-3xl font-semibold mb-1">
+            {t('journal_title')}{selectedEntry?.mood ? ` ${moodEmoji(selectedEntry.mood)}` : ''}
+          </h1>
+          <p className="text-sm text-muted-foreground">{displayDate}</p>
         </div>
-        <p className="text-sm text-muted-foreground hidden sm:block">{displayDate}</p>
+        {!isToday && (
+          <Button size="sm" variant="outline" className="text-xs gap-1.5" onClick={() => setSelectedDate(todayStr())}>
+            {t('journal_back_to_today')}
+          </Button>
+        )}
       </motion.div>
 
       {/* Main 2-column layout */}
@@ -158,7 +164,7 @@ export default function JournalPage() {
                   <span className="text-xs font-medium text-muted-foreground">{t('journal_mood')}</span>
                 </div>
                 <p className="text-2xl font-bold tracking-tight">
-                  {todayEntry?.mood ? `${moodEmoji(todayEntry.mood)} ${MOOD_LABELS[todayEntry.mood] ?? ''}` : '—'}
+                  {selectedEntry?.mood ? `${moodEmoji(selectedEntry.mood)} ${MOOD_LABELS[selectedEntry.mood] ?? ''}` : '—'}
                 </p>
               </CardContent>
             </Card>
@@ -173,30 +179,32 @@ export default function JournalPage() {
             </Card>
           </div>
 
-          {/* Today's Reflection */}
+          {/* Date Reflection */}
           <Card className="glass-card card-accent">
             <CardContent className="p-4 space-y-2">
-              <h3 className="text-sm font-semibold">{t('journal_todays_reflection')}</h3>
+              <h3 className="text-sm font-semibold">
+                {isToday ? t('journal_todays_reflection') : t('journal_date_reflection')}
+              </h3>
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div>
                   <p className="text-xs text-muted-foreground">{t('journal_habits_status')}</p>
                   <p className="text-sm font-bold">
-                    {todayHabits ? `${todayHabits.completed}/${todayHabits.total}` : '—'}
+                    {dateHabits ? `${dateHabits.completed}/${dateHabits.total}` : '—'}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">{t('journal_tasks_status')}</p>
                   <p className="text-sm font-bold">
-                    {todayTasks.total > 0 ? `${todayTasks.done}/${todayTasks.total}` : '—'}
+                    {dateTasks.total > 0 ? `${dateTasks.done}/${dateTasks.total}` : '—'}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">{t('journal_mood')}</p>
-                  <p className="text-sm font-bold">{todayEntry?.mood ? moodEmoji(todayEntry.mood) : '—'}</p>
+                  <p className="text-sm font-bold">{selectedEntry?.mood ? moodEmoji(selectedEntry.mood) : '—'}</p>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground truncate" dir="auto">
-                {todayEntry?.content ? todayEntry.content.slice(0, 100) + (todayEntry.content.length > 100 ? '...' : '') : t('journal_no_entry_yet')}
+                {selectedEntry?.content ? selectedEntry.content.slice(0, 100) + (selectedEntry.content.length > 100 ? '...' : '') : t('journal_no_entry_yet')}
               </p>
             </CardContent>
           </Card>
