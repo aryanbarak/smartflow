@@ -1,5 +1,5 @@
 import type { Env, AgentBriefing, ExtractedFact, MemoryEntry, UserContext, BriefingMode, ChatMessage, ChatOptions } from './types'
-import { buildUserContext, fetchUserMemory, fetchUserLanguage, fetchTaskSnapshot, fetchCalendarSnapshot, fetchHabitSnapshot, supabaseGet, supabasePost, supabasePatch } from './context-builder'
+import { buildUserContext, fetchUserMemory, fetchUserLanguage, fetchTaskSnapshot, fetchCalendarSnapshot, fetchHabitSnapshot, fetchFinanceSnapshot, supabaseGet, supabasePost, supabasePatch } from './context-builder'
 import { buildPrompt, buildExtractionPrompt, buildChatExtractionPrompt, EXTRACTABLE_KEYS, buildChatSystemPrompt } from './prompt-builder'
 
 const ENABLE_AUTO_MEMORY_WRITE = true
@@ -45,6 +45,10 @@ export default {
 
     if (pathname === '/habits/suggestions') {
       return handleHabitSuggestions(request, env)
+    }
+
+    if (pathname === '/finance/suggestions') {
+      return handleFinanceSuggestions(request, env)
     }
 
     return json({ error: 'Not found' }, 404, origin)
@@ -474,6 +478,111 @@ async function handleHabitSuggestions(request: Request, env: Env): Promise<Respo
     return json({ suggestions }, 200, origin)
   } catch (err) {
     console.error('[HabitSuggestions] Error:', err)
+    return json({ suggestions: [] }, 200, origin)
+  }
+}
+
+// =============================================
+// /finance/suggestions handler
+// =============================================
+async function handleFinanceSuggestions(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin') ?? ''
+
+  const { userId, error: authError } = await requireAuth(request, env)
+  if (authError || !userId) {
+    return json({ error: authError ?? 'Unauthorized' }, 401, origin)
+  }
+
+  try {
+    const [snapshot, language] = await Promise.all([
+      fetchFinanceSnapshot(userId, env),
+      fetchUserLanguage(userId, env),
+    ])
+
+    if (snapshot.transactionCount === 0 && snapshot.recentTransactions.length === 0) {
+      return json({ suggestions: [] }, 200, origin)
+    }
+
+    const system = [
+      `You are a personal finance assistant. Analyze the user's real transaction data below and return 2-3 short, specific, actionable insights.`,
+      ``,
+      `RULES:`,
+      `- ONLY reference categories and amounts visible in the provided data — no generic advice.`,
+      `- Each insight must reference specific numbers, categories, or percentages from the data.`,
+      `- Keep each insight to 1 sentence, max 15 words.`,
+      `- Return ONLY a JSON array, no markdown, no preamble, no explanation.`,
+      `- Each item: { "text": "...", "type": "insight" | "action" }`,
+      `- "insight" = observation about a spending pattern. "action" = specific recommendation.`,
+      `- Do NOT invent data not present below. Do NOT give generic budgeting tips.`,
+      `- If nothing notable exists, return an empty array [].`,
+      `- Write in ${language === 'de' ? 'German' : language === 'fa' ? 'Persian (Farsi)' : 'English'}.`,
+    ].join('\n')
+
+    const catLines = snapshot.topCategories.map(c => `  ${c.category}: €${c.amount}`).join('\n')
+
+    const dataLines = [
+      `Current month: Income €${snapshot.totalIncome}, Expenses €${snapshot.totalExpenses}, Balance €${snapshot.net}`,
+      `Transactions this month: ${snapshot.transactionCount}`,
+      snapshot.expenseChangePct !== null ? `Expense change vs last month: ${snapshot.expenseChangePct >= 0 ? '+' : ''}${snapshot.expenseChangePct}%` : null,
+      snapshot.incomeSpentPct !== null ? `${snapshot.incomeSpentPct}% of income spent` : null,
+      catLines ? `Top expense categories:\n${catLines}` : null,
+      snapshot.recentTransactions.length > 0 ? `Recent transactions:\n${snapshot.recentTransactions.map(t => `  ${t.date} ${t.type} ${t.category} €${t.amount}${t.notes ? ` (${t.notes})` : ''}`).join('\n')}` : null,
+    ].filter(Boolean).join('\n')
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: system }] },
+          contents: [{ parts: [{ text: dataLines }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  text: { type: 'STRING' },
+                  type: { type: 'STRING', enum: ['insight', 'action'] },
+                },
+                required: ['text', 'type'],
+              },
+            },
+            maxOutputTokens: 256,
+            temperature: 0.3,
+            thinkingConfig: { thinkingBudget: 0 },
+          },
+        }),
+      }
+    )
+
+    if (!res.ok) {
+      console.error('[FinanceSuggestions] Gemini error:', await res.text())
+      return json({ suggestions: [] }, 200, origin)
+    }
+
+    const data: unknown = await res.json()
+    const raw: string = (data as any)?.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]'
+
+    let suggestions: Array<{ text: string; type: string }> = []
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) {
+        suggestions = parsed
+          .filter((s: any) => typeof s.text === 'string' && s.text.trim().length > 0)
+          .slice(0, 3)
+          .map((s: any) => ({ text: s.text.trim(), type: s.type === 'action' ? 'action' : 'insight' }))
+      }
+    } catch {
+      console.error('[FinanceSuggestions] Failed to parse Gemini response:', raw)
+    }
+
+    console.log(`[FinanceSuggestions] userId=${userId} transactions=${snapshot.transactionCount} suggestions=${suggestions.length}`)
+    return json({ suggestions }, 200, origin)
+  } catch (err) {
+    console.error('[FinanceSuggestions] Error:', err)
     return json({ suggestions: [] }, 200, origin)
   }
 }

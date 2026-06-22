@@ -126,52 +126,53 @@ export default function JournalPage() {
         <p className="text-sm text-muted-foreground hidden sm:block">{displayDate}</p>
       </motion.div>
 
-      {/* KPI Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-        <Card className="glass-card card-accent surface-elevated">
-          <CardContent className="p-3.5">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="icon-tile w-8 h-8 rounded-md"><Flame className="w-4 h-4 text-primary" /></div>
-              <span className="text-xs font-medium text-muted-foreground">{t('journal_streak')}</span>
-            </div>
-            <p className="text-2xl font-bold tracking-tight">{streak} <span className="text-sm font-normal text-muted-foreground">days</span></p>
-          </CardContent>
-        </Card>
-        <Card className="glass-card card-accent surface-elevated">
-          <CardContent className="p-3.5">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="icon-tile w-8 h-8 rounded-md"><BookOpen className="w-4 h-4 text-primary" /></div>
-              <span className="text-xs font-medium text-muted-foreground">{t('journal_entries_month')}</span>
-            </div>
-            <p className="text-2xl font-bold tracking-tight">{monthEntries.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="glass-card card-accent surface-elevated">
-          <CardContent className="p-3.5">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="icon-tile w-8 h-8 rounded-md"><Smile className="w-4 h-4 text-primary" /></div>
-              <span className="text-xs font-medium text-muted-foreground">{t('journal_mood')}</span>
-            </div>
-            <p className="text-2xl font-bold tracking-tight">
-              {todayEntry?.mood ? `${moodEmoji(todayEntry.mood)} ${MOOD_LABELS[todayEntry.mood] ?? ''}` : '—'}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="glass-card card-accent surface-elevated">
-          <CardContent className="p-3.5">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="icon-tile w-8 h-8 rounded-md"><Brain className="w-4 h-4 text-primary" /></div>
-              <span className="text-xs font-medium text-muted-foreground">{t('journal_ai_insight')}</span>
-            </div>
-            <p className="text-2xl font-bold tracking-tight text-emerald-400">Positive</p>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Main 2-column layout */}
       <div className="flex flex-col lg:flex-row gap-5 lg:items-start">
         {/* Left column */}
         <div className="flex-1 min-w-0 space-y-4">
+
+          {/* KPI Row */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="glass-card card-accent surface-elevated">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="icon-tile w-8 h-8 rounded-md"><Flame className="w-4 h-4 text-primary" /></div>
+                  <span className="text-xs font-medium text-muted-foreground">{t('journal_streak')}</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight">{streak} <span className="text-sm font-normal text-muted-foreground">days</span></p>
+              </CardContent>
+            </Card>
+            <Card className="glass-card card-accent surface-elevated">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="icon-tile w-8 h-8 rounded-md"><BookOpen className="w-4 h-4 text-primary" /></div>
+                  <span className="text-xs font-medium text-muted-foreground">{t('journal_entries_month')}</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight">{monthEntries.length}</p>
+              </CardContent>
+            </Card>
+            <Card className="glass-card card-accent surface-elevated">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="icon-tile w-8 h-8 rounded-md"><Smile className="w-4 h-4 text-primary" /></div>
+                  <span className="text-xs font-medium text-muted-foreground">{t('journal_mood')}</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight">
+                  {todayEntry?.mood ? `${moodEmoji(todayEntry.mood)} ${MOOD_LABELS[todayEntry.mood] ?? ''}` : '—'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="glass-card card-accent surface-elevated">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="icon-tile w-8 h-8 rounded-md"><Brain className="w-4 h-4 text-primary" /></div>
+                  <span className="text-xs font-medium text-muted-foreground">{t('journal_ai_insight')}</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight text-emerald-400">Positive</p>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Today's Reflection */}
           <Card className="glass-card card-accent">
             <CardContent className="p-4 space-y-2">

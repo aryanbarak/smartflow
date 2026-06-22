@@ -386,6 +386,64 @@ export async function fetchHabitContext(
 }
 
 // =============================================
+// Finance — snapshot for AI suggestions
+// =============================================
+export interface FinanceSnapshot {
+  totalIncome: number
+  totalExpenses: number
+  net: number
+  topCategories: { category: string; amount: number }[]
+  lastMonthExpenses: number
+  expenseChangePct: number | null
+  incomeSpentPct: number | null
+  transactionCount: number
+  recentTransactions: { date: string; type: string; category: string; amount: number; notes: string | null }[]
+}
+
+export async function fetchFinanceSnapshot(userId: string, env: Env): Promise<FinanceSnapshot> {
+  const now = new Date()
+  const ninetyDaysAgo = new Date(now.getTime() - 90 * 86400000).toISOString().slice(0, 10)
+  const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const firstOfLastMonth = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}-01`
+
+  const rows = await supabaseGet<Array<{
+    date: string; type: string; category: string; amount: number; notes: string | null
+  }>>(env, `finance_transactions?select=date,type,category,amount,notes&user_id=eq.${userId}&date=gte.${ninetyDaysAgo}&order=date.desc&limit=200`)
+
+  const currentMonth = rows.filter(r => r.date >= firstOfMonth)
+  const lastMonth = rows.filter(r => r.date >= firstOfLastMonth && r.date < firstOfMonth)
+
+  const income = currentMonth.filter(r => r.type === 'income').reduce((s, r) => s + r.amount, 0)
+  const expenses = currentMonth.filter(r => r.type === 'expense').reduce((s, r) => s + r.amount, 0)
+  const lastMonthExp = lastMonth.filter(r => r.type === 'expense').reduce((s, r) => s + r.amount, 0)
+
+  const catTotals: Record<string, number> = {}
+  for (const r of currentMonth.filter(r2 => r2.type === 'expense')) {
+    catTotals[r.category] = (catTotals[r.category] ?? 0) + r.amount
+  }
+  const topCategories = Object.entries(catTotals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([category, amount]) => ({ category, amount: Math.round(amount * 100) / 100 }))
+
+  const expenseChangePct = lastMonthExp > 0 ? Math.round(((expenses - lastMonthExp) / lastMonthExp) * 100) : null
+  const incomeSpentPct = income > 0 ? Math.round((expenses / income) * 100) : null
+
+  return {
+    totalIncome: Math.round(income * 100) / 100,
+    totalExpenses: Math.round(expenses * 100) / 100,
+    net: Math.round((income - expenses) * 100) / 100,
+    topCategories,
+    lastMonthExpenses: Math.round(lastMonthExp * 100) / 100,
+    expenseChangePct,
+    incomeSpentPct,
+    transactionCount: currentMonth.length,
+    recentTransactions: rows.slice(0, 15).map(r => ({ ...r, amount: Math.round(r.amount * 100) / 100 })),
+  }
+}
+
+// =============================================
 // داده‌های Finance ماه جاری
 // =============================================
 export async function fetchFinanceContext(

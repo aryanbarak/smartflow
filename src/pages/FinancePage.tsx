@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -12,6 +12,8 @@ import {
   Download,
   Upload,
   FileBarChart,
+  Tag,
+  MoreVertical,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -65,7 +67,16 @@ import { FinanceCharts } from "@/features/finance/components/FinanceCharts";
 import { RecurringTransactions } from "@/features/finance/components/RecurringTransactions";
 import { generateMonthlyReport } from "@/features/finance/reportService";
 import { migrateLocalStorageToDb } from "@/features/finance/migrateLocalStorage";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n";
+import { Sparkles, Lightbulb, ArrowRight } from "lucide-react";
 
 const categories = ["Food", "Transport", "Rent", "Health", "Other"];
 
@@ -125,6 +136,7 @@ interface TransactionGroup {
 }
 
 export default function FinancePage() {
+  const { t } = useT();
   const {
     transactions,
     addTransaction,
@@ -212,7 +224,7 @@ export default function FinancePage() {
       return [
         {
           key: "all",
-          label: "All transactions",
+          label: t('finance_all_transactions'),
           transactions: filteredTransactions,
           income,
           expense,
@@ -300,6 +312,12 @@ export default function FinancePage() {
     };
   }, [filteredTransactions]);
 
+  const topCategory = useMemo(() => {
+    const top = categoryStats.items[0];
+    if (!top || top.expense === 0) return null;
+    return { name: top.category, amount: top.expense };
+  }, [categoryStats]);
+
   const hasAnyTransactions = transactions.length > 0;
   const hasFilteredResults = filteredTransactions.length > 0;
   const isInitialLoading = isLoading && !transactions.length;
@@ -327,8 +345,49 @@ export default function FinancePage() {
     });
   }, [transactions]);
 
+  // AI Suggestions — fetched from Gemini
+  const [finSuggestions, setFinSuggestions] = useState<Array<{ text: string; type: string }>>([]);
+  const [finSugLoading, setFinSugLoading] = useState(false);
+  const finSugLoaded = useRef(false);
+  const workerUrl = import.meta.env.VITE_AGENT_WORKER_URL as string;
+
+  const fetchFinanceSuggestions = () => {
+    if (finSugLoaded.current) return;
+    finSugLoaded.current = true;
+    setFinSugLoading(true);
+    supabase.auth.getSession().then(({ data: { session: authSession } }) => {
+      if (!authSession) { setFinSugLoading(false); return; }
+      fetch(`${workerUrl}/finance/suggestions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession.access_token}` },
+      })
+        .then(res => res.ok ? res.json() : { suggestions: [] })
+        .then((body: { suggestions: Array<{ text: string; type: string }> }) => {
+          setFinSuggestions(body.suggestions ?? []);
+        })
+        .catch(() => setFinSuggestions([]))
+        .finally(() => setFinSugLoading(false));
+    });
+  };
+
+  // Computed real stats (no AI needed)
+  const prevMonthExpenses = useMemo(() => {
+    const prev = addMonths(selectedMonth, -1);
+    return transactions
+      .filter(tx => isSameMonth(toLocalDate(tx.date), prev) && tx.type === 'expense')
+      .reduce((s, tx) => s + tx.amount, 0);
+  }, [transactions, selectedMonth]);
+
+  const expenseChangePct = prevMonthExpenses > 0
+    ? Math.round(((totals.expense - prevMonthExpenses) / prevMonthExpenses) * 100)
+    : null;
+
+  const incomeSpentPct = totals.income > 0
+    ? Math.round((totals.expense / totals.income) * 100)
+    : null;
+
   const monthLabel =
-    filter === "all" ? "All time" : formatMonthYear(selectedMonth);
+    filter === "all" ? t('finance_all_time') : formatMonthYear(selectedMonth);
 
   const handleScopeChange = (value: "month" | "all") => {
     setFilter(value);
@@ -546,12 +605,12 @@ export default function FinancePage() {
     a.download = `finance-report-${currentMonthStr}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Monthly report downloaded");
+    toast.success(t('finance_report_downloaded'));
   };
 
 
   return (
-    <div className="p-4 lg:p-8 max-w-5xl mx-auto">
+    <div className="px-4 sm:px-6 lg:px-8 pb-6">
       {financeError && (
         <div className="mb-4">
           <StatePanel
@@ -565,41 +624,32 @@ export default function FinancePage() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-4 gap-3 flex-wrap"
+        className="flex items-center justify-between py-5"
       >
         <div>
-          <h1 className="text-2xl lg:text-3xl font-semibold mb-1">Finance</h1>
+          <h1 className="text-2xl lg:text-3xl font-semibold mb-1">{t('finance_title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('finance_subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1"
-            onClick={handleExportPdf}
-            disabled={!hasFilteredResults}
-          >
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Export PDF</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1"
-            onClick={() => void handleExportReport()}
-            disabled={!hasFilteredResults}
-          >
-            <FileBarChart className="w-4 h-4" />
-            <span className="hidden sm:inline">Monthly Report</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1"
-            onClick={() => setShowImport(true)}
-          >
-            <Upload className="w-4 h-4" />
-            <span className="hidden sm:inline">Import PDF</span>
-          </Button>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <MoreVertical className="w-4 h-4" />
+                <span className="hidden sm:inline">{t('finance_tools')}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportPdf} disabled={!hasFilteredResults}>
+                <Download className="w-3.5 h-3.5 mr-2" /> {t('finance_export_pdf')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void handleExportReport()} disabled={!hasFilteredResults}>
+                <FileBarChart className="w-3.5 h-3.5 mr-2" /> {t('finance_monthly_report')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowImport(true)}>
+                <Upload className="w-3.5 h-3.5 mr-2" /> {t('finance_import_statement')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <CsvImportExport
             transactions={transactions}
             onImport={async (rows) => {
@@ -610,15 +660,15 @@ export default function FinancePage() {
           />
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2 shadow-glow" onClick={openNew}>
+              <Button className="gap-2" style={{ background: 'var(--gradient-primary)' }} onClick={openNew}>
                 <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Add Entry</span>
+                <span className="hidden sm:inline">{t('finance_add_entry')}</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>
-                  {editingTx ? "Edit Transaction" : "Add Transaction"}
+                  {editingTx ? t('finance_edit_transaction') : t('finance_add_transaction')}
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-4">
@@ -635,15 +685,15 @@ export default function FinancePage() {
                 >
                   <TabsList className="w-full">
                     <TabsTrigger value="expense" className="flex-1">
-                      Expense
+                      {t('finance_expense')}
                     </TabsTrigger>
                     <TabsTrigger value="income" className="flex-1">
-                      Income
+                      {t('finance_income')}
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
                 <div className="space-y-2">
-                  <Label>Amount</Label>
+                  <Label>{t('finance_amount')}</Label>
                   <Input
                     type="number"
                     min="0"
@@ -654,7 +704,7 @@ export default function FinancePage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Category</Label>
+                  <Label>{t('finance_category')}</Label>
                   <Select value={category} onValueChange={setCategory}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
@@ -669,7 +719,7 @@ export default function FinancePage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Date</Label>
+                  <Label>{t('finance_date')}</Label>
                   <Input
                     type="date"
                     value={date}
@@ -677,14 +727,14 @@ export default function FinancePage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Notes</Label>
+                  <Label>{t('finance_notes')}</Label>
                   <Input
                     value={notes}
                     onChange={(event) => setNotes(event.target.value)}
                   />
                 </div>
                 <Button className="w-full" onClick={handleSave}>
-                  {editingTx ? "Save Changes" : "Save Transaction"}
+                  {editingTx ? t('finance_save_changes') : t('finance_save_transaction')}
                 </Button>
               </div>
             </DialogContent>
@@ -692,72 +742,72 @@ export default function FinancePage() {
         </div>
       </motion.div>
 
-      {/* Totals */}
-      {isInitialLoading ? (
-        <div className="grid sm:grid-cols-3 gap-3 mb-6">
-          {Array.from({ length: 3 }).map((_, idx) => (
-            <SkeletonCard key={idx} />
-          ))}
-        </div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          className="grid sm:grid-cols-3 gap-3 mb-6"
-        >
-          <Card className="bg-success/10 border-success/20">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">Income</p>
-                  <p className="text-xl font-semibold text-success">
-                    {formatCurrency(totals.income)}
-                  </p>
-                </div>
-                <div className="w-9 h-9 rounded-lg bg-success/20 flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-success" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Two-column layout */}
+      <div className="flex flex-col lg:flex-row gap-5 lg:items-start">
+      {/* Left column */}
+      <div className="flex-1 min-w-0 space-y-4">
 
-          <Card className="bg-destructive/10 border-destructive/20">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">Expenses</p>
-                  <p className="text-xl font-semibold text-destructive">
-                    {formatCurrency(totals.expense)}
-                  </p>
-                </div>
-                <div className="w-9 h-9 rounded-lg bg-destructive/20 flex items-center justify-center">
-                  <TrendingDown className="w-4 h-4 text-destructive" />
-                </div>
+      {/* KPI Stats Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        <Card className="glass-card card-accent surface-elevated">
+          <CardContent className="p-3.5">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="icon-tile w-8 h-8 rounded-md bg-emerald-500/15">
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-primary/10 border-primary/20">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">Balance</p>
-                  <p className="text-xl font-semibold text-primary">
-                    {formatCurrency(totals.net)}
-                  </p>
-                </div>
-                <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <DollarSign className="w-4 h-4 text-primary" />
-                </div>
+              <span className="text-xs font-medium text-muted-foreground">{t('finance_income')}</span>
+            </div>
+            <p className="text-2xl font-bold tracking-tight text-emerald-400">
+              {isInitialLoading ? '...' : formatCurrency(totals.income)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card card-accent surface-elevated">
+          <CardContent className="p-3.5">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="icon-tile w-8 h-8 rounded-md bg-rose-500/15">
+                <TrendingDown className="w-4 h-4 text-rose-400" />
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+              <span className="text-xs font-medium text-muted-foreground">{t('finance_expenses')}</span>
+            </div>
+            <p className="text-2xl font-bold tracking-tight text-rose-400">
+              {isInitialLoading ? '...' : formatCurrency(totals.expense)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card card-accent surface-elevated">
+          <CardContent className="p-3.5">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="icon-tile w-8 h-8 rounded-md">
+                <DollarSign className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">{t('finance_balance')}</span>
+            </div>
+            <p className={cn("text-2xl font-bold tracking-tight", totals.net >= 0 ? "text-emerald-400" : "text-rose-400")}>
+              {isInitialLoading ? '...' : formatCurrency(totals.net)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card card-accent surface-elevated">
+          <CardContent className="p-3.5">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="icon-tile w-8 h-8 rounded-md bg-cyan-500/15">
+                <Tag className="w-4 h-4 text-cyan-400" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">{t('finance_top_spend')}</span>
+            </div>
+            <p className="text-lg font-bold tracking-tight">
+              {isInitialLoading ? '...' : topCategory ? topCategory.name : '—'}
+            </p>
+            {topCategory && !isInitialLoading && (
+              <p className="text-[11px] text-muted-foreground">{formatCurrency(topCategory.amount)}</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Transactions header: tabs + month nav + group by */}
-      <div className="mb-4 space-y-2">
+      <div className="space-y-2">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <CardTitle className="text-lg">Transactions</CardTitle>
           <div className="flex items-center gap-2 flex-wrap">
@@ -810,12 +860,12 @@ export default function FinancePage() {
             onValueChange={(v) => setGroupBy(v as GroupBy)}
           >
             <SelectTrigger className="w-[130px] sm:w-[140px] text-xs sm:text-sm">
-              <SelectValue placeholder="Group by" />
+              <SelectValue placeholder={t('finance_group_by')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">No grouping</SelectItem>
-              <SelectItem value="day">Day</SelectItem>
-              <SelectItem value="week">Week</SelectItem>
+              <SelectItem value="none">{t('finance_no_grouping')}</SelectItem>
+              <SelectItem value="day">{t('finance_day')}</SelectItem>
+              <SelectItem value="week">{t('finance_week')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -826,7 +876,7 @@ export default function FinancePage() {
         <Input
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search by category or notes..."
+          placeholder={t('finance_search')}
           className="max-w-xs"
         />
         <Toggle
@@ -834,21 +884,21 @@ export default function FinancePage() {
           onPressedChange={setShowIncome}
           className="rounded-full"
         >
-          Income
+          {t('finance_income')}
         </Toggle>
         <Toggle
           pressed={showExpense}
           onPressedChange={setShowExpense}
           className="rounded-full"
         >
-          Expense
+          {t('finance_expense')}
         </Toggle>
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="All categories" />
+            <SelectValue placeholder={t('finance_all_categories')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All categories</SelectItem>
+            <SelectItem value="all">{t('finance_all_categories')}</SelectItem>
             {categories.map((item) => (
               <SelectItem key={item} value={item}>
                 {item}
@@ -860,7 +910,7 @@ export default function FinancePage() {
 
       <Card className="mb-6">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Category insights</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('finance_category_insights')}</CardTitle>
         </CardHeader>
         <CardContent>
           {categoryStats.items.length === 0 ? (
@@ -896,34 +946,39 @@ export default function FinancePage() {
         </CardContent>
       </Card>
 
-      {/* Grouped list + empty states */}
+      {/* Recent Transactions */}
       {isInitialLoading ? (
-        <Card>
-          <CardContent className="space-y-3 pt-6">
+        <Card className="glass-card card-accent">
+          <CardContent className="space-y-3 p-4">
             {Array.from({ length: 6 }).map((_, idx) => (
               <SkeletonListItem key={idx} />
             ))}
           </CardContent>
         </Card>
       ) : !hasAnyTransactions ? (
-        <StatePanel
-          variant="empty"
-          title="No transactions yet"
-          description="Start by adding your first income or expense. Once you have data, charts and category insights will appear here."
-          actionLabel="Add entry"
-          onAction={openNew}
-        />
+        <div className="max-w-md mx-auto">
+          <StatePanel
+            variant="empty"
+            title={t('finance_no_transactions')}
+            description={t('finance_no_transactions_desc')}
+            actionLabel={t('finance_add_entry')}
+            onAction={openNew}
+          />
+        </div>
       ) : !hasFilteredResults ? (
-        <StatePanel
-          variant="empty"
-          title="No results for your current filters"
-          description="Try adjusting your search, type toggles, or category filter."
-          actionLabel="Clear filters"
-          onAction={handleClearFilters}
-        />
+        <div className="max-w-md mx-auto">
+          <StatePanel
+            variant="empty"
+            title={t('finance_no_results')}
+            description={t('finance_no_results_desc')}
+            actionLabel={t('finance_clear_filters')}
+            onAction={handleClearFilters}
+          />
+        </div>
       ) : (
-        <Card>
-          <CardContent className="space-y-4 pt-6">
+        <Card className="glass-card card-accent">
+          <CardContent className="p-4 space-y-3">
+            <h3 className="text-sm font-semibold">{t('finance_recent')}</h3>
             {groups.map((g) => (
               <div key={g.key} className="space-y-2">
                 {groupBy !== "none" && (
@@ -948,63 +1003,60 @@ export default function FinancePage() {
 
                 {g.transactions.map((tx) => {
                   const dateLabel = toLocalDate(tx.date).toLocaleDateString();
+                  const initial = tx.category.charAt(0).toUpperCase();
                   return (
                     <div
                       key={tx.id}
-                      className="flex items-center gap-2 sm:gap-3 p-3 rounded-lg bg-secondary"
+                      className="glass-card flex items-center gap-2 sm:gap-3 p-3 rounded-xl transition-colors group hover:bg-secondary/30"
                     >
                       <div
                         className={cn(
-                          "w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg flex items-center justify-center",
+                          "w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-xs font-bold",
                           tx.type === "income"
-                            ? "bg-success/20"
-                            : "bg-destructive/20"
+                            ? "bg-emerald-500/15 text-emerald-400"
+                            : "bg-rose-500/15 text-rose-400"
                         )}
                       >
-                        {tx.type === "income" ? (
-                          <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
-                        ) : (
-                          <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
-                        )}
+                        {initial}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{tx.category}</p>
                         <p className="text-xs text-muted-foreground truncate">
-                          {tx.notes || dateLabel}
+                          {tx.notes ? `${tx.notes} · ${dateLabel}` : dateLabel}
                         </p>
                       </div>
                       <div className="text-right shrink-0">
                         <p
                           className={cn(
-                            "text-sm font-medium",
+                            "text-sm font-semibold",
                             tx.type === "income"
-                              ? "text-success"
-                              : "text-destructive"
+                              ? "text-emerald-400"
+                              : "text-rose-400"
                           )}
                         >
                           {tx.type === "income" ? "+" : "-"}
                           {formatCurrency(tx.amount)}
                         </p>
-                        <p className="text-xs text-muted-foreground hidden sm:block">
+                        <p className="text-[10px] text-muted-foreground hidden sm:block">
                           {dateLabel}
                         </p>
                       </div>
-                      <div className="flex shrink-0">
+                      <div className="flex shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
                           onClick={() => openEdit(tx)}
                         >
-                          <Pencil className="w-4 h-4" />
+                          <Pencil className="w-3.5 h-3.5" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
                           onClick={() => setDeleteTarget(tx)}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
                     </div>
@@ -1021,35 +1073,35 @@ export default function FinancePage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete transaction?</AlertDialogTitle>
+            <AlertDialogTitle>{t('finance_delete_title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove the selected transaction.
+              {t('finance_delete_desc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('finance_cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete}>
-              Delete
+              {t('finance_delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       {/* Charts */}
-      <div className="mt-6">
-        <FinanceCharts
-          transactions={filteredTransactions}
-          months={last6Months}
-        />
-      </div>
+      <Card className="glass-card card-accent">
+        <CardContent className="p-4">
+          <FinanceCharts
+            transactions={filteredTransactions}
+            months={last6Months}
+          />
+        </CardContent>
+      </Card>
 
       {/* Budget Goals */}
-      <div className="mt-4">
-        <BudgetGoalsWidget />
-      </div>
+      <BudgetGoalsWidget />
 
       {/* Budget Limits + Savings Goals */}
-      <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <BudgetLimitsWidget
           currentMonth={currentMonthStr}
           transactions={currentMonthTransactions}
@@ -1058,8 +1110,148 @@ export default function FinancePage() {
       </div>
 
       {/* Recurring Transactions */}
-      <div className="mt-4">
-        <RecurringTransactions onApplied={refresh} />
+      <RecurringTransactions onApplied={refresh} />
+
+      </div>
+
+      {/* Right sidebar */}
+      <div className="w-full lg:w-[300px] shrink-0 space-y-4 lg:sticky lg:top-4 lg:self-start">
+        {/* Financial Health */}
+        <Card className="glass-card card-accent">
+          <CardContent className="p-4 space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="icon-tile w-7 h-7 rounded-md">
+                <DollarSign className="w-3.5 h-3.5 text-primary" />
+              </div>
+              <span className="text-sm font-semibold">{t('finance_health')}</span>
+            </div>
+            {(() => {
+              const score =
+                (totals.net > 0 ? 30 : 0) +
+                (totals.income > 0 && totals.expense < totals.income * 0.8 ? 20 : 0) +
+                (totals.income > 0 ? 20 : 0) +
+                (categoryStats.items.length > 0 && categoryStats.items[0].expenseShare < 0.5 ? 15 : 0) +
+                (filteredTransactions.length > 3 ? 15 : 0);
+              const label = score >= 85 ? t('finance_health_excellent') : score >= 65 ? t('finance_health_stable') : score >= 40 ? t('finance_health_caution') : t('finance_health_at_risk');
+              const color = score >= 65 ? 'text-emerald-400' : score >= 40 ? 'text-orange-400' : 'text-rose-400';
+              const strokeColor = score >= 65 ? 'hsl(142, 76%, 42%)' : score >= 40 ? 'hsl(38, 92%, 55%)' : 'hsl(0, 84%, 55%)';
+              return (
+                <>
+                  <div className="flex flex-col items-center">
+                    <div className="relative w-24 h-24">
+                      <svg viewBox="0 0 96 96" className="w-full h-full -rotate-90">
+                        <circle cx="48" cy="48" r="40" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+                        <circle
+                          cx="48" cy="48" r="40" fill="none"
+                          stroke={strokeColor}
+                          strokeWidth="6"
+                          strokeLinecap="round"
+                          strokeDasharray={`${(score / 100) * 251.3} 251.3`}
+                        />
+                      </svg>
+                      <span className={cn("absolute inset-0 flex items-center justify-center text-xl font-bold", color)}>
+                        {score}
+                      </span>
+                    </div>
+                    <p className={cn("text-xs font-medium mt-1", color)}>{label}</p>
+                  </div>
+                  <div className="space-y-1.5 text-[11px] text-muted-foreground">
+                    <div className="flex justify-between"><span>{t('finance_health_positive')}</span><span>{totals.net > 0 ? '✓' : '✗'}</span></div>
+                    <div className="flex justify-between"><span>{t('finance_health_under80')}</span><span>{totals.income > 0 && totals.expense < totals.income * 0.8 ? '✓' : '✗'}</span></div>
+                    <div className="flex justify-between"><span>{t('finance_health_has_income')}</span><span>{totals.income > 0 ? '✓' : '✗'}</span></div>
+                    <div className="flex justify-between"><span>{t('finance_health_diversified')}</span><span>{categoryStats.items.length > 0 && categoryStats.items[0].expenseShare < 0.5 ? '✓' : '✗'}</span></div>
+                    <div className="flex justify-between"><span>{t('finance_health_active')}</span><span>{filteredTransactions.length > 3 ? '✓' : '✗'}</span></div>
+                  </div>
+                </>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
+        {/* AI Finance Insights */}
+        <Card className="glass-card card-accent">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2.5">
+              <div className="icon-tile w-7 h-7 rounded-md">
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
+              </div>
+              <span className="text-sm font-semibold">{t('finance_ai_title')}</span>
+            </div>
+
+            {finSuggestions.length > 0 ? (
+              <ul className="space-y-2">
+                {finSuggestions.map((s, i) => (
+                  <li key={i} className="flex items-start gap-3 rounded-lg bg-secondary/20 px-3 py-2.5">
+                    <div className={cn("icon-tile w-7 h-7 rounded-lg shrink-0 mt-0.5", s.type === 'action' ? 'bg-emerald-500/15' : 'bg-violet-500/15')}>
+                      {s.type === 'action'
+                        ? <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
+                        : <Lightbulb className="w-3.5 h-3.5 text-violet-400" />}
+                    </div>
+                    <p className="text-xs leading-relaxed">{s.text}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : finSugLoading ? (
+              <div className="space-y-2">
+                <SkeletonBlock className="h-10 w-full" />
+                <SkeletonBlock className="h-10 w-full" />
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground">{t('finance_ai_desc')}</p>
+                <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={fetchFinanceSuggestions}>
+                  <Sparkles className="w-3.5 h-3.5" /> {t('finance_ai_generate')}
+                </Button>
+              </>
+            )}
+
+            {/* Computed real stats */}
+            <div className="border-t border-border/40 pt-3 space-y-2">
+              {topCategory && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{t('finance_top_category')}</span>
+                  <span className="font-medium">{topCategory.name}: {formatCurrency(topCategory.amount)}</span>
+                </div>
+              )}
+              {expenseChangePct !== null && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{t('finance_vs_last_month')}</span>
+                  <span className={cn("font-medium", expenseChangePct <= 0 ? "text-emerald-400" : "text-rose-400")}>
+                    Expenses {expenseChangePct >= 0 ? '↑' : '↓'} {Math.abs(expenseChangePct)}%
+                  </span>
+                </div>
+              )}
+              {incomeSpentPct !== null && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{t('finance_income_spent')}</span>
+                  <span className={cn("font-medium", incomeSpentPct <= 80 ? "text-emerald-400" : "text-rose-400")}>
+                    {incomeSpentPct}%
+                  </span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions */}
+        <Card className="glass-card card-accent">
+          <CardContent className="p-4 space-y-2">
+            <h3 className="text-sm font-semibold mb-1">{t('finance_quick_actions')}</h3>
+            <Button size="sm" variant="outline" className="w-full justify-start gap-2 text-xs" onClick={() => { setType('income'); openNew(); }}>
+              <Plus className="w-3.5 h-3.5 text-emerald-400" /> {t('finance_add_income')}
+            </Button>
+            <Button size="sm" variant="outline" className="w-full justify-start gap-2 text-xs" onClick={() => { setType('expense'); openNew(); }}>
+              <Plus className="w-3.5 h-3.5 text-rose-400" /> {t('finance_add_expense')}
+            </Button>
+            <Button size="sm" variant="outline" className="w-full justify-start gap-2 text-xs" onClick={() => setShowImport(true)}>
+              <Upload className="w-3.5 h-3.5" /> {t('finance_import_statement')}
+            </Button>
+            <Button size="sm" variant="outline" className="w-full justify-start gap-2 text-xs" onClick={() => void handleExportReport()}>
+              <FileBarChart className="w-3.5 h-3.5" /> {t('finance_monthly_report')}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
       </div>
 
       <AnimatePresence>
