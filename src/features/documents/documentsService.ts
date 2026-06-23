@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 
 export const DOCUMENTS_BUCKET =
   import.meta.env.VITE_SUPABASE_STORAGE_BUCKET || "documents";
@@ -12,13 +11,36 @@ export interface Document {
   sizeBytes: number | null;
   title: string | null;
   description: string | null;
+  tags: string[];
+  aiSummary: string | null;
+  aiSummaryPoints: string[];
+  extractedTasksCount: number;
+  lastOpenedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-type DocumentRow = Database["public"]["Tables"]["documents"]["Row"];
+const SELECT_COLS =
+  'id,storage_path,file_name,mime_type,size_bytes,title,description,tags,ai_summary,ai_summary_points,extracted_tasks_count,last_opened_at,created_at,updated_at';
 
-function mapRow(row: DocumentRow): Document {
+interface RawRow {
+  id: string;
+  storage_path: string;
+  file_name: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  title: string | null;
+  description: string | null;
+  tags: string[] | null;
+  ai_summary: string | null;
+  ai_summary_points: unknown;
+  extracted_tasks_count: number | null;
+  last_opened_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+function mapRow(row: RawRow): Document {
   return {
     id: row.id,
     storagePath: row.storage_path,
@@ -27,6 +49,11 @@ function mapRow(row: DocumentRow): Document {
     sizeBytes: row.size_bytes,
     title: row.title,
     description: row.description,
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    aiSummary: row.ai_summary,
+    aiSummaryPoints: Array.isArray(row.ai_summary_points) ? row.ai_summary_points as string[] : [],
+    extractedTasksCount: row.extracted_tasks_count ?? 0,
+    lastOpenedAt: row.last_opened_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -35,10 +62,10 @@ function mapRow(row: DocumentRow): Document {
 export async function listDocuments(): Promise<Document[]> {
   const { data, error } = await supabase
     .from("documents")
-    .select("id,storage_path,file_name,mime_type,size_bytes,title,description,created_at,updated_at")
+    .select(SELECT_COLS)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []).map((row) => mapRow(row as DocumentRow));
+  return (data ?? []).map((row) => mapRow(row as unknown as RawRow));
 }
 
 export async function createDocument(meta: {
@@ -64,10 +91,10 @@ export async function createDocument(meta: {
       title: meta.title ?? null,
       description: meta.description ?? null,
     })
-    .select("id,storage_path,file_name,mime_type,size_bytes,title,description,created_at,updated_at")
+    .select(SELECT_COLS)
     .single();
   if (error || !data) throw error ?? new Error("Failed to create document");
-  return mapRow(data as DocumentRow);
+  return mapRow(data as unknown as RawRow);
 }
 
 export async function updateDocument(
@@ -81,10 +108,10 @@ export async function updateDocument(
       description: patch.description === undefined ? undefined : patch.description,
     })
     .eq("id", id)
-    .select("id,storage_path,file_name,mime_type,size_bytes,title,description,created_at,updated_at")
+    .select(SELECT_COLS)
     .single();
   if (error || !data) throw error ?? new Error("Failed to update document");
-  return mapRow(data as DocumentRow);
+  return mapRow(data as unknown as RawRow);
 }
 
 export async function deleteDocument(id: string): Promise<void> {
@@ -106,14 +133,43 @@ export async function uploadToStorage(userId: string, file: File) {
   const storagePath = `${userId}/${safeName}`;
   const { error } = await supabase.storage.from(DOCUMENTS_BUCKET).upload(storagePath, file, { upsert: true });
   if (error) throw error;
-  return {
-    storagePath,
-    fileName: safeName,
-  };
+  return { storagePath, fileName: safeName };
 }
 
 export async function downloadDocument(storagePath: string): Promise<Blob> {
   const { data, error } = await supabase.storage.from(DOCUMENTS_BUCKET).download(storagePath);
   if (error || !data) throw error ?? new Error("Failed to download file");
   return data;
+}
+
+export async function updateTags(id: string, tags: string[]): Promise<void> {
+  const { error } = await supabase
+    .from("documents")
+    .update({ tags })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function updateAiSummary(id: string, summary: string, points: string[]): Promise<void> {
+  const { error } = await supabase
+    .from("documents")
+    .update({ ai_summary: summary, ai_summary_points: points })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function updateExtractedTasksCount(id: string, count: number): Promise<void> {
+  const { error } = await supabase
+    .from("documents")
+    .update({ extracted_tasks_count: count })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function updateLastOpened(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("documents")
+    .update({ last_opened_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
 }

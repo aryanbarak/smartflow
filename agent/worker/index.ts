@@ -51,6 +51,10 @@ export default {
       return handleFinanceSuggestions(request, env)
     }
 
+    if (pathname === '/documents/analyze') {
+      return handleDocumentAnalyze(request, env)
+    }
+
     return json({ error: 'Not found' }, 404, origin)
   },
 }
@@ -1031,6 +1035,81 @@ async function requireAuth(
   }
 
   return { userId: user.id, error: null }
+}
+
+// =============================================
+// /documents/analyze handler
+// =============================================
+async function handleDocumentAnalyze(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin') ?? ''
+
+  const { userId, error: authError } = await requireAuth(request, env)
+  if (authError || !userId) {
+    return json({ error: authError ?? 'Unauthorized' }, 401, origin)
+  }
+
+  try {
+    const body = await request.json() as {
+      message: string
+      text?: string
+      fileData?: { base64: string; mimeType: string; name: string }
+      language?: string
+    }
+
+    if (!body.message) {
+      return json({ error: 'message is required' }, 400, origin)
+    }
+
+    // Build Gemini content parts
+    const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = []
+
+    // If PDF/file attachment: send as inlineData
+    if (body.fileData?.base64) {
+      parts.push({
+        inlineData: {
+          mimeType: body.fileData.mimeType,
+          data: body.fileData.base64,
+        },
+      })
+    }
+
+    // If text content provided: embed in prompt
+    if (body.text) {
+      parts.push({ text: `${body.message}\n\nDocument text:\n${body.text.slice(0, 30000)}` })
+    } else if (!body.fileData) {
+      parts.push({ text: body.message })
+    } else {
+      parts.push({ text: body.message })
+    }
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 4096 },
+        }),
+      },
+    )
+
+    if (!res.ok) {
+      const errBody = await res.text()
+      console.error('[documents/analyze] Gemini error:', res.status, errBody)
+      return json({ error: `Gemini error: ${res.status}` }, 502, origin)
+    }
+
+    const geminiData = await res.json() as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
+    }
+    const answer = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+
+    return json({ answer }, 200, origin)
+  } catch (err) {
+    console.error('[documents/analyze] error:', err)
+    return json({ error: 'Internal error' }, 500, origin)
+  }
 }
 
 // =============================================

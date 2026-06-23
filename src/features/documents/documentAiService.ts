@@ -1,8 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
-import * as pdfjsLib from 'pdfjs-dist';
-import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 
-const AI_WORKER_URL = import.meta.env.VITE_AI_AGENT_URL || 'https://api.barakzai.cloud/analyze';
+const WORKER_URL = (import.meta.env.VITE_AGENT_WORKER_URL as string | undefined) ?? '';
 
 export interface SummaryResult {
   summary: string;
@@ -11,105 +9,111 @@ export interface SummaryResult {
   language: string;
 }
 
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
+  return headers;
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      resolve(result.split(',')[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function parseJsonResponse(content: string): { summary: string; keyPoints: string[] } {
+  try {
+    const clean = content.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean) as { summary?: string; keyPoints?: string[] };
+    return { summary: parsed.summary ?? '', keyPoints: parsed.keyPoints ?? [] };
+  } catch {
+    return { summary: content.slice(0, 1500), keyPoints: [] };
+  }
+}
+
 export const documentAiService = {
-  async extractTextFromPdf(file: File): Promise<string> {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+  async callWorker(
+    message: string,
+    options?: { text?: string; fileData?: { base64: string; mimeType: string; name: string }; language?: string }
+  ): Promise<string> {
+    const headers = await getAuthHeaders();
+    const body: Record<string, unknown> = { message };
+    if (options?.text) body.text = options.text;
+    if (options?.fileData) body.fileData = options.fileData;
+    if (options?.language) body.language = options.language;
 
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const response = await fetch(`${WORKER_URL}/documents/analyze`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
 
-    let fullText = '';
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .filter((item): item is TextItem => 'str' in item)
-        .map(item => item.str)
-        .join(' ');
-      fullText += pageText + '\n';
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({})) as { error?: string };
+      throw new Error(err.error ?? `Worker error: ${response.status}`);
     }
 
-    return fullText.trim();
+    const data = await response.json() as { answer?: string };
+    return data.answer ?? '';
   },
 
-  async generateSummary(
+  async generateSummaryFromText(
     text: string,
-    language: 'de' | 'fa' | 'en' = 'de',
-    customPrompt?: string
+    language: 'de' | 'fa' | 'en' = 'en'
   ): Promise<SummaryResult> {
     const langLabel = language === 'de' ? 'German' : language === 'fa' ? 'Persian/Farsi' : 'English';
-
-    const prompt = customPrompt ?? `
-Analyze this document and provide:
+    const prompt = `Analyze this document and provide:
 1. A clear summary in ${langLabel} (3-5 sentences)
 2. 5 key points as a JSON array
 
-Document text:
-${text.slice(0, 8000)}
+Respond in this exact JSON format:
+{"summary": "...", "keyPoints": ["point1", "point2", "point3", "point4", "point5"], "language": "${language}"}
+Return ONLY the JSON. No markdown, no extra text.`;
+
+    const content = await this.callWorker(prompt, { text, language });
+    const parsed = parseJsonResponse(content);
+    return { ...parsed, wordCount: text.split(/\s+/).length, language };
+  },
+
+  async generateSummaryFromPdf(
+    blob: Blob,
+    fileName: string,
+    language: 'de' | 'fa' | 'en' = 'en'
+  ): Promise<SummaryResult> {
+    const langLabel = language === 'de' ? 'German' : language === 'fa' ? 'Persian/Farsi' : 'English';
+    const base64 = await blobToBase64(blob);
+    const prompt = `Analyze this PDF document and provide:
+1. A clear summary in ${langLabel} (3-5 sentences)
+2. 5 key points as a JSON array
 
 Respond in this exact JSON format:
-{
-  "summary": "...",
-  "keyPoints": ["point1", "point2", "point3", "point4", "point5"],
-  "language": "${language}"
-}
-Return ONLY the JSON. No markdown, no extra text.
-`;
+{"summary": "...", "keyPoints": ["point1", "point2", "point3", "point4", "point5"], "language": "${language}"}
+Return ONLY the JSON. No markdown, no extra text.`;
 
-    const response = await fetch(AI_WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: prompt, mode: 'general_it', language }),
+    const content = await this.callWorker(prompt, {
+      fileData: { base64, mimeType: 'application/pdf', name: fileName },
+      language,
     });
-
-    if (!response.ok) throw new Error('AI service error');
-
-    const data = await response.json() as { response?: string; content?: string };
-    const content = data.response ?? data.content ?? '';
-
-    try {
-      const clean = content.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(clean) as { summary?: string; keyPoints?: string[]; language?: string };
-      return {
-        summary: parsed.summary ?? '',
-        keyPoints: parsed.keyPoints ?? [],
-        wordCount: text.split(/\s+/).length,
-        language,
-      };
-    } catch {
-      return {
-        summary: content.slice(0, 500),
-        keyPoints: [],
-        wordCount: text.split(/\s+/).length,
-        language,
-      };
-    }
+    const parsed = parseJsonResponse(content);
+    return { ...parsed, wordCount: 0, language };
   },
 
-  async saveSummary(documentId: string, result: SummaryResult, extractedText: string): Promise<void> {
-    const { error } = await supabase
-      .from('documents')
-      .update({
-        summary: result.summary,
-        summary_language: result.language,
-        summary_generated_at: new Date().toISOString(),
-        extracted_text: extractedText.slice(0, 50000),
-        word_count: result.wordCount,
-        key_points: result.keyPoints,
-      } as Record<string, unknown>)
-      .eq('id', documentId);
-
-    if (error) throw error;
+  async callWithText(text: string, prompt: string, language?: string): Promise<string> {
+    return this.callWorker(prompt, { text, language });
   },
 
-  async processDocument(
-    file: File,
-    documentId: string,
-    language: 'de' | 'fa' | 'en' = 'de'
-  ): Promise<SummaryResult> {
-    const text = await this.extractTextFromPdf(file);
-    const result = await this.generateSummary(text, language);
-    await this.saveSummary(documentId, result, text);
-    return result;
+  async callWithPdf(blob: Blob, fileName: string, prompt: string, language?: string): Promise<string> {
+    const base64 = await blobToBase64(blob);
+    return this.callWorker(prompt, {
+      fileData: { base64, mimeType: 'application/pdf', name: fileName },
+      language,
+    });
   },
 };

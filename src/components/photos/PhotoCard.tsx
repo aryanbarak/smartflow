@@ -1,11 +1,13 @@
-import { Trash2 } from "lucide-react";
+import { Heart, Trash2 } from "lucide-react";
 import { thumbUrl, type Photo } from "@/features/photos/photosService";
+import { cn } from "@/lib/utils";
 
 interface PhotoCardProps {
   photo: Photo;
   isAiTagging?: boolean;
   onClick: () => void;
   onDelete: () => void;
+  onToggleFavorite?: () => void;
 }
 
 export function PhotoCard({
@@ -13,10 +15,9 @@ export function PhotoCard({
   isAiTagging = false,
   onClick,
   onDelete,
+  onToggleFavorite,
 }: Readonly<PhotoCardProps>) {
   return (
-    // Outer div is the group container — not interactive itself.
-    // Main click area and delete button are sibling <button>s, never nested.
     <div className="group relative overflow-hidden rounded-lg bg-slate-800 break-inside-avoid mb-3">
       {/* Primary click target */}
       <button
@@ -61,7 +62,24 @@ export function PhotoCard({
         )}
       </button>
 
-      {/* Delete — sibling of main button, not nested inside it */}
+      {/* Favorite heart — top-left on hover, always visible if favorited */}
+      {onToggleFavorite && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onToggleFavorite(); }}
+          className={cn(
+            "absolute top-1.5 left-1.5 p-1.5 rounded-full transition-all z-10",
+            photo.isFavorite
+              ? "bg-rose-500/80 text-white opacity-100"
+              : "bg-black/60 text-white/50 opacity-0 group-hover:opacity-100 hover:text-rose-400"
+          )}
+          aria-label={photo.isFavorite ? "Remove from favorites" : "Add to favorites"}
+        >
+          <Heart className={cn("h-3.5 w-3.5", photo.isFavorite && "fill-current")} />
+        </button>
+      )}
+
+      {/* Delete — top-right on hover */}
       <button
         type="button"
         onClick={onDelete}

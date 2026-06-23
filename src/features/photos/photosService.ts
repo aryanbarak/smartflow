@@ -17,6 +17,8 @@ export interface Photo {
   tags: string[];
   caption: string | null;
   location: string | null;
+  isFavorite: boolean;
+  memoryDate: string | null;
   createdAt: string;
 }
 
@@ -45,7 +47,7 @@ export function thumbUrl(photo: Photo) {
 }
 
 const PHOTO_COLS =
-  "id,user_id,r2_key,thumb_key,file_name,file_size,mime_type,width,height,taken_at,album_id,tags,caption,location,created_at";
+  "id,user_id,r2_key,thumb_key,file_name,file_size,mime_type,width,height,taken_at,album_id,tags,caption,location,is_favorite,memory_date,created_at";
 const ALBUM_COLS = "id,user_id,name,description,cover_photo_id,created_at";
 
 type Row = Record<string, unknown>;
@@ -70,6 +72,8 @@ function mapPhoto(row: Row): Photo {
     tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
     caption: sn(row.caption),
     location: sn(row.location),
+    isFavorite: row.is_favorite === true,
+    memoryDate: sn(row.memory_date),
     createdAt: s(row.created_at),
   };
 }
@@ -150,6 +154,22 @@ export const photosService = {
 
   async deletePhoto(id: string): Promise<void> {
     const { error } = await supabase.from("photos").delete().eq("id", id);
+    if (error) throw error;
+  },
+
+  async toggleFavorite(id: string, isFavorite: boolean): Promise<void> {
+    const { error } = await supabase
+      .from("photos")
+      .update({ is_favorite: isFavorite })
+      .eq("id", id);
+    if (error) throw error;
+  },
+
+  async updateMemoryDate(id: string, date: string | null): Promise<void> {
+    const { error } = await supabase
+      .from("photos")
+      .update({ memory_date: date })
+      .eq("id", id);
     if (error) throw error;
   },
 };

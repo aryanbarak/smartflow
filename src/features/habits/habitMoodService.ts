@@ -85,11 +85,11 @@ export async function getHabitMoodCorrelation(
   return { days: dayList, avgMoodHighHabit, avgMoodLowHabit, correlation, message, thisWeekAvgMood, thisWeekCompletionRate };
 }
 
-export async function getTodayHabitSummary(userId: string): Promise<{ completed: number; total: number; rate: number }> {
-  const today = new Date().toISOString().slice(0, 10);
+export async function getTodayHabitSummary(userId: string, date?: string): Promise<{ completed: number; total: number; rate: number }> {
+  const target = date ?? new Date().toISOString().slice(0, 10);
   const [habitsRes, completionsRes] = await Promise.all([
     supabase.from('habits').select('id').eq('user_id', userId).eq('is_active', true),
-    supabase.from('habit_completions').select('id').eq('user_id', userId).eq('completed_date', today),
+    supabase.from('habit_completions').select('id').eq('user_id', userId).eq('completed_date', target),
   ]);
   const total = (habitsRes.data ?? []).length;
   const completed = (completionsRes.data ?? []).length;
