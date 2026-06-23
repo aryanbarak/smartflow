@@ -1,234 +1,313 @@
-﻿// src/pages/FamilyPage.tsx
-
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { Plus, Calendar, FileText, Edit2, Trash2, ShoppingCart } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { StatePanel } from "@/components/common/StatePanel";
+  Plus, Calendar, CalendarDays, FileText, Trash2, ShoppingCart, Users, GraduationCap,
+  CheckSquare, Settings, MoreVertical, Edit2, Bot, BookOpen, ArrowRight, Home, PartyPopper,
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import {
-  SkeletonBlock,
-  SkeletonCard,
-  SkeletonListItem,
-  SkeletonSection,
-} from "@/components/common/Skeletons";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useFamily } from "@/hooks/useFamily";
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { StatePanel } from '@/components/common/StatePanel';
 import {
-  Child,
-  ChildScheduleItem,
-  ChildEvent,
-} from "@/features/family/familyService";
-import { ShoppingList } from "@/features/shopping/ShoppingList";
+  SkeletonBlock, SkeletonCard, SkeletonListItem, SkeletonSection,
+} from '@/components/common/Skeletons';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
-  createCalendarEventFromFamily,
-  deleteCalendarEventById,
-} from "@/features/calendar/calendarService";
-import { cn } from "@/lib/utils";
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useFamily } from '@/hooks/useFamily';
+import { useTasks } from '@/hooks/useTasks';
+import { Child, ChildScheduleItem, ChildEvent } from '@/features/family/familyService';
+import { childHomeworkService, type Homework, type HomeworkCreateInput } from '@/features/family/childHomeworkService';
+import { childExamsService, type Exam, type ExamCreateInput } from '@/features/family/childExamsService';
+import { ShoppingList } from '@/features/shopping/ShoppingList';
+import { useShoppingList } from '@/features/shopping/useShoppingList';
+import {
+  createCalendarEventFromFamily, deleteCalendarEventById,
+} from '@/features/calendar/calendarService';
+import { useT } from '@/i18n';
+import { cn } from '@/lib/utils';
 
 function getInitials(name: string): string {
-  const parts = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (parts.length === 0) return "?";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
-const defaultColors = ["bg-pink-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500"];
-const DAYS_OF_WEEK = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-];
+const defaultColors = ['bg-pink-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500'];
+const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-function getTodayWeekdayName(): string {
-  const today = new Date();
-  const jsDay = today.getDay();
-  const index = (jsDay + 6) % 7;
-  return DAYS_OF_WEEK[index];
+function todayIso(): string {
+  return new Date().toISOString().split('T')[0];
+}
+function todayWeekday(): string {
+  const d = new Date();
+  return DAYS_OF_WEEK[(d.getDay() + 6) % 7];
 }
 
-function getTodayIsoDate(): string {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = `${today.getMonth() + 1}`.padStart(2, "0");
-  const day = `${today.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+const CATEGORY_COLORS: Record<string, string> = {
+  school: 'bg-blue-500/15 text-blue-400',
+  health: 'bg-emerald-500/15 text-emerald-400',
+  sports: 'bg-orange-500/15 text-orange-400',
+  meeting: 'bg-violet-500/15 text-violet-400',
+};
 
 export default function FamilyPage() {
-  const { children, isLoading, error, addChild, updateChild, removeChild } =
-    useFamily();
+  const { children, isLoading, error, addChild, updateChild, removeChild } = useFamily();
+  const { tasks } = useTasks();
+  const { data: shoppingItems = [] } = useShoppingList();
+  const { t } = useT();
+  const navigate = useNavigate();
 
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
 
-  // Form state for Add Child (v1: ÙÙ‚Ø· Ù¾Ø±ÙˆÙØ§ÛŒÙ„ Ø³Ø§Ø¯Ù‡)
-  const [name, setName] = useState("");
-  const [age, setAge] = useState("");
-  const [color, setColor] = useState<string>(defaultColors[0]);
+  // Form state
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const [color, setColor] = useState(defaultColors[0]);
   const [formError, setFormError] = useState<string | null>(null);
-  const [newNote, setNewNote] = useState("");
+  const [newNote, setNewNote] = useState('');
   const [isSavingNote, setIsSavingNote] = useState(false);
-  const [newEventTitle, setNewEventTitle] = useState("");
-  const [newEventDate, setNewEventDate] = useState("");
+  const [newEventTitle, setNewEventTitle] = useState('');
+  const [newEventDate, setNewEventDate] = useState('');
+  const [newEventCategory, setNewEventCategory] = useState('');
   const [isSavingEvent, setIsSavingEvent] = useState(false);
   const [addToCalendar, setAddToCalendar] = useState(true);
-  const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
   const [scheduleDraft, setScheduleDraft] = useState<Record<string, string>>({});
   const [isSavingSchedule, setIsSavingSchedule] = useState(false);
+
+  // Homework state
+  const [homework, setHomework] = useState<Homework[]>([]);
+  const [hwSubject, setHwSubject] = useState('');
+  const [hwTitle, setHwTitle] = useState('');
+  const [hwDue, setHwDue] = useState('');
+  const [hwPriority, setHwPriority] = useState<'low' | 'normal' | 'high'>('normal');
+  const [isSavingHw, setIsSavingHw] = useState(false);
+
+  // Exams state
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [examSubject, setExamSubject] = useState('');
+  const [examDate, setExamDate] = useState('');
+  const [examNotes, setExamNotes] = useState('');
+  const [isSavingExam, setIsSavingExam] = useState(false);
+
+  // All homework for KPI
+  const [allPendingHw, setAllPendingHw] = useState<Homework[]>([]);
 
   const hasChildren = children.length > 0;
 
   const selectedChild: Child | null = useMemo(() => {
     if (!hasChildren) return null;
-    if (selectedChildId) {
-      return children.find((c) => c.id === selectedChildId) ?? children[0];
-    }
+    if (selectedChildId) return children.find(c => c.id === selectedChildId) ?? children[0];
     return children[0];
   }, [children, hasChildren, selectedChildId]);
 
-  const todaySummary = useMemo(() => {
-    if (!selectedChild) {
-      return {
-        todaySchedule: null as ChildScheduleItem | null,
-        todayEvents: [] as ChildEvent[],
-        upcomingEvents: [] as ChildEvent[],
-      };
-    }
-
-    const todayWeekday = getTodayWeekdayName();
-    const todayIso = getTodayIsoDate();
-
-    const todaySchedule =
-      (selectedChild.schedule ?? []).find(
-        (item) => item.day === todayWeekday && item.activity?.trim()
-      ) ?? null;
-
-    const allEvents = (selectedChild.events ?? []).filter(
-      (event) => !!event.date && !!event.title
-    );
-
-    const todayEvents = allEvents.filter((event) => event.date === todayIso);
-
-    const upcomingEvents = allEvents
-      .filter((event) => event.date >= todayIso)
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(0, 5);
-
-    return { todaySchedule, todayEvents, upcomingEvents };
-  }, [selectedChild]);
-
-  // When list changes, ensure selectedChildId always valid
   useEffect(() => {
-    if (!hasChildren) {
-      setSelectedChildId(null);
-      return;
-    }
-    if (!selectedChildId || !children.some((c) => c.id === selectedChildId)) {
+    if (!hasChildren) { setSelectedChildId(null); return; }
+    if (!selectedChildId || !children.some(c => c.id === selectedChildId)) {
       setSelectedChildId(children[0].id);
     }
   }, [children, hasChildren, selectedChildId]);
 
+  // Load homework + exams for selected child
   useEffect(() => {
-    if (!selectedChild) {
-      setScheduleDraft({});
-      return;
-    }
+    if (!selectedChild) { setHomework([]); setExams([]); return; }
+    childHomeworkService.getByChild(selectedChild.id).then(setHomework).catch(() => setHomework([]));
+    childExamsService.getByChild(selectedChild.id).then(setExams).catch(() => setExams([]));
+  }, [selectedChild?.id]);
+
+  // Load all pending homework for KPI
+  useEffect(() => {
+    childHomeworkService.getAllPending().then(setAllPendingHw).catch(() => setAllPendingHw([]));
+  }, [homework]);
+
+  // Sync schedule draft
+  useEffect(() => {
+    if (!selectedChild) { setScheduleDraft({}); return; }
     const draft: Record<string, string> = {};
-    DAYS_OF_WEEK.forEach((day) => {
-      draft[day] = "";
-    });
-    (selectedChild.schedule ?? []).forEach((item) => {
-      if (item.day && typeof item.activity === "string") {
-        draft[item.day] = item.activity;
-      }
+    DAYS_OF_WEEK.forEach(day => { draft[day] = ''; });
+    (selectedChild.schedule ?? []).forEach(item => {
+      if (item.day && typeof item.activity === 'string') draft[item.day] = item.activity;
     });
     setScheduleDraft(draft);
   }, [selectedChild]);
 
+  // ─── KPI computations ───
+  const today = todayIso();
+
+  const totalEvents = useMemo(() =>
+    children.reduce((sum, c) => sum + (c.events ?? []).filter(e => !!e.date && !!e.title).length, 0)
+  , [children]);
+
+  const todayEvents = useMemo(() => {
+    const result: Array<ChildEvent & { childName: string }> = [];
+    for (const child of children) {
+      for (const ev of (child.events ?? [])) {
+        if (ev.date === today && ev.title) result.push({ ...ev, childName: child.name });
+      }
+    }
+    return result;
+  }, [children, today]);
+
+  const openTasks = useMemo(() =>
+    tasks.filter(t2 => !t2.completed).length
+  , [tasks]);
+
+  // Upcoming events (next 30 days) across all children
+  const upcomingAll = useMemo(() => {
+    const future = new Date();
+    future.setDate(future.getDate() + 30);
+    const futureIso = future.toISOString().split('T')[0];
+    const result: Array<ChildEvent & { childName: string; childColor: string }> = [];
+    for (const child of children) {
+      for (const ev of (child.events ?? [])) {
+        if (ev.date && ev.title && ev.date >= today && ev.date <= futureIso) {
+          result.push({ ...ev, childName: child.name, childColor: child.color });
+        }
+      }
+    }
+    return result.sort((a, b) => a.date.localeCompare(b.date));
+  }, [children, today]);
+
+  // Sidebar: next 3 events + homework due in 3 days
+  const sidebarEvents = upcomingAll.slice(0, 3);
+  const threeDaysOut = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 3);
+    return d.toISOString().split('T')[0];
+  }, []);
+  const urgentHomework = useMemo(() =>
+    allPendingHw.filter(h => h.due_date <= threeDaysOut).slice(0, 3)
+  , [allPendingHw, threeDaysOut]);
+  const highPriorityHw = useMemo(() =>
+    allPendingHw.filter(h => h.priority === 'high' && h.due_date <= (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; })())
+  , [allPendingHw]);
+
+  // Selected child overview data
+  const childUpcomingEvents = useMemo(() => {
+    if (!selectedChild) return [];
+    return (selectedChild.events ?? [])
+      .filter(e => e.date && e.title && e.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 5);
+  }, [selectedChild, today]);
+
+  const childRecentNotes = useMemo(() => {
+    if (!selectedChild) return [];
+    return (selectedChild.notes ?? []).slice(-5).reverse();
+  }, [selectedChild]);
+
+  // Unchecked shopping items for sidebar
+  const uncheckedShopping = useMemo(() =>
+    shoppingItems.filter(i => !i.checked).slice(0, 5)
+  , [shoppingItems]);
+
+  // Weekly family schedule (for overview fallback when no today events)
+  const weeklyTimeline = useMemo(() => {
+    const result: Array<{ day: string; childName: string; activity: string }> = [];
+    for (const child of children) {
+      for (const item of (child.schedule ?? [])) {
+        if (item.day && item.activity?.trim()) {
+          result.push({ day: item.day, childName: child.name, activity: item.activity });
+        }
+      }
+    }
+    return DAYS_OF_WEEK
+      .map(day => ({ day, items: result.filter(r => r.day === day) }))
+      .filter(g => g.items.length > 0);
+  }, [children]);
+
+  // AI assistant: build natural-language items
+  const childNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of children) map.set(c.id, c.name);
+    return map;
+  }, [children]);
+
+  const assistantItems = useMemo(() => {
+    const items: Array<{ text: string; priority: number }> = [];
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowIso = tomorrow.toISOString().split('T')[0];
+    const twoDaysOut = new Date();
+    twoDaysOut.setDate(twoDaysOut.getDate() + 2);
+    const twoDaysIso = twoDaysOut.toISOString().split('T')[0];
+
+    for (const hw of allPendingHw) {
+      const childName = childNameById.get(hw.child_id) ?? '';
+      if (hw.due_date < today) {
+        items.push({ text: t('family_ai_overdue', { child: childName, title: hw.title }), priority: 0 });
+      } else if (hw.due_date === today) {
+        items.push({ text: t('family_ai_due_today', { child: childName, title: hw.title }), priority: 1 });
+      } else if (hw.due_date === tomorrowIso) {
+        items.push({ text: t('family_ai_due_tomorrow', { child: childName, title: hw.title }), priority: 2 });
+      }
+    }
+
+    for (const ev of upcomingAll.slice(0, 5)) {
+      if (ev.date >= today && ev.date <= twoDaysIso) {
+        items.push({ text: t('family_ai_event_soon', { child: ev.childName, title: ev.title, date: ev.date.slice(5) }), priority: 3 });
+      }
+    }
+
+    const pendingCount = shoppingItems.filter(i => !i.checked).length;
+    if (pendingCount > 0) {
+      items.push({ text: t('family_ai_shopping', { count: String(pendingCount) }), priority: 4 });
+    }
+
+    return items.sort((a, b) => a.priority - b.priority).slice(0, 4);
+  }, [allPendingHw, upcomingAll, shoppingItems, childNameById, today, t]);
+
+  const handleGenerateWeeklyPlan = useCallback(() => {
+    const childInfo = children.map(c => {
+      const hwList = allPendingHw.filter(h => h.child_id === c.id).map(h => `${h.subject}: ${h.title} (due ${h.due_date})`);
+      const evList = (c.events ?? []).filter(e => e.date && e.date >= today).slice(0, 3).map(e => `${e.title} on ${e.date}`);
+      return `${c.name}${hwList.length ? ` — Homework: ${hwList.join(', ')}` : ''}${evList.length ? ` — Events: ${evList.join(', ')}` : ''}`;
+    }).join('\n');
+    sessionStorage.setItem('chat_initial_prompt', `Help me plan this week for my family:\n${childInfo}`);
+    navigate('/chat');
+  }, [children, allPendingHw, today, navigate]);
+
+  // ─── Handlers ───
   const handleOpenNew = () => {
-    setName("");
-    setAge("");
-    setColor(defaultColors[0]);
-    setFormError(null);
-    setIsDialogOpen(true);
+    setName(''); setAge(''); setColor(defaultColors[0]); setFormError(null); setIsDialogOpen(true);
   };
 
   const handleSaveNew = async () => {
     const trimmedName = name.trim();
-    if (!trimmedName) {
-      setFormError("Name is required.");
-      return;
-    }
-
+    if (!trimmedName) { setFormError(t('family_name_required')); return; }
     const numericAge = age ? Number(age) : undefined;
-    if (age && (Number.isNaN(numericAge) || numericAge <= 0)) {
-      setFormError("Age must be a positive number.");
-      return;
-    }
-
+    if (age && (Number.isNaN(numericAge) || (numericAge ?? 0) <= 0)) { setFormError(t('family_age_invalid')); return; }
     const initials = getInitials(trimmedName);
-
-    const created = await addChild({
-      name: trimmedName,
-      age: numericAge,
-      color,
-      initials,
-      schedule: [], // v1: Ø®Ø§Ù„ÛŒØ› Ø¨Ø¹Ø¯Ø§Ù‹ ÙÛŒÚ†Ø±Ù‡Ø§ÛŒ ÙˆÛŒØ±Ø§ÛŒØ´ Ø±Ø§ Ø§Ø¶Ø§ÙÙ‡ Ù…ÛŒâ€ŒÚ©Ù†ÛŒÙ…
-      notes: [],
-      events: [],
-    });
-
-    if (created) {
-      setIsDialogOpen(false);
-      setSelectedChildId(created.id);
-    }
-  };
-
-  const handleDeleteChild = async (child: Child) => {
-    await removeChild(child.id);
+    const created = await addChild({ name: trimmedName, age: numericAge, color, initials, schedule: [], notes: [], events: [] });
+    if (created) { setIsDialogOpen(false); setSelectedChildId(created.id); }
   };
 
   const handleAddNote = async () => {
     if (!selectedChild) return;
     const trimmed = newNote.trim();
     if (!trimmed) return;
-    try {
-      setIsSavingNote(true);
-      const updatedNotes = [...(selectedChild.notes ?? []), trimmed];
-      await updateChild(selectedChild.id, { notes: updatedNotes });
-      setNewNote("");
-    } finally {
-      setIsSavingNote(false);
-    }
+    try { setIsSavingNote(true); await updateChild(selectedChild.id, { notes: [...(selectedChild.notes ?? []), trimmed] }); setNewNote(''); }
+    finally { setIsSavingNote(false); }
   };
 
   const handleDeleteNote = async (index: number) => {
     if (!selectedChild) return;
-    const currentNotes = selectedChild.notes ?? [];
-    const updatedNotes = currentNotes.filter((_, i) => i !== index);
-    await updateChild(selectedChild.id, { notes: updatedNotes });
+    await updateChild(selectedChild.id, { notes: (selectedChild.notes ?? []).filter((_, i) => i !== index) });
   };
 
   const handleAddEvent = async () => {
@@ -237,619 +316,676 @@ export default function FamilyPage() {
     const date = newEventDate.trim();
     if (!title || !date) return;
     setIsSavingEvent(true);
-    setIsSyncingCalendar(false);
-
-    let calendarEventId: string | null | undefined = null;
-
     try {
+      let calendarEventId: string | undefined;
       if (addToCalendar) {
-        setIsSyncingCalendar(true);
-        const result = await createCalendarEventFromFamily({
-          title,
-          date,
-          childName: selectedChild.name,
-        });
+        const result = await createCalendarEventFromFamily({ title, date, childName: selectedChild.name });
         calendarEventId = result.id;
-        setIsSyncingCalendar(false);
       }
-
-      const currentEvents = selectedChild.events ?? [];
-      const newEvent: ChildEvent = {
-        title,
-        date,
-        calendarEventId: calendarEventId ?? undefined,
-      };
-      const updatedEvents = [...currentEvents, newEvent];
-      await updateChild(selectedChild.id, { events: updatedEvents });
-      setNewEventTitle("");
-      setNewEventDate("");
-    } finally {
-      setIsSavingEvent(false);
-      setIsSyncingCalendar(false);
-    }
+      const newEv: ChildEvent = { title, date, calendarEventId };
+      await updateChild(selectedChild.id, { events: [...(selectedChild.events ?? []), newEv] });
+      setNewEventTitle(''); setNewEventDate(''); setNewEventCategory('');
+    } finally { setIsSavingEvent(false); }
   };
 
   const handleDeleteEvent = async (index: number) => {
     if (!selectedChild) return;
-    const currentEvents = selectedChild.events ?? [];
-    const eventToDelete = currentEvents[index];
-    const updatedEvents = currentEvents.filter((_, i) => i !== index);
-    await updateChild(selectedChild.id, { events: updatedEvents });
-    if (eventToDelete?.calendarEventId) {
-      try {
-        await deleteCalendarEventById(eventToDelete.calendarEventId);
-      } catch (error) {
-        console.error("Failed to delete linked calendar event", error);
-      }
-    }
-  };
-
-  const handleScheduleChange = (day: string, value: string) => {
-    setScheduleDraft((prev) => ({
-      ...prev,
-      [day]: value,
-    }));
+    const events = selectedChild.events ?? [];
+    const ev = events[index];
+    await updateChild(selectedChild.id, { events: events.filter((_, i) => i !== index) });
+    if (ev?.calendarEventId) { deleteCalendarEventById(ev.calendarEventId).catch(console.error); }
   };
 
   const handleSaveSchedule = async () => {
     if (!selectedChild) return;
-    const items: ChildScheduleItem[] = [];
-    DAYS_OF_WEEK.forEach((day) => {
-      const activity = (scheduleDraft[day] ?? "").trim();
-      if (activity) {
-        items.push({ day, activity });
-      }
-    });
+    const items: ChildScheduleItem[] = DAYS_OF_WEEK
+      .filter(day => (scheduleDraft[day] ?? '').trim())
+      .map(day => ({ day, activity: scheduleDraft[day].trim() }));
+    try { setIsSavingSchedule(true); await updateChild(selectedChild.id, { schedule: items }); }
+    finally { setIsSavingSchedule(false); }
+  };
+
+  const handleAddHomework = async () => {
+    if (!selectedChild || !hwSubject.trim() || !hwTitle.trim() || !hwDue) return;
+    setIsSavingHw(true);
     try {
-      setIsSavingSchedule(true);
-      await updateChild(selectedChild.id, { schedule: items });
-    } finally {
-      setIsSavingSchedule(false);
-    }
+      const input: HomeworkCreateInput = { child_id: selectedChild.id, subject: hwSubject.trim(), title: hwTitle.trim(), due_date: hwDue, priority: hwPriority };
+      const created = await childHomeworkService.create(input);
+      setHomework(prev => [...prev, created]);
+      setHwSubject(''); setHwTitle(''); setHwDue(''); setHwPriority('normal');
+    } finally { setIsSavingHw(false); }
+  };
+
+  const handleCompleteHomework = async (id: string) => {
+    await childHomeworkService.complete(id);
+    setHomework(prev => prev.map(h => h.id === id ? { ...h, completed: true, completed_at: new Date().toISOString() } : h));
+  };
+
+  const handleDeleteHomework = async (id: string) => {
+    await childHomeworkService.delete(id);
+    setHomework(prev => prev.filter(h => h.id !== id));
+  };
+
+  const handleAddExam = async () => {
+    if (!selectedChild || !examSubject.trim() || !examDate) return;
+    setIsSavingExam(true);
+    try {
+      const input: ExamCreateInput = { child_id: selectedChild.id, subject: examSubject.trim(), exam_date: examDate, notes: examNotes.trim() || undefined };
+      const created = await childExamsService.create(input);
+      setExams(prev => [...prev, created]);
+      setExamSubject(''); setExamDate(''); setExamNotes('');
+    } finally { setIsSavingExam(false); }
+  };
+
+  const handleDeleteExam = async (id: string) => {
+    await childExamsService.delete(id);
+    setExams(prev => prev.filter(e => e.id !== id));
   };
 
   const isInitialLoading = isLoading && !children.length;
 
+  // Quick action handlers for sidebar
+  const quickAddEvent = useCallback(() => { setActiveTab('events'); }, []);
+  const quickAddHomework = useCallback(() => { setActiveTab('school'); }, []);
+  const quickAddNote = useCallback(() => { setActiveTab('notes'); }, []);
+  const quickAddShopping = useCallback(() => { setActiveTab('shopping'); }, []);
+
   return (
-    <div className="p-4 lg:p-8 max-w-6xl mx-auto">
-      {/* Error banner */}
+    <div className="px-4 sm:px-6 lg:px-8 pb-6">
       {error && (
         <div className="mb-4">
-          <StatePanel
-            variant="error"
-            title="Family failed to load"
-            description={error || "Failed to load family data."}
-          />
+          <StatePanel variant="error" title="Family failed to load" description={error || 'Failed to load family data.'} />
         </div>
       )}
 
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-8 gap-3 flex-wrap"
-      >
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold truncate">Family</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">
-            Manage your kids&apos; activities and notes
-          </p>
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between py-5">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-semibold mb-1">{t('family_title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('family_subtitle')}</p>
         </div>
-
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2 shadow-glow" onClick={handleOpenNew}>
+            <Button className="gap-2" style={{ background: 'var(--gradient-primary)' }} onClick={handleOpenNew}>
               <Plus className="w-4 h-4" />
-              Add Child
+              <span className="hidden sm:inline">{t('family_add_child')}</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add Child</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>{t('family_add_child')}</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-4">
-              {formError && (
-                <Alert variant="destructive">
-                  <AlertDescription>{formError}</AlertDescription>
-                </Alert>
-              )}
+              {formError && <Alert variant="destructive"><AlertDescription>{formError}</AlertDescription></Alert>}
               <div className="space-y-2">
-                <Label>Name</Label>
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Emma Barakzai"
-                />
+                <Label>{t('family_child_name')}</Label>
+                <Input value={name} onChange={e => setName(e.target.value)} placeholder="Emma" />
               </div>
               <div className="space-y-2">
-                <Label>Age</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
-                  placeholder="8"
-                />
+                <Label>{t('family_age')}</Label>
+                <Input type="number" min={0} value={age} onChange={e => setAge(e.target.value)} placeholder="8" />
               </div>
               <div className="space-y-2">
-                <Label>Color</Label>
+                <Label>{t('family_color')}</Label>
                 <div className="flex gap-2">
-                  {defaultColors.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setColor(c)}
-                      className={cn(
-                        "w-7 h-7 rounded-full border-2 border-transparent",
-                        c,
-                        color === c && "ring-2 ring-offset-2 ring-primary"
-                      )}
-                    />
+                  {defaultColors.map(c => (
+                    <button key={c} type="button" onClick={() => setColor(c)}
+                      className={cn('w-7 h-7 rounded-full border-2 border-transparent', c, color === c && 'ring-2 ring-offset-2 ring-primary')} />
                   ))}
                 </div>
               </div>
-              <Button className="w-full" onClick={handleSaveNew}>
-                Save
-              </Button>
+              <Button className="w-full" onClick={() => void handleSaveNew()}>{t('family_save')}</Button>
             </div>
           </DialogContent>
         </Dialog>
       </motion.div>
 
-      {/* Main content */}
       {isInitialLoading ? (
-        <div className="grid gap-6 lg:grid-cols-[260px,1fr]">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">
-                <SkeletonBlock className="h-4 w-20" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {Array.from({ length: 3 }).map((_, idx) => (
-                <SkeletonListItem key={idx} />
-              ))}
-            </CardContent>
-          </Card>
-          <div className="space-y-4">
-            <SkeletonCard />
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  <SkeletonBlock className="h-4 w-40" />
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <SkeletonSection rows={2} />
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></div>
+          <div className="grid gap-4 lg:grid-cols-2"><SkeletonCard /><SkeletonCard /></div>
+        </div>
+      ) : !hasChildren ? (
+        <StatePanel variant="empty" title={t('family_no_children')} description={t('family_no_children_desc')} actionLabel={t('family_add_child')} onAction={handleOpenNew} />
+      ) : (
+        <>
+          {/* Two-column layout */}
+          <div className="flex flex-col lg:flex-row gap-5 lg:items-start">
+          {/* Left column */}
+          <div className="flex-1 min-w-0 space-y-4">
+
+          {/* KPI Row */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="glass-card card-accent surface-elevated">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="icon-tile w-8 h-8 rounded-md bg-violet-500/15"><Users className="w-4 h-4 text-violet-400" /></div>
+                  <span className="text-xs font-medium text-muted-foreground">{t('family_children')}</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight">{children.length}</p>
+                <p className="text-[11px] text-muted-foreground">{t('family_total_kids')}</p>
+              </CardContent>
+            </Card>
+            <Card className="glass-card card-accent surface-elevated">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="icon-tile w-8 h-8 rounded-md bg-blue-500/15"><Calendar className="w-4 h-4 text-blue-400" /></div>
+                  <span className="text-xs font-medium text-muted-foreground">{t('family_events')}</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight">{todayEvents.length > 0 ? todayEvents.length : totalEvents}</p>
+                <p className="text-[11px] text-muted-foreground">{todayEvents.length > 0 ? t('family_events_today') : t('family_total_events')}</p>
+              </CardContent>
+            </Card>
+            <Card className="glass-card card-accent surface-elevated">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="icon-tile w-8 h-8 rounded-md bg-amber-500/15"><GraduationCap className="w-4 h-4 text-amber-400" /></div>
+                  <span className="text-xs font-medium text-muted-foreground">{t('family_homework')}</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight">{allPendingHw.length}</p>
+                <p className="text-[11px] text-muted-foreground">{t('family_pending_tasks')}</p>
+              </CardContent>
+            </Card>
+            <Card className="glass-card card-accent surface-elevated">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="icon-tile w-8 h-8 rounded-md bg-emerald-500/15"><CheckSquare className="w-4 h-4 text-emerald-400" /></div>
+                  <span className="text-xs font-medium text-muted-foreground">{t('family_tasks')}</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight">{openTasks}</p>
+                <p className="text-[11px] text-muted-foreground">{t('family_open_tasks')}</p>
               </CardContent>
             </Card>
           </div>
-        </div>
-      ) : !hasChildren ? (
-        <StatePanel
-          variant="empty"
-          title="No family members yet"
-          description="Add your children to track schedules, notes, and important events in one place."
-          actionLabel="Add first child"
-          onAction={handleOpenNew}
-        />
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-[260px,1fr]">
-          {/* Left: children list — horizontal scroll on mobile, vertical on desktop */}
-          <Card className="lg:self-start">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Kids</CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 lg:p-6 lg:pt-0">
-              <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-x-visible lg:space-y-2 lg:pb-0">
-                {children.map((child) => {
-                  const isSelected = selectedChild?.id === child.id;
-                  return (
-                    <button
-                      key={child.id}
-                      type="button"
-                      onClick={() => setSelectedChildId(child.id)}
-                      className={cn(
-                        "flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-left transition",
-                        "lg:w-full lg:gap-3",
-                        isSelected
-                          ? "border-primary bg-primary/10"
-                          : "border-border hover:bg-muted/60"
-                      )}
-                    >
-                      <Avatar className="h-8 w-8 lg:h-9 lg:w-9 shrink-0">
-                        <AvatarFallback
-                          className={cn("text-xs text-white", child.color)}
-                        >
-                          {child.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{child.name}</p>
-                        {child.age != null && (
-                          <p className="text-xs text-muted-foreground">
-                            Age {child.age}
-                          </p>
-                        )}
-                      </div>
-                      <Button
+
+          {/* Row 2: Children list + Today's overview */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Children list */}
+            <Card className="glass-card card-accent">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">{t('family_children')}</h3>
+                  <Settings className="w-3.5 h-3.5 text-muted-foreground" />
+                </div>
+                <div className="space-y-1.5">
+                  {children.map(child => {
+                    const isSelected = selectedChild?.id === child.id;
+                    return (
+                      <motion.button
+                        key={child.id}
                         type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void handleDeleteChild(child);
-                        }}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Right: selected child details */}
-          {selectedChild && (
-            <div className="space-y-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback
-                        className={cn("text-sm text-white", selectedChild.color)}
-                      >
-                        {selectedChild.initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <CardTitle className="text-lg">
-                        {selectedChild.name}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
-                        {selectedChild.age != null && (
-                          <Badge variant="outline">Age {selectedChild.age}</Badge>
+                        whileHover={{ scale: 1.01 }}
+                        onClick={() => setSelectedChildId(child.id)}
+                        className={cn(
+                          'w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors',
+                          isSelected ? 'bg-primary/10 border border-primary/30' : 'hover:bg-secondary/30 border border-transparent'
                         )}
-                        <Badge variant="secondary">Child profile</Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0"
-                    disabled
-                    title="Edit profile (coming soon)"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                </CardHeader>
-              </Card>
-
-              <Tabs defaultValue="schedule">
-                <TabsList className="mb-3 grid grid-cols-4 w-full h-auto sm:flex sm:h-10">
-                  <TabsTrigger value="schedule" className="flex items-center gap-1 text-xs sm:text-sm py-1.5 sm:py-0">
-                    <Calendar className="w-3 h-3 shrink-0" />
-                    <span>Schedule</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="notes" className="flex items-center gap-1 text-xs sm:text-sm py-1.5 sm:py-0">
-                    <FileText className="w-3 h-3 shrink-0" />
-                    <span>Notes</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="events" className="flex items-center gap-1 text-xs sm:text-sm py-1.5 sm:py-0">
-                    <Calendar className="w-3 h-3 shrink-0" />
-                    <span>Events</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="shopping" className="flex items-center gap-1 text-xs sm:text-sm py-1.5 sm:py-0">
-                    <ShoppingCart className="w-3 h-3 shrink-0" />
-                    <span>Shopping</span>
-                  </TabsTrigger>
-                </TabsList>
-
-                <Card className="mt-4 mb-4">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      Today & upcoming for {selectedChild.name}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <div>
-                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                        Today&apos;s schedule
-                      </div>
-                      {todaySummary.todaySchedule ? (
-                        <div className="mt-1">
-                          <span className="font-medium">
-                            {todaySummary.todaySchedule.day}:{" "}
-                          </span>
-                          <span>{todaySummary.todaySchedule.activity}</span>
+                      >
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                          style={{ backgroundColor: child.color.startsWith('#') ? child.color : undefined }}
+                          // For Tailwind class colors we use className fallback
+                        >
+                          <Avatar className="h-9 w-9">
+                            <AvatarFallback className={cn('text-xs text-white', !child.color.startsWith('#') && child.color)}
+                              style={child.color.startsWith('#') ? { backgroundColor: child.color } : undefined}>
+                              {child.initials}
+                            </AvatarFallback>
+                          </Avatar>
                         </div>
-                      ) : (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          No specific activities planned for today.
-                        </p>
-                      )}
-                    </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{child.name}</p>
+                          {child.age != null && <p className="text-[11px] text-muted-foreground">{t('family_age')} {child.age}</p>}
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" title={t('family_options')} onClick={e => e.stopPropagation()}>
+                              <MoreVertical className="w-3.5 h-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem className="text-destructive" onClick={e => { e.stopPropagation(); void removeChild(child.id); }}>
+                              <Trash2 className="w-3.5 h-3.5 mr-2" /> {t('family_delete')}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+                <Button variant="outline" size="sm" className="w-full gap-1.5 text-xs" onClick={handleOpenNew}>
+                  <Plus className="w-3.5 h-3.5" /> {t('family_add_child')}
+                </Button>
+              </CardContent>
+            </Card>
 
-                    <div>
-                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                        Today&apos;s events
+            {/* Today's overview */}
+            <Card className="glass-card card-accent">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">{t('family_today_overview')}</h3>
+                  <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => navigate('/calendar')}>
+                    <Calendar className="w-3 h-3" /> {t('family_view_calendar')}
+                  </Button>
+                </div>
+                {todayEvents.length > 0 ? (
+                  <div className="space-y-2">
+                    {todayEvents.map((ev, i) => (
+                      <div key={i} className="flex items-center gap-3 rounded-lg bg-secondary/20 px-3 py-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{ev.title}</p>
+                          <p className="text-[10px] text-muted-foreground">{ev.childName}</p>
+                        </div>
+                        <Badge variant="outline" className="text-[10px] shrink-0">{t('family_planned')}</Badge>
                       </div>
-                      {todaySummary.todayEvents.length === 0 ? (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          No events scheduled for today.
-                        </p>
-                      ) : (
-                        <ul className="mt-1 space-y-1">
-                          {todaySummary.todayEvents.map((event, idx) => (
-                            <li key={idx} className="flex items-center justify-between">
-                              <span>{event.title}</span>
-                              {event.calendarEventId && (
-                                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                                  In calendar
-                                </span>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-
-                    <div>
-                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                        Upcoming
-                      </div>
-                      {todaySummary.upcomingEvents.length === 0 ? (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          No upcoming events in the next days.
-                        </p>
-                      ) : (
-                        <ul className="mt-1 space-y-1">
-                          {todaySummary.upcomingEvents.map((event, idx) => (
-                            <li key={idx} className="flex items-center justify-between">
-                              <div className="flex flex-col">
-                                <span>{event.title}</span>
-                                <span className="text-[11px] text-muted-foreground">
-                                  {event.date}
-                                </span>
-                              </div>
-                              {event.calendarEventId && (
-                                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                                  In calendar
-                                </span>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Schedule */}
-                <TabsContent value="schedule">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm font-medium">
-                        Weekly schedule
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {(selectedChild.schedule ?? []).length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          No schedule added yet. Use the form below to add weekly activities for this child.
-                        </p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          Update the weekly activities for this child and save your changes.
-                        </p>
-                      )}
-
-                      <div className="space-y-2">
-                        {DAYS_OF_WEEK.map((day) => (
-                          <div
-                            key={day}
-                            className="grid gap-2 sm:grid-cols-[120px,1fr] items-center"
-                          >
-                            <Label className="text-xs sm:text-sm text-muted-foreground">
-                              {day}
-                            </Label>
-                            <Input
-                              placeholder="No activities"
-                              value={scheduleDraft[day] ?? ""}
-                              onChange={(e) => handleScheduleChange(day, e.target.value)}
-                            />
+                    ))}
+                  </div>
+                ) : weeklyTimeline.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase">{t('family_this_week')}</p>
+                    {weeklyTimeline.map(group => (
+                      <div key={group.day}>
+                        <p className={cn('text-[10px] font-semibold mb-0.5', group.day === todayWeekday() ? 'text-primary' : 'text-muted-foreground')}>{group.day}</p>
+                        {group.items.map((item, j) => (
+                          <div key={j} className="flex items-center gap-2 ml-3 mb-0.5">
+                            <span className="text-[10px] text-muted-foreground">{item.childName}:</span>
+                            <span className="text-xs">{item.activity}</span>
                           </div>
                         ))}
                       </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-3 text-center">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">{t('family_this_week')}</p>
+                    <p className="text-xs text-muted-foreground">{t('family_add_schedule_hint')}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
+          {/* Row 3: Selected child detail */}
+          {selectedChild && (
+            <>
+              <Card className="glass-card card-accent">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback className={cn('text-sm text-white', !selectedChild.color.startsWith('#') && selectedChild.color)}
+                        style={selectedChild.color.startsWith('#') ? { backgroundColor: selectedChild.color } : undefined}>
+                        {selectedChild.initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-semibold">{selectedChild.name}</h3>
+                      {(() => {
+                        const info = [
+                          selectedChild.age != null ? `${t('family_age')} ${selectedChild.age}` : null,
+                          selectedChild.grade ? `${t('family_grade')} ${selectedChild.grade}` : null,
+                          selectedChild.school ?? null,
+                        ].filter(Boolean).join('  ·  ');
+                        return info ? <p className="text-xs text-muted-foreground mt-0.5">{info}</p> : null;
+                      })()}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="mb-3 grid grid-cols-3 sm:grid-cols-6 w-full h-auto">
+                  <TabsTrigger value="overview" className="text-xs py-1.5 gap-1"><Home className="w-3 h-3" />{t('family_tab_overview')}</TabsTrigger>
+                  <TabsTrigger value="schedule" className="text-xs py-1.5 gap-1"><CalendarDays className="w-3 h-3" />{t('family_tab_schedule')}</TabsTrigger>
+                  <TabsTrigger value="school" className="text-xs py-1.5 gap-1"><GraduationCap className="w-3 h-3" />{t('family_tab_school')}</TabsTrigger>
+                  <TabsTrigger value="notes" className="text-xs py-1.5 gap-1"><FileText className="w-3 h-3" />{t('family_tab_notes')}</TabsTrigger>
+                  <TabsTrigger value="events" className="text-xs py-1.5 gap-1"><PartyPopper className="w-3 h-3" />{t('family_tab_events')}</TabsTrigger>
+                  <TabsTrigger value="shopping" className="text-xs py-1.5 gap-1"><ShoppingCart className="w-3 h-3" />{t('family_shopping')}</TabsTrigger>
+                </TabsList>
+
+                {/* Overview tab */}
+                <TabsContent value="overview">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <Card className="glass-card card-accent">
+                      <CardContent className="p-4 space-y-3">
+                        <h4 className="text-sm font-semibold">{t('family_upcoming_events')}</h4>
+                        {childUpcomingEvents.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">{t('family_no_upcoming')}</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {childUpcomingEvents.map((ev, i) => (
+                              <div key={i} className="flex items-center gap-3">
+                                <div className="text-center shrink-0 w-10">
+                                  <p className="text-[10px] font-bold text-primary uppercase">
+                                    {new Date(ev.date + 'T00:00:00').toLocaleDateString('en', { month: 'short' })}
+                                  </p>
+                                  <p className="text-lg font-bold leading-none">{new Date(ev.date + 'T00:00:00').getDate()}</p>
+                                </div>
+                                <p className="text-xs flex-1 truncate">{ev.title}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                    <Card className="glass-card card-accent">
+                      <CardContent className="p-4 space-y-3">
+                        <h4 className="text-sm font-semibold">{t('family_tab_notes')}</h4>
+                        {childRecentNotes.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">{t('family_no_notes')}</p>
+                        ) : (
+                          <ul className="space-y-1.5">
+                            {childRecentNotes.map((note, i) => (
+                              <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                                <span className="text-primary mt-0.5">•</span>
+                                <span className="flex-1" dir="auto">{note}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <Button variant="outline" size="sm" className="w-full text-xs gap-1" onClick={() => setActiveTab('notes')}>
+                          <Plus className="w-3 h-3" /> {t('family_add_note')}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                {/* Schedule tab */}
+                <TabsContent value="schedule">
+                  <Card className="glass-card card-accent">
+                    <CardContent className="p-4 space-y-4">
+                      <h4 className="text-sm font-semibold">{t('family_weekly_schedule')}</h4>
+                      <div className="grid grid-cols-7 gap-1.5">
+                        {DAYS_OF_WEEK.map(day => {
+                          const isToday = day === todayWeekday();
+                          return (
+                            <div key={day} className={cn('rounded-lg p-2 text-center min-h-[80px]', isToday ? 'bg-primary/10 border border-primary/20' : 'bg-secondary/20')}>
+                              <p className={cn('text-[10px] font-bold uppercase mb-1', isToday ? 'text-primary' : 'text-muted-foreground')}>{day.slice(0, 3)}</p>
+                              <Input
+                                className="text-[10px] h-auto py-1 px-1.5 bg-transparent border-0 text-center"
+                                placeholder={t('family_free')}
+                                value={scheduleDraft[day] ?? ''}
+                                onChange={e => setScheduleDraft(prev => ({ ...prev, [day]: e.target.value }))}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
                       <div className="flex justify-end">
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => void handleSaveSchedule()}
-                          disabled={isSavingSchedule}
-                        >
-                          {isSavingSchedule ? "Saving..." : "Save schedule"}
+                        <Button size="sm" onClick={() => void handleSaveSchedule()} disabled={isSavingSchedule}>
+                          {isSavingSchedule ? t('family_saving') : t('family_save_schedule')}
                         </Button>
                       </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
 
-                {/* Notes */}
+                {/* School tab */}
+                <TabsContent value="school">
+                  <div className="space-y-4">
+                    {/* Homework */}
+                    <Card className="glass-card card-accent">
+                      <CardContent className="p-4 space-y-3">
+                        <h4 className="text-sm font-semibold">{t('family_homework')}</h4>
+                        {homework.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">{t('family_no_homework')}</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {homework.map(hw => (
+                              <div key={hw.id} className={cn('flex items-center gap-3 rounded-lg px-3 py-2 bg-secondary/20', hw.completed && 'opacity-50')}>
+                                <Checkbox checked={hw.completed} disabled={hw.completed} onCheckedChange={() => void handleCompleteHomework(hw.id)} />
+                                <div className="flex-1 min-w-0">
+                                  <p className={cn('text-xs font-medium', hw.completed && 'line-through')}>{hw.subject}: {hw.title}</p>
+                                  <p className="text-[10px] text-muted-foreground">{t('family_due')}: {hw.due_date}</p>
+                                </div>
+                                <Badge variant="outline" className={cn('text-[10px]',
+                                  hw.priority === 'high' ? 'border-rose-400 text-rose-400' :
+                                  hw.priority === 'low' ? 'border-muted-foreground' : ''
+                                )}>{hw.priority}</Badge>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => void handleDeleteHomework(hw.id)}>
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* Add homework form */}
+                        <div className="border-t border-border/40 pt-3 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input placeholder={t('family_subject')} value={hwSubject} onChange={e => setHwSubject(e.target.value)} className="text-xs" />
+                            <Input placeholder={t('family_hw_title')} value={hwTitle} onChange={e => setHwTitle(e.target.value)} className="text-xs" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input type="date" value={hwDue} onChange={e => setHwDue(e.target.value)} className="text-xs" />
+                            <Select value={hwPriority} onValueChange={v => setHwPriority(v as 'low' | 'normal' | 'high')}>
+                              <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="low">{t('family_priority_low')}</SelectItem>
+                                <SelectItem value="normal">{t('family_priority_normal')}</SelectItem>
+                                <SelectItem value="high">{t('family_priority_high')}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button size="sm" variant="outline" className="w-full text-xs gap-1" disabled={isSavingHw} onClick={() => void handleAddHomework()}>
+                            <Plus className="w-3 h-3" /> {t('family_add_homework')}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Exams */}
+                    <Card className="glass-card card-accent">
+                      <CardContent className="p-4 space-y-3">
+                        <h4 className="text-sm font-semibold">{t('family_exams')}</h4>
+                        {exams.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">{t('family_no_exams')}</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {exams.map(ex => (
+                              <div key={ex.id} className="flex items-center gap-3 rounded-lg px-3 py-2 bg-secondary/20">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-medium">{ex.subject}</p>
+                                  <p className="text-[10px] text-muted-foreground">{ex.exam_date}{ex.grade ? ` — ${t('family_grade')}: ${ex.grade}` : ''}</p>
+                                  {ex.notes && <p className="text-[10px] text-muted-foreground truncate">{ex.notes}</p>}
+                                </div>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => void handleDeleteExam(ex.id)}>
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="border-t border-border/40 pt-3 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input placeholder={t('family_subject')} value={examSubject} onChange={e => setExamSubject(e.target.value)} className="text-xs" />
+                            <Input type="date" value={examDate} onChange={e => setExamDate(e.target.value)} className="text-xs" />
+                          </div>
+                          <Input placeholder={t('family_exam_notes')} value={examNotes} onChange={e => setExamNotes(e.target.value)} className="text-xs" />
+                          <Button size="sm" variant="outline" className="w-full text-xs gap-1" disabled={isSavingExam} onClick={() => void handleAddExam()}>
+                            <Plus className="w-3 h-3" /> {t('family_add_exam')}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                {/* Notes tab */}
                 <TabsContent value="notes">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm font-medium">
-                        Notes
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {!selectedChild.notes || selectedChild.notes.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          No notes yet. Use the box below to add your first note.
-                        </p>
+                  <Card className="glass-card card-accent">
+                    <CardContent className="p-4 space-y-3">
+                      <h4 className="text-sm font-semibold">{t('family_tab_notes')}</h4>
+                      {(selectedChild.notes ?? []).length === 0 ? (
+                        <p className="text-xs text-muted-foreground">{t('family_no_notes')}</p>
                       ) : (
-                        <ul className="space-y-2 text-sm">
+                        <ul className="space-y-1.5">
                           {(selectedChild.notes ?? []).map((note: string, idx: number) => (
-                            <li
-                              key={idx}
-                              className="flex items-start justify-between gap-2 rounded-lg bg-secondary px-3 py-2"
-                            >
-                              <span className="flex-1 whitespace-pre-wrap">{note}</span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="shrink-0 text-muted-foreground hover:text-destructive"
-                                onClick={() => void handleDeleteNote(idx)}
-                              >
-                                <Trash2 className="w-4 h-4" />
+                            <li key={idx} className="flex items-start gap-2 rounded-lg bg-secondary/20 px-3 py-2">
+                              <span className="flex-1 text-xs whitespace-pre-wrap" dir="auto">{note}</span>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => void handleDeleteNote(idx)}>
+                                <Trash2 className="w-3 h-3" />
                               </Button>
                             </li>
                           ))}
                         </ul>
                       )}
-
                       <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">
-                          Add a quick note
-                        </Label>
-                        <Textarea
-                          value={newNote}
-                          onChange={(e) => setNewNote(e.target.value)}
-                          placeholder="Homework, health notes, behavior, appointments..."
-                          rows={3}
-                        />
-                        <div className="flex justify-end">
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => void handleAddNote()}
-                            disabled={isSavingNote || !newNote.trim()}
-                          >
-                            {isSavingNote ? "Saving..." : "Save note"}
-                          </Button>
-                        </div>
+                        <Textarea value={newNote} onChange={e => setNewNote(e.target.value)} placeholder={t('family_note_placeholder')} rows={3} className="text-xs" />
+                        <Button size="sm" variant="outline" className="w-full text-xs gap-1" disabled={isSavingNote || !newNote.trim()} onClick={() => void handleAddNote()}>
+                          <Plus className="w-3 h-3" /> {t('family_save_note')}
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
 
-                {/* Events */}
+                {/* Events tab */}
                 <TabsContent value="events">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm font-medium">
-                        Important events
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {!selectedChild.events || selectedChild.events.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          No events added yet. Use the form below to add birthdays,
-                          doctor appointments, or school events.
-                        </p>
+                  <Card className="glass-card card-accent">
+                    <CardContent className="p-4 space-y-3">
+                      <h4 className="text-sm font-semibold">{t('family_tab_events')}</h4>
+                      {(selectedChild.events ?? []).length === 0 ? (
+                        <p className="text-xs text-muted-foreground">{t('family_no_events')}</p>
                       ) : (
-                        <div className="space-y-2">
-                          {(selectedChild.events ?? []).map(
-                            (event: ChildEvent, idx: number) => (
-                              <div
-                                key={idx}
-                                className="flex items-center justify-between rounded-lg bg-secondary px-3 py-2"
-                              >
-                                <div className="flex flex-col">
-                                  <span className="text-sm font-medium">
-                                    {event.title}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {event.date}
-                                  </span>
-                                  {event.calendarEventId && (
-                                    <span className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-                                      Linked to calendar
-                                    </span>
-                                  )}
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-muted-foreground hover:text-destructive"
-                                  onClick={() => void handleDeleteEvent(idx)}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                        <div className="space-y-1.5">
+                          {(selectedChild.events ?? []).map((ev: ChildEvent, idx: number) => (
+                            <div key={idx} className="flex items-center gap-3 rounded-lg bg-secondary/20 px-3 py-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium">{ev.title}</p>
+                                <p className="text-[10px] text-muted-foreground">{ev.date}</p>
                               </div>
-                            )
-                          )}
+                              {ev.calendarEventId && <Badge variant="outline" className="text-[10px]">{t('family_in_calendar')}</Badge>}
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => void handleDeleteEvent(idx)}>
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          ))}
                         </div>
                       )}
-
-                      <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">
-                          Add event
-                        </Label>
-                        <div className="grid gap-2 sm:grid-cols-[2fr,1fr]">
-                          <Input
-                            placeholder="Doctor appointment, Birthday..."
-                            value={newEventTitle}
-                            onChange={(e) => setNewEventTitle(e.target.value)}
-                          />
-                          <Input
-                            type="date"
-                            value={newEventDate}
-                            onChange={(e) => setNewEventDate(e.target.value)}
-                          />
+                      <div className="border-t border-border/40 pt-3 space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input placeholder={t('family_event_title')} value={newEventTitle} onChange={e => setNewEventTitle(e.target.value)} className="text-xs" />
+                          <Input type="date" value={newEventDate} onChange={e => setNewEventDate(e.target.value)} className="text-xs" />
                         </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <Label className="text-xs text-muted-foreground">
-                            Also add this event to Calendar
-                          </Label>
-                          <Checkbox
-                            checked={addToCalendar}
-                            onCheckedChange={(checked) => setAddToCalendar(!!checked)}
-                          />
+                        <div className="flex items-center gap-2">
+                          <Checkbox checked={addToCalendar} onCheckedChange={c => setAddToCalendar(!!c)} />
+                          <span className="text-[10px] text-muted-foreground">{t('family_sync_calendar')}</span>
                         </div>
-                        <div className="flex justify-end">
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => void handleAddEvent()}
-                            disabled={
-                              isSavingEvent ||
-                              isSyncingCalendar ||
-                              !newEventTitle.trim() ||
-                              !newEventDate.trim()
-                            }
-                          >
-                            {isSavingEvent || isSyncingCalendar ? "Saving..." : "Save event"}
-                          </Button>
-                        </div>
+                        <Button size="sm" variant="outline" className="w-full text-xs gap-1" disabled={isSavingEvent || !newEventTitle.trim() || !newEventDate} onClick={() => void handleAddEvent()}>
+                          <Plus className="w-3 h-3" /> {t('family_save_event')}
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
-                {/* Shopping */}
+
+                {/* Shopping tab */}
                 <TabsContent value="shopping">
-                  <Card>
-                    <CardContent className="pt-5">
-                      <ShoppingList />
-                    </CardContent>
+                  <Card className="glass-card card-accent">
+                    <CardContent className="pt-5"><ShoppingList /></CardContent>
                   </Card>
                 </TabsContent>
               </Tabs>
-            </div>
+            </>
           )}
-        </div>
+
+          {/* Row 4: Upcoming Family Events */}
+          <Card className="glass-card card-accent">
+            <CardContent className="p-4 space-y-3">
+              <h3 className="text-sm font-semibold">{t('family_upcoming_family_events')}</h3>
+              {upcomingAll.length === 0 ? (
+                <p className="text-xs text-muted-foreground">{t('family_no_upcoming_30')}</p>
+              ) : (
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {upcomingAll.slice(0, 10).map((ev, i) => (
+                    <div key={i} className="shrink-0 w-[160px] rounded-lg bg-secondary/20 p-3 space-y-2">
+                      <div className="text-center">
+                        <p className="text-[10px] font-bold text-primary uppercase">
+                          {new Date(ev.date + 'T00:00:00').toLocaleDateString('en', { month: 'short' })}
+                        </p>
+                        <p className="text-xl font-bold leading-none">{new Date(ev.date + 'T00:00:00').getDate()}</p>
+                      </div>
+                      <p className="text-xs font-medium text-center truncate">{ev.title}</p>
+                      <Badge variant="outline" className="text-[10px] w-full justify-center">{ev.childName}</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          </div>
+
+          {/* Right sidebar */}
+          <div className="w-full lg:w-[300px] shrink-0 space-y-4 lg:sticky lg:top-4 lg:self-start">
+            {/* Flow AI Family Assistant */}
+            <Card className="glass-card card-accent">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="icon-tile w-7 h-7 rounded-md"><Bot className="w-3.5 h-3.5 text-primary" /></div>
+                  <span className="text-sm font-semibold">{t('family_ai_assistant')}</span>
+                </div>
+
+                {assistantItems.length > 0 ? (
+                  <ul className="space-y-2">
+                    {assistantItems.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 rounded-lg bg-secondary/20 px-3 py-2">
+                        <span className={cn('mt-0.5', item.priority <= 1 ? 'text-rose-400' : 'text-primary')}>•</span>
+                        <span className="text-xs leading-relaxed">{item.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-muted-foreground">{t('family_all_caught_up')}</p>
+                )}
+
+                <Button variant="outline" size="sm" className="w-full text-xs gap-1.5" onClick={handleGenerateWeeklyPlan}>
+                  <CalendarDays className="w-3 h-3" /> {t('family_generate_plan')}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Shopping List preview */}
+            <Card className="glass-card card-accent">
+              <CardContent className="p-4 space-y-3">
+                <h3 className="text-sm font-semibold">{t('family_shopping')}</h3>
+                {uncheckedShopping.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">{t('family_shopping_empty')}</p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {uncheckedShopping.map(item => (
+                      <li key={item.id} className="text-xs flex items-center gap-2">
+                        <span className="text-muted-foreground">○</span>
+                        <span>{item.name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <Button variant="outline" size="sm" className="w-full text-xs" onClick={quickAddShopping}>
+                  {t('family_view_full_list')}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card className="glass-card card-accent">
+              <CardContent className="p-4 space-y-2">
+                <h3 className="text-sm font-semibold mb-1">{t('family_quick_actions')}</h3>
+                <Button size="sm" variant="outline" className="w-full justify-start gap-2 text-xs" onClick={quickAddEvent}>
+                  <Plus className="w-3.5 h-3.5 text-blue-400" /> {t('family_add_event')}
+                </Button>
+                <Button size="sm" variant="outline" className="w-full justify-start gap-2 text-xs" onClick={quickAddHomework}>
+                  <Plus className="w-3.5 h-3.5 text-amber-400" /> {t('family_add_homework')}
+                </Button>
+                <Button size="sm" variant="outline" className="w-full justify-start gap-2 text-xs" onClick={quickAddNote}>
+                  <Plus className="w-3.5 h-3.5 text-emerald-400" /> {t('family_add_note')}
+                </Button>
+                <Button size="sm" variant="outline" className="w-full justify-start gap-2 text-xs" onClick={quickAddShopping}>
+                  <ShoppingCart className="w-3.5 h-3.5 text-violet-400" /> {t('family_add_to_shopping')}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+          </div>
+        </>
       )}
     </div>
   );
 }
-
-
-
-

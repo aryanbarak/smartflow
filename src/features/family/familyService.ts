@@ -27,6 +27,8 @@ export interface Child {
   color: string;
   initials: string;
   role: MemberRole;
+  school?: string;
+  grade?: string;
   schedule: ChildScheduleItem[];
   notes: string[];
   events: ChildEvent[];
@@ -64,6 +66,8 @@ function mapRowToChild(row: FamilyChildRow): Child {
     color: row.color,
     initials: row.initials,
     role: storedRole ?? ageToRole(age),
+    school: (row as Record<string, unknown>).school as string | undefined,
+    grade: (row as Record<string, unknown>).grade as string | undefined,
     schedule: (row.schedule ?? []) as ChildScheduleItem[],
     notes: (row.notes ?? []) as string[],
     events: (row.events ?? []) as ChildEvent[],
