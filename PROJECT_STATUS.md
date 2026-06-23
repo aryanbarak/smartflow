@@ -75,6 +75,100 @@ Keep this file under 2 pages; update after every session.
 
 ---
 
+## Completed This Session (2026-06-22/23) — Documents, Photos, Family, Journal
+
+### Habits Page Redesign ✅
+
+- ✅ KPI cards (Streak/Active/Completion Rate/Goal Progress), Today's Habits horizontal cards
+- ✅ Active/Paused tabs, Today's Progress ring sidebar, AI Suggestions (Gemini)
+- ✅ Habit types (Ongoing/Goal), target value/unit, achieved_at (migration `20260621120000`)
+- ✅ HabitDetailPage: 30-day heatmap, stats, goal progress, edit form
+- ✅ Weekly heatmap on HabitCard, Framer Motion on MoodPicker
+- ✅ Fixed completionRate denominator (daysSinceCreation capped at 30)
+- ✅ Fixed useToggleHabit stale data (`exact: false` invalidation)
+
+### Journal Page Redesign ✅
+
+- ✅ KPI cards (Streak/Entries/Mood/AI Insight), Today's Reflection card
+- ✅ Reflection prompt pills, Mood Trend sparkline (Recharts), Memory Timeline
+- ✅ Date-based journal entries: clicking calendar date loads that date's entry
+- ✅ Fixed JournalEditor date-switch bug (`loadedDate` ref + `dirty` flag to prevent stale auto-saves)
+- ✅ Calendar color-coded with mood emojis per day, legend, entry dots
+- ✅ Header shows selected date + "Back to today" button for past dates
+- ✅ Habits/tasks summary fetches data for selected date (not hardcoded today)
+
+### Finance Page Redesign ✅
+
+- ✅ 4 KPI cards (Income/Expenses/Balance/Top Spend), two-column layout with sidebar
+- ✅ Financial Health ring score (5-criteria formula, max 100)
+- ✅ AI Finance Insights card (POST /finance/suggestions worker endpoint)
+- ✅ Transaction list restyled (glass-card rows, category circles, hover actions)
+- ✅ Charts card (FinanceCharts component), Budget Goals/Limits/Savings widgets
+- ✅ Full i18n: ~90 new keys in en/de/fa for all Finance strings
+- ✅ Layout fix: KPI cards inside left column, AI Insights moved to sidebar
+
+### Family Page Redesign ✅
+
+- ✅ 4 KPI cards (Children/Events/Homework/Tasks), two-column layout with sidebar
+- ✅ Children list with avatar, age, 3-dot menu; Today's Family Overview (weekly timeline fallback)
+- ✅ 6-tab detail card: Overview, Schedule, School, Notes, Events, Shopping (with icons)
+- ✅ School tab: homework CRUD (child_homework table), exams CRUD (child_exams table)
+- ✅ New services: childHomeworkService, childExamsService, pocketMoneyService, rewardPointsService
+- ✅ AI Family Assistant sidebar: natural-language computed insights, "Generate Weekly Plan" → /chat
+- ✅ Child header shows Age · Grade · School (no "adult" role display)
+- ✅ Shopping list preview in sidebar, Quick Actions card
+- ✅ Full i18n: ~70 new keys in en/de/fa
+
+### Documents Page Redesign ✅
+
+- ✅ 5-tab structure: Library, AI Workspace, PDF Tools, Audio, Text Editor
+- ✅ Library tab: 6 KPI cards, search bar with type filter pills + sort, recent docs card grid, all docs list
+- ✅ Right sidebar: Storage donut chart (Recharts), Smart Tags, Recent Activity, Quick Actions
+- ✅ Upload moved to modal dialog (header + Quick Actions buttons open it)
+- ✅ AI Workspace tab: document selector + info card + content preview (text files show first 800 chars)
+- ✅ 5 AI actions: Generate Summary, Extract Tasks (→ add to tasks), Translate (DE/EN/FA), Auto-Tag, Ask AI
+- ✅ AI calls routed through Worker `/documents/analyze` endpoint (not api.barakzai.cloud — CORS fix)
+- ✅ Worker endpoint: Gemini with inlineData support for PDF base64 attachments
+- ✅ documentAiService rewritten: removed pdfjs-dist dependency, uses Worker + Supabase auth
+- ✅ New service methods: updateTags, updateAiSummary, updateExtractedTasksCount, updateLastOpened
+- ✅ New DB columns: tags, ai_summary, ai_summary_points, extracted_tasks_count, last_opened_at
+- ✅ Full i18n: ~80 new keys in en/de/fa
+
+### Photos Page Redesign ✅
+
+- ✅ 4 KPI cards (Total Photos/Family Members/Albums/This Month)
+- ✅ 5-tab navigation: All Photos, Timeline, Favorites, Albums, People
+- ✅ All Photos: grouped by date, masonry grid with hover overlay (heart + delete)
+- ✅ Timeline: grouped by month, horizontal thumbnail strips
+- ✅ Favorites tab: is_favorite toggle with heart button on photo cards
+- ✅ People tab: tag-based (person:X), person cards with avatar + photo count + preview thumbnails
+- ✅ Right sidebar: On This Day (amber accent), AI Highlights (computed stats), People grid, Albums, Quick Actions
+- ✅ "Generate Memory Story" → /chat with photo context via sessionStorage
+- ✅ PhotoCard: heart button overlay (always visible when favorited, hover for unfavorited)
+- ✅ New DB columns: is_favorite, memory_date (migration `20260623120000`)
+- ✅ New service methods: toggleFavorite, updateMemoryDate
+- ✅ Full i18n: ~50 new keys in en/de/fa
+
+### New Migrations (June 21-23)
+
+- `20260621120000_habit_goals.sql` — habit_type, target_value, target_unit, achieved_at
+- `20260623120000_photos_favorite_memory.sql` — photos.is_favorite, photos.memory_date
+
+### New Worker Endpoints (June 22-23)
+
+- `POST /habits/suggestions` — Gemini-analyzed habit patterns
+- `POST /finance/suggestions` — Gemini-analyzed spending patterns
+- `POST /documents/analyze` — Gemini document analysis with PDF base64 inlineData support
+
+### Cross-Cutting Fixes (June 22-23) ✅
+
+- ✅ All pages now use consistent `px-4 sm:px-6 lg:px-8 pb-6` padding (removed `max-w-6xl` from Documents)
+- ✅ documentAiService: fixed URL (was missing `/analyze`), added auth token, fixed response field (`answer`)
+- ✅ documentAiService: removed pdfjs-dist, switched to Worker-routed Gemini calls (CORS fix)
+- ✅ All error toasts now show actual error messages instead of generic strings
+
+---
+
 ## Completed This Session (2026-06-17/21) — Full UI Redesign
 
 ### Dashboard Redesign ✅
