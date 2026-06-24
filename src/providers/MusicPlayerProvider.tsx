@@ -23,16 +23,21 @@ function makeLocalTrack(file: File): LocalTrack {
   };
 }
 
+function stopHtmlAudio(audio: HTMLAudioElement | null) {
+  if (!audio) return;
+  audio.pause();
+  audio.removeAttribute("src");
+  audio.load();
+}
+
 export function MusicPlayerProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [currentTrack, setCurrentTrack] = useState<ActiveTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  // S6754: setter name must match "set" + capitalized value name
   const [volumeLevel, setVolumeLevel] = useState<number>(loadVolume);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [localTracks, setLocalTracks] = useState<LocalTrack[]>([]);
 
-  // Refs keep latest values fresh inside event listeners without re-subscribing
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const localTracksRef = useRef<LocalTrack[]>([]);
   const currentTrackRef = useRef<ActiveTrack | null>(null);
@@ -42,7 +47,6 @@ export function MusicPlayerProvider({ children }: Readonly<{ children: ReactNode
   useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
   useEffect(() => { volumeRef.current = volumeLevel; }, [volumeLevel]);
 
-  // ─── HTML Audio element ───────────────────────────────────────────────────
   useEffect(() => {
     const audio = new Audio();
     audio.volume = volumeRef.current / 100;
@@ -50,8 +54,12 @@ export function MusicPlayerProvider({ children }: Readonly<{ children: ReactNode
 
     const onTimeUpdate = () => setCurrentTime(audio.currentTime);
     const onDurationChange = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
-    const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
+    const onPlay = () => {
+      if (currentTrackRef.current?.type === "local") setIsPlaying(true);
+    };
+    const onPause = () => {
+      if (currentTrackRef.current?.type === "local") setIsPlaying(false);
+    };
     const onEnded = () => {
       const ct = currentTrackRef.current;
       const lt = localTracksRef.current;
@@ -60,15 +68,20 @@ export function MusicPlayerProvider({ children }: Readonly<{ children: ReactNode
       const next = lt[idx + 1];
       if (next) {
         audio.src = next.objectUrl;
-        void audio.play();
+        audio.currentTime = 0;
+        setCurrentTime(0);
+        setDuration(0);
         setCurrentTrack(next);
+        void audio.play();
       } else {
         setIsPlaying(false);
+        setCurrentTime(0);
       }
     };
 
     audio.addEventListener("timeupdate", onTimeUpdate);
     audio.addEventListener("durationchange", onDurationChange);
+    audio.addEventListener("loadedmetadata", onDurationChange);
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
     audio.addEventListener("ended", onEnded);
@@ -76,17 +89,23 @@ export function MusicPlayerProvider({ children }: Readonly<{ children: ReactNode
     return () => {
       audio.removeEventListener("timeupdate", onTimeUpdate);
       audio.removeEventListener("durationchange", onDurationChange);
+      audio.removeEventListener("loadedmetadata", onDurationChange);
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("ended", onEnded);
-      audio.pause();
-      audio.src = "";
+      stopHtmlAudio(audio);
+      audioRef.current = null;
     };
   }, []);
 
-  // ─── Actions ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      for (const track of localTracksRef.current) URL.revokeObjectURL(track.objectUrl);
+    };
+  }, []);
+
   const playYouTube = useCallback((videoId: string, title = "YouTube") => {
-    audioRef.current?.pause();
+    stopHtmlAudio(audioRef.current);
     setCurrentTrack({ type: "youtube", videoId, title });
     setIsPlaying(true);
     setCurrentTime(0);
@@ -96,25 +115,36 @@ export function MusicPlayerProvider({ children }: Readonly<{ children: ReactNode
   const playLocal = useCallback((track: LocalTrack) => {
     const audio = audioRef.current;
     if (!audio) return;
+
     setCurrentTrack(track);
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+
+    audio.pause();
     audio.src = track.objectUrl;
+    audio.currentTime = 0;
     audio.volume = volumeRef.current / 100;
-    void audio.play();
+    void audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
   }, []);
 
   const pause = useCallback(() => {
     if (currentTrackRef.current?.type === "local") audioRef.current?.pause();
-    setIsPlaying(false);
+    if (currentTrackRef.current) setIsPlaying(false);
   }, []);
 
   const resume = useCallback(() => {
-    if (currentTrackRef.current?.type === "local") void audioRef.current?.play();
+    const track = currentTrackRef.current;
+    if (!track) return;
+    if (track.type === "local") {
+      void audioRef.current?.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      return;
+    }
     setIsPlaying(true);
   }, []);
 
   const stop = useCallback(() => {
-    const audio = audioRef.current;
-    if (audio) { audio.pause(); audio.src = ""; }
+    stopHtmlAudio(audioRef.current);
     setCurrentTrack(null);
     setIsPlaying(false);
     setCurrentTime(0);
@@ -122,9 +152,10 @@ export function MusicPlayerProvider({ children }: Readonly<{ children: ReactNode
   }, []);
 
   const setVolume = useCallback((v: number) => {
-    setVolumeLevel(v);
-    persistVolume(v);
-    if (audioRef.current) audioRef.current.volume = v / 100;
+    const nextVolume = Math.max(0, Math.min(100, v));
+    setVolumeLevel(nextVolume);
+    persistVolume(nextVolume);
+    if (audioRef.current) audioRef.current.volume = nextVolume / 100;
   }, []);
 
   const seek = useCallback((seconds: number) => {
@@ -136,43 +167,65 @@ export function MusicPlayerProvider({ children }: Readonly<{ children: ReactNode
   const playNext = useCallback(() => {
     const ct = currentTrackRef.current;
     if (!ct) return;
+
     if (ct.type === "local") {
       const lt = localTracksRef.current;
+      if (lt.length === 0) return;
       const idx = lt.findIndex((t) => t.id === ct.id);
       const next = lt[(idx + 1) % lt.length];
       if (next) {
         const audio = audioRef.current;
-        if (audio) { audio.src = next.objectUrl; void audio.play(); }
+        if (audio) {
+          audio.src = next.objectUrl;
+          audio.currentTime = 0;
+          void audio.play();
+        }
         setCurrentTrack(next);
+        setCurrentTime(0);
+        setDuration(0);
         setIsPlaying(true);
       }
-    } else {
-      const idx = PRESETS.findIndex((p) => p.videoId === ct.videoId);
-      const next = PRESETS[(idx + 1) % PRESETS.length];
-      setCurrentTrack({ type: "youtube", videoId: next.videoId, title: next.title });
-      setIsPlaying(true);
+      return;
     }
+
+    const idx = PRESETS.findIndex((p) => p.videoId === ct.videoId);
+    const next = PRESETS[((idx < 0 ? 0 : idx) + 1) % PRESETS.length];
+    setCurrentTrack({ type: "youtube", videoId: next.videoId, title: next.title });
+    setCurrentTime(0);
+    setDuration(0);
+    setIsPlaying(true);
   }, []);
 
   const playPrev = useCallback(() => {
     const ct = currentTrackRef.current;
     if (!ct) return;
+
     if (ct.type === "local") {
       const lt = localTracksRef.current;
+      if (lt.length === 0) return;
       const idx = lt.findIndex((t) => t.id === ct.id);
       const prev = lt[(idx - 1 + lt.length) % lt.length];
       if (prev) {
         const audio = audioRef.current;
-        if (audio) { audio.src = prev.objectUrl; void audio.play(); }
+        if (audio) {
+          audio.src = prev.objectUrl;
+          audio.currentTime = 0;
+          void audio.play();
+        }
         setCurrentTrack(prev);
+        setCurrentTime(0);
+        setDuration(0);
         setIsPlaying(true);
       }
-    } else {
-      const idx = PRESETS.findIndex((p) => p.videoId === ct.videoId);
-      const prev = PRESETS[(idx - 1 + PRESETS.length) % PRESETS.length];
-      setCurrentTrack({ type: "youtube", videoId: prev.videoId, title: prev.title });
-      setIsPlaying(true);
+      return;
     }
+
+    const idx = PRESETS.findIndex((p) => p.videoId === ct.videoId);
+    const prev = PRESETS[((idx < 0 ? PRESETS.length : idx) - 1 + PRESETS.length) % PRESETS.length];
+    setCurrentTrack({ type: "youtube", videoId: prev.videoId, title: prev.title });
+    setCurrentTime(0);
+    setDuration(0);
+    setIsPlaying(true);
   }, []);
 
   const addLocalTracks = useCallback((files: File[]) => {
@@ -180,18 +233,8 @@ export function MusicPlayerProvider({ children }: Readonly<{ children: ReactNode
     if (eligible.length === 0) return;
     const newTracks = eligible.map(makeLocalTrack);
     setLocalTracks((prev) => [...prev, ...newTracks]);
-    if (!currentTrackRef.current && newTracks[0]) {
-      const first = newTracks[0];
-      const audio = audioRef.current;
-      if (audio) {
-        audio.src = first.objectUrl;
-        audio.volume = volumeRef.current / 100;
-        void audio.play();
-      }
-      setCurrentTrack(first);
-      setIsPlaying(true);
-    }
-  }, []);
+    if (!currentTrackRef.current && newTracks[0]) playLocal(newTracks[0]);
+  }, [playLocal]);
 
   const removeLocalTrack = useCallback((id: string) => {
     setLocalTracks((prev) => {
@@ -199,20 +242,20 @@ export function MusicPlayerProvider({ children }: Readonly<{ children: ReactNode
       if (hit) URL.revokeObjectURL(hit.objectUrl);
       return prev.filter((t) => t.id !== id);
     });
-    if (currentTrackRef.current?.type === "local" && currentTrackRef.current.id === id) {
-      const audio = audioRef.current;
-      if (audio) { audio.pause(); audio.src = ""; }
-      setCurrentTrack(null);
-      setIsPlaying(false);
-    }
-  }, []);
+    if (currentTrackRef.current?.type === "local" && currentTrackRef.current.id === id) stop();
+  }, [stop]);
+
+  const sourceType = currentTrack?.type ?? null;
 
   const ctxValue = useMemo(
     () => ({
+      activeTrack: currentTrack,
       currentTrack,
+      sourceType,
       isPlaying,
       volume: volumeLevel,
       currentTime,
+      progress: currentTime,
       duration,
       localTracks,
       playYouTube,
@@ -228,7 +271,7 @@ export function MusicPlayerProvider({ children }: Readonly<{ children: ReactNode
       removeLocalTrack,
     }),
     [
-      currentTrack, isPlaying, volumeLevel, currentTime, duration, localTracks,
+      currentTrack, sourceType, isPlaying, volumeLevel, currentTime, duration, localTracks,
       playYouTube, playLocal, pause, resume, stop, setVolume,
       seek, playNext, playPrev, addLocalTracks, removeLocalTrack,
     ],

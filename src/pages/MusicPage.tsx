@@ -1,803 +1,194 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Search, Upload, Trash2, Music2, ChevronDown, ChevronUp,
-  Play, Pause, AlertTriangle, Plus, ArrowLeft, X,
+  Play, Pause, Plus, X, Heart,
+  ListMusic, Clock, FolderOpen, SkipBack, SkipForward,
+  Shuffle, Repeat, Volume2, Filter, Headphones,
+  BookOpen, Moon, Dumbbell, Users, Zap, Brain, Timer,
+  ExternalLink,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import {
-  useMusicPlayer,
-  parseVideoId,
-  loadHistory,
-  addToHistory,
-  PRESETS,
-  type HistoryEntry,
-} from "@/hooks/useMusicPlayer";
-import { loadPlaylists, savePlaylists, type Playlist, type PlaylistVideo } from "@/hooks/usePlaylists";
+import { useMusicPlayer, parseVideoId, PRESETS } from "@/hooks/useMusicPlayer";
 import { usePlaylistPlayer } from "@/contexts/PlaylistPlayerContext";
 import { PlaylistsTab } from "@/components/music/PlaylistsTab";
 import { PomodoroTimer } from "@/components/music/PomodoroTimer";
+import { usePomodoroStore } from "@/features/music/pomodoroStore";
+import { type MusicTrack, type PlaylistTrack, musicService } from "@/features/music/musicService";
+import {
+  usePlaylists, usePlayHistory, useLikedTracks, useAddToHistory,
+  useLikeTrack, useUnlikeTrack, useCreatePlaylist, useAddTrackToPlaylist,
+} from "@/features/music/useMusic";
+import { useTasks } from "@/hooks/useTasks";
+import { useT } from "@/i18n";
+import { loadPlaylists } from "@/hooks/usePlaylists";
+import { loadHistory as loadOldHistory } from "@/hooks/useMusicPlayer";
+import { safeGet, storageKey } from "@/lib/storage";
 
-// ─── Search types ─────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 interface InvidiousVideo {
-  type: string;
-  videoId: string;
-  title: string;
-  author: string;
-  lengthSeconds: number;
-  videoThumbnails: Array<{ quality: string; url: string }>;
+  type: string; videoId: string; title: string; author: string;
+  lengthSeconds: number; videoThumbnails: Array<{ quality: string; url: string }>;
 }
 
 const SEARCH_API = "https://api.barakzai.cloud/search";
 
 async function searchInvidious(query: string): Promise<InvidiousVideo[]> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), 10000);
   try {
-    const res = await fetch(
-      `${SEARCH_API}?q=${encodeURIComponent(query)}`,
-      { signal: controller.signal },
-    );
-    clearTimeout(timeoutId);
-    if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+    const res = await fetch(`${SEARCH_API}?q=${encodeURIComponent(query)}`, { signal: ctrl.signal });
+    clearTimeout(tid);
+    if (!res.ok) throw new Error(`${res.status}`);
     const data = (await res.json()) as { results?: InvidiousVideo[]; error?: string };
     if (data.error) throw new Error(data.error);
     return data.results ?? [];
-  } catch {
-    clearTimeout(timeoutId);
-    throw new Error("Search unavailable");
-  }
+  } catch { clearTimeout(tid); throw new Error("Search unavailable"); }
 }
 
-function formatDuration(seconds: number): string {
-  if (seconds <= 0) return "";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
+function fmtDuration(s: number): string {
+  if (s <= 0) return "";
+  const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); const sec = s % 60;
+  return h > 0 ? `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}` : `${m}:${String(sec).padStart(2,"0")}`;
+}
+function fmtTime(s: number): string { return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`; }
+
+function videoToTrack(v: InvidiousVideo): MusicTrack {
+  return { youtubeId: v.videoId, title: v.title, artist: v.author, thumbnailUrl: `https://i.ytimg.com/vi/${v.videoId}/mqdefault.jpg`, durationSeconds: v.lengthSeconds > 0 ? v.lengthSeconds : undefined };
 }
 
-function makePlaylistVideo(video: InvidiousVideo): PlaylistVideo {
-  return {
-    videoId: video.videoId,
-    title: video.title,
-    thumbnail: `https://i.ytimg.com/vi/${video.videoId}/mqdefault.jpg`,
-    duration: formatDuration(video.lengthSeconds),
-    addedAt: new Date().toISOString().split("T")[0],
-  };
-}
-
-// ─── YouTube helpers ──────────────────────────────────────────────────────────
-
-async function fetchYouTubeInfo(videoId: string): Promise<{ title: string; embeddable: boolean }> {
+async function fetchYTInfo(id: string) {
   try {
-    const res = await fetch(
-      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
-    );
-    if (!res.ok) return { title: `Video ${videoId}`, embeddable: false };
-    const data = (await res.json()) as { title?: string };
-    const title = typeof data.title === "string" && data.title ? data.title : `Video ${videoId}`;
-    return { title, embeddable: true };
-  } catch {
-    return { title: `Video ${videoId}`, embeddable: true };
-  }
+    const r = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+    if (!r.ok) return { title: `Video ${id}`, ok: false };
+    const d = (await r.json()) as { title?: string };
+    return { title: typeof d.title === "string" && d.title ? d.title : `Video ${id}`, ok: true };
+  } catch { return { title: `Video ${id}`, ok: true }; }
 }
 
-function isYouTubeEmbedError(data: unknown): boolean {
-  if (data === null || typeof data !== "object") return false;
-  const d = data as Record<string, unknown>;
-  if (d.event !== "onError") return false;
-  const code = d.info;
-  return code === 101 || code === 150 || code === 100;
+
+// Quick Modes
+const QUICK_MODES = [
+  { id: 'deep-focus', icon: Zap, label: 'mf_mode_deep_focus', desc: 'mf_mode_deep_focus_desc', query: 'Deep Focus Coding Music', color: 'bg-indigo-500/15 text-indigo-400' },
+  { id: 'study', icon: BookOpen, label: 'mf_mode_study', desc: 'mf_mode_study_desc', query: 'Study Music Concentration', color: 'bg-blue-500/15 text-blue-400' },
+  { id: 'relax', icon: Headphones, label: 'mf_mode_relax', desc: 'mf_mode_relax_desc', query: 'Calm Relaxing Music', color: 'bg-emerald-500/15 text-emerald-400' },
+  { id: 'sleep', icon: Moon, label: 'mf_mode_sleep', desc: 'mf_mode_sleep_desc', query: 'Sleep Music Deep Calm', color: 'bg-violet-500/15 text-violet-400' },
+  { id: 'workout', icon: Dumbbell, label: 'mf_mode_workout', desc: 'mf_mode_workout_desc', query: 'Workout Motivation Music', color: 'bg-rose-500/15 text-rose-400' },
+  { id: 'family', icon: Users, label: 'mf_mode_family', desc: 'mf_mode_family_desc', query: 'Kids Music Family Friendly', color: 'bg-amber-500/15 text-amber-400' },
+] as const;
+
+// ─── localStorage migration ─────────────────────────────────────────────────
+const MIGRATION_KEY = storageKey("music-migrated-to-db");
+async function migrateLS() {
+  if (safeGet<boolean>(MIGRATION_KEY, false)) return;
+  try {
+    const ex = await musicService.getPlaylists();
+    if (ex.length > 0) { localStorage.setItem(MIGRATION_KEY, "true"); return; }
+    const old = loadPlaylists();
+    for (const o of old) { const c = await musicService.createPlaylist(o.name); for (const v of o.videos) await musicService.addTrackToPlaylist(c.id, { youtubeId: v.videoId, title: v.title, thumbnailUrl: v.thumbnail }); }
+    const oh = loadOldHistory();
+    for (const h of [...oh].reverse()) await musicService.addToHistory({ youtubeId: h.videoId, title: h.title });
+    if (old.length > 0 || oh.length > 0) toast.success("Playlists synced to cloud ☁️");
+    localStorage.setItem(MIGRATION_KEY, "true");
+  } catch (e) { console.error("[Music migration]", e); }
 }
 
-function isYouTubeEnded(data: unknown): boolean {
-  if (!data || typeof data !== "object") return false;
-  const d = data as Record<string, unknown>;
-  return d.event === "onStateChange" && d.info === 0;
-}
+// ─── Now Playing Card ───────────────────────────────────────────────────────
 
-// ─── Search skeleton ──────────────────────────────────────────────────────────
+function NowPlayingCard() {
+  const { t } = useT();
+  const { currentTrack, isPlaying, volume, currentTime, duration, pause, resume, setVolume, playNext, playPrev } = useMusicPlayer();
+  const { isShuffled, toggleShuffle } = usePlaylistPlayer();
 
-function SearchSkeleton() {
+  if (!currentTrack) return null;
+
+  const isYT = currentTrack.type === "youtube";
+  const title = isYT ? currentTrack.title : currentTrack.name;
+  const thumb = isYT ? `https://i.ytimg.com/vi/${currentTrack.videoId}/hqdefault.jpg` : null;
+  const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
+
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="rounded-lg bg-slate-800 overflow-hidden animate-pulse">
-          <div className="aspect-video bg-slate-700" />
-          <div className="p-3 space-y-2">
-            <div className="h-3 bg-slate-700 rounded w-4/5" />
-            <div className="h-3 bg-slate-700 rounded w-3/5" />
-            <div className="h-2 bg-slate-700 rounded w-1/3 mt-1" />
-          </div>
+    <Card className="glass-card card-accent overflow-hidden">
+      <CardContent className="p-0">
+        <div className="flex items-center justify-between px-4 pt-3 pb-1">
+          <p className="text-xs font-semibold">{t('mf_now_playing')}</p>
+          <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
         </div>
-      ))}
-    </div>
+        {thumb && <div className="px-4 pb-3"><div className="rounded-lg overflow-hidden aspect-square relative"><img src={thumb} alt={title} className="w-full h-full object-cover" /></div></div>}
+        <div className="px-4 pb-2">
+          <p className="text-sm font-semibold truncate">{title}</p>
+          {isYT && <p className="text-[11px] text-muted-foreground truncate">YouTube</p>}
+        </div>
+        <div className="px-4 pb-1">
+          <div className="w-full h-1 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} /></div>
+          <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5"><span>{fmtTime(currentTime)}</span><span>{duration > 0 ? fmtTime(duration) : '--:--'}</span></div>
+        </div>
+        <div className="flex items-center justify-center gap-3 px-4 pb-3">
+          <button type="button" onClick={toggleShuffle} className={cn("p-1.5", isShuffled ? "text-primary" : "text-muted-foreground hover:text-foreground")} title="Shuffle"><Shuffle className="w-3.5 h-3.5" /></button>
+          <button type="button" onClick={playPrev} className="p-1.5 text-muted-foreground hover:text-foreground" title="Previous"><SkipBack className="w-4 h-4" /></button>
+          <button type="button" onClick={isPlaying ? pause : resume} className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90" title={isPlaying ? "Pause" : "Play"}>
+            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+          </button>
+          <button type="button" onClick={playNext} className="p-1.5 text-muted-foreground hover:text-foreground" title="Next"><SkipForward className="w-4 h-4" /></button>
+          <button type="button" className="p-1.5 text-muted-foreground" title="Repeat"><Repeat className="w-3.5 h-3.5" /></button>
+        </div>
+        <div className="flex items-center gap-2 px-4 pb-4"><Volume2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" /><input type="range" min={0} max={100} value={volume} onChange={e => setVolume(Number(e.target.value))} className="flex-1 h-1 accent-primary" title="Volume" /></div>
+      </CardContent>
+    </Card>
   );
 }
 
-// ─── Playlist dropdown (shared between VideoCard and player view) ──────────────
+// ─── Local Tab ──────────────────────────────────────────────────────────────
 
-interface PlaylistDropdownProps {
-  playlists: readonly Playlist[];
-  onSelect: (playlistId: string | "new") => void;
-  onClose: () => void;
-  anchor?: "bottom" | "top";
-}
-
-function PlaylistDropdownMenu({ playlists, onSelect, onClose, anchor = "bottom" }: Readonly<PlaylistDropdownProps>) {
+function LocalTab() {
+  const { localTracks, currentTrack, isPlaying, playLocal, pause, resume, removeLocalTrack, addLocalTracks } = useMusicPlayer();
+  const [isDragging, setIsDragging] = useState(false);
+  const handleFiles = useCallback((files: FileList | null) => { if (files) addLocalTracks(Array.from(files)); }, [addLocalTracks]);
+  const activeId = currentTrack?.type === "local" ? currentTrack.id : null;
   return (
-    <>
-      <div className="fixed inset-0 z-40" onClick={onClose} aria-hidden="true" />
-      <div
-        className={cn(
-          "absolute right-0 w-52 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden",
-          anchor === "bottom" ? "top-full mt-1" : "bottom-full mb-1",
-        )}
-      >
-        {playlists.length > 0 && (
-          <>
-            {playlists.map((pl) => (
-              <button
-                key={pl.id}
-                type="button"
-                className="w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 flex items-center gap-2 truncate"
-                onClick={() => { onSelect(pl.id); onClose(); }}
-              >
-                <span className="text-slate-400 flex-shrink-0">📋</span>
-                <span className="truncate">{pl.name}</span>
-              </button>
-            ))}
-            <div className="border-t border-slate-700/60" />
-          </>
-        )}
-        <button
-          type="button"
-          className="w-full text-left px-3 py-2 text-sm text-cyan-400 hover:bg-slate-800 flex items-center gap-1.5"
-          onClick={() => { onSelect("new"); onClose(); }}
-        >
-          <Plus className="h-3.5 w-3.5 flex-shrink-0" />
-          Create new playlist
-        </button>
-      </div>
-    </>
-  );
-}
-
-// ─── Video card ───────────────────────────────────────────────────────────────
-
-interface VideoCardProps {
-  video: InvidiousVideo;
-  isActive: boolean;
-  isPlaying: boolean;
-  playlists: readonly Playlist[];
-  onPlay: () => void;
-  onAddToPlaylist: (playlistId: string | "new") => void;
-}
-
-function VideoCard({ video, isActive, isPlaying, playlists, onPlay, onAddToPlaylist }: Readonly<VideoCardProps>) {
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-
-  return (
-    <div
-      className={cn(
-        "rounded-lg flex flex-col border transition-colors",
-        isActive
-          ? "border-cyan-500/40 bg-cyan-500/5"
-          : "border-slate-700 bg-slate-800 hover:border-slate-600",
+    <div className="space-y-4">
+      <label htmlFor="local-file-input" className={cn("block border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors", isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}
+        onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={e => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files); }}>
+        <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+        <p className="text-sm font-medium">Drop audio files or click to browse</p>
+        <p className="text-xs text-muted-foreground mt-1">MP3, WAV, OGG, M4A, FLAC</p>
+        <input id="local-file-input" type="file" accept=".mp3,.wav,.ogg,.m4a,.flac,audio/*" multiple className="sr-only" onChange={e => handleFiles(e.target.files)} />
+      </label>
+      {localTracks.length === 0 ? <p className="text-center text-sm text-muted-foreground py-4">No tracks yet</p> : (
+        <div className="space-y-1">{localTracks.map((track, idx) => {
+          const isActive = track.id === activeId;
+          return (<div key={track.id} className={cn("flex items-center gap-3 px-4 py-3 rounded-lg group", isActive ? "bg-primary/10 border border-primary/30" : "hover:bg-secondary/30")}>
+            <span className="text-xs text-muted-foreground w-5 text-right shrink-0">{isActive ? <Music2 className={cn("h-3.5 w-3.5", isPlaying && "text-primary animate-pulse")} /> : idx + 1}</span>
+            <button type="button" className="flex-1 text-left min-w-0" onClick={() => { if (isActive) { if (isPlaying) pause(); else resume(); } else playLocal(track); }}>
+              <p className={cn("text-sm font-medium truncate", isActive && "text-primary")}>{track.name}</p>
+            </button>
+            <button type="button" aria-label={`Remove ${track.name}`} className="opacity-0 group-hover:opacity-100 p-1 rounded text-muted-foreground hover:text-destructive" onClick={() => removeLocalTrack(track.id)}><Trash2 className="h-4 w-4" /></button>
+          </div>);
+        })}</div>
       )}
-    >
-      <div className="relative aspect-video flex-shrink-0 overflow-hidden rounded-t-lg">
-        <img
-          src={`https://i.ytimg.com/vi/${video.videoId}/mqdefault.jpg`}
-          alt={video.title}
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
-        {video.lengthSeconds > 0 && (
-          <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[10px] font-mono px-1 rounded leading-4">
-            {formatDuration(video.lengthSeconds)}
-          </span>
-        )}
-        {isActive && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            {isPlaying
-              ? <Pause className="h-8 w-8 text-white drop-shadow" />
-              : <Play className="h-8 w-8 text-white drop-shadow ml-1" />}
-          </div>
-        )}
-      </div>
-      <div className="p-3 flex flex-col gap-1.5 flex-1">
-        <p className="text-xs font-medium text-slate-100 line-clamp-2 leading-snug">{video.title}</p>
-        <p className="text-[11px] text-slate-400 truncate">{video.author}</p>
-        <div className="flex gap-1.5 mt-auto pt-1">
-          <Button
-            size="sm"
-            className={cn(
-              "flex-1 gap-1 h-7 text-xs",
-              isActive && "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30",
-            )}
-            onClick={onPlay}
-          >
-            {isActive && isPlaying
-              ? <><Pause className="h-3 w-3" /> Pause</>
-              : <><Play className="h-3 w-3" /> Play</>}
-          </Button>
-          <div className="relative">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 w-7 p-0 text-slate-400 hover:text-white flex-shrink-0"
-              onClick={() => setDropdownOpen((v) => !v)}
-              aria-label="Add to playlist"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
-            {dropdownOpen && (
-              <PlaylistDropdownMenu
-                playlists={playlists}
-                onSelect={onAddToPlaylist}
-                onClose={() => setDropdownOpen(false)}
-                anchor="top"
-              />
-            )}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
 
-// ─── Create playlist modal ────────────────────────────────────────────────────
+// ─── Create Playlist Modal ──────────────────────────────────────────────────
 
-interface CreatePlaylistModalProps {
-  videoTitle: string;
-  onConfirm: (name: string) => void;
-  onCancel: () => void;
-}
-
-function CreatePlaylistModal({ videoTitle, onConfirm, onCancel }: Readonly<CreatePlaylistModalProps>) {
+function CreatePlaylistModal({ videoTitle, onConfirm, onCancel }: Readonly<{ videoTitle: string; onConfirm: (n: string) => void; onCancel: () => void }>) {
   const [name, setName] = useState("");
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-80 shadow-2xl space-y-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="font-semibold text-slate-100">New Playlist</p>
-            <p className="text-xs text-slate-400 mt-0.5 truncate max-w-52" title={videoTitle}>
-              Adding: {videoTitle}
-            </p>
-          </div>
-          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-slate-400" onClick={onCancel}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-        <Input
-          autoFocus
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && name.trim()) onConfirm(name.trim());
-            if (e.key === "Escape") onCancel();
-          }}
-          placeholder="Playlist name…"
-          className="bg-slate-800 border-slate-600"
-        />
-        <div className="flex gap-2 justify-end">
-          <Button variant="ghost" size="sm" onClick={onCancel}>Cancel</Button>
-          <Button size="sm" onClick={() => { if (name.trim()) onConfirm(name.trim()); }} disabled={!name.trim()}>
-            Create & Add
-          </Button>
-        </div>
+      <div className="bg-card border border-border rounded-xl p-6 w-80 shadow-2xl space-y-4">
+        <div className="flex items-start justify-between"><div><p className="font-semibold">New Playlist</p><p className="text-xs text-muted-foreground mt-0.5 truncate max-w-52" title={videoTitle}>Adding: {videoTitle}</p></div>
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={onCancel}><X className="h-4 w-4" /></Button></div>
+        <Input autoFocus value={name} onChange={e => setName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && name.trim()) onConfirm(name.trim()); if (e.key === 'Escape') onCancel(); }} placeholder="Playlist name…" />
+        <div className="flex gap-2 justify-end"><Button variant="ghost" size="sm" onClick={onCancel}>Cancel</Button><Button size="sm" onClick={() => { if (name.trim()) onConfirm(name.trim()); }} disabled={!name.trim()}>Create & Add</Button></div>
       </div>
-    </div>
-  );
-}
-
-// ─── YouTube tab ──────────────────────────────────────────────────────────────
-
-interface YouTubeTabProps {
-  playlists: readonly Playlist[];
-  onAddToPlaylist: (video: InvidiousVideo, playlistId: string | "new") => void;
-  onAddCurrentToPlaylist: (playlistId: string | "new") => void;
-  onVideoEnded: () => void;
-}
-
-function YouTubeTab({ playlists, onAddToPlaylist, onAddCurrentToPlaylist, onVideoEnded }: Readonly<YouTubeTabProps>) {
-  const { currentTrack, isPlaying, playYouTube, pause, resume, stop } = useMusicPlayer();
-
-  const [input, setInput] = useState("");
-  const [urlError, setUrlError] = useState<string | null>(null);
-  const [isLoadingTitle, setIsLoadingTitle] = useState(false);
-
-  const [history, setHistory] = useState<HistoryEntry[]>(() => loadHistory());
-  const [embedError, setEmbedError] = useState(false);
-  const [view, setView] = useState<"browse" | "player">("browse");
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<InvidiousVideo[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [playerDropdownOpen, setPlayerDropdownOpen] = useState(false);
-
-  const activeVideoId = currentTrack?.type === "youtube" ? currentTrack.videoId : null;
-  const isLocalhost =
-    globalThis.location.hostname === "localhost" || globalThis.location.hostname === "127.0.0.1";
-  const hasSearchQuery = searchQuery.trim().length > 0;
-
-  useEffect(() => {
-    const q = searchQuery.trim();
-    if (!q) {
-      setSearchResults([]);
-      setSearchError(null);
-      setIsSearching(false);
-      return;
-    }
-    setIsSearching(true);
-    let cancelled = false;
-    const timer = setTimeout(() => {
-      searchInvidious(q)
-        .then((res) => {
-          if (!cancelled) { setSearchResults(res); setSearchError(null); }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setSearchResults([]);
-            setSearchError("Search unavailable. Please paste a YouTube URL directly.");
-          }
-        })
-        .finally(() => { if (!cancelled) setIsSearching(false); });
-    }, 500);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [searchQuery]);
-
-  useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      if (event.origin !== "https://www.youtube.com") return;
-      try {
-        const data =
-          typeof event.data === "string" ? (JSON.parse(event.data) as unknown) : event.data;
-        if (isYouTubeEmbedError(data)) setEmbedError(true);
-        if (isYouTubeEnded(data)) onVideoEnded();
-      } catch {
-        // ignore malformed messages
-      }
-    };
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, [onVideoEnded]);
-
-  const handlePlay = useCallback(
-    (videoId: string, title: string) => {
-      setUrlError(null);
-      setEmbedError(false);
-      playYouTube(videoId, title);
-      setHistory((prev) => addToHistory({ videoId, title }, prev));
-      setView("player");
-    },
-    [playYouTube],
-  );
-
-  const handleSearchPlay = useCallback(
-    (video: InvidiousVideo) => {
-      if (activeVideoId === video.videoId) {
-        if (isPlaying) { pause(); } else { resume(); }
-        setView("player");
-        return;
-      }
-      handlePlay(video.videoId, video.title);
-    },
-    [activeVideoId, isPlaying, pause, resume, handlePlay],
-  );
-
-  const handleSubmit = () => {
-    const trimmed = input.trim();
-    if (!trimmed) return;
-    const vid = parseVideoId(trimmed);
-    if (!vid) {
-      setUrlError("Could not find a YouTube video ID in that URL. Try pasting the full URL.");
-      return;
-    }
-    setIsLoadingTitle(true);
-    fetchYouTubeInfo(vid)
-      .then(({ title, embeddable }) => {
-        setIsLoadingTitle(false);
-        setInput("");
-        handlePlay(vid, title);
-        if (!embeddable) setEmbedError(true);
-      })
-      .catch(() => setIsLoadingTitle(false));
-  };
-
-  const embedSrc =
-    activeVideoId && !embedError
-      ? `https://www.youtube.com/embed/${activeVideoId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1`
-      : null;
-
-  return (
-    <div className="space-y-5">
-      {isLocalhost && (
-        <div className="flex items-start gap-3 rounded-lg border border-blue-500/30 bg-blue-500/10 p-4">
-          <span className="text-blue-400 flex-shrink-0 text-base leading-none mt-0.5" aria-hidden="true">ℹ</span>
-          <p className="text-sm text-blue-200">
-            YouTube playback works on <strong>barakzai.cloud</strong>. On localhost, use the{" "}
-            <strong>My Music</strong> tab to upload local files.
-          </p>
-        </div>
-      )}
-
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-        <Input
-          value={searchQuery}
-          onChange={(e) => { setSearchQuery(e.target.value); if (view === "player") setView("browse"); }}
-          placeholder="Search for music, artists, playlists…"
-          className="pl-9 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
-        />
-      </div>
-
-      {/* ── Player view ────────────────────────────────────────────────────── */}
-      {view === "player" && (
-        <div className="space-y-3">
-          <button
-            type="button"
-            onClick={() => setView("browse")}
-            className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to browse
-          </button>
-
-          {embedError && (
-            <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
-              <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-amber-200 font-medium">Video cannot be embedded</p>
-                <p className="text-xs text-amber-300/70 mt-0.5">
-                  The video owner has disabled playback on external sites.
-                </p>
-                {activeVideoId && (
-                  <a
-                    href={`https://www.youtube.com/watch?v=${activeVideoId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-amber-400 hover:text-amber-200 underline mt-1 inline-block"
-                  >
-                    Watch on YouTube ↗
-                  </a>
-                )}
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-amber-400 hover:text-amber-200 flex-shrink-0"
-                onClick={() => { stop(); setEmbedError(false); setView("browse"); }}
-              >
-                Dismiss
-              </Button>
-            </div>
-          )}
-
-          {embedSrc && (
-            <div className="rounded-xl overflow-hidden border border-slate-700 shadow-lg">
-              <div className="relative w-full aspect-video">
-                <iframe
-                  key={activeVideoId}
-                  src={embedSrc}
-                  title="YouTube player"
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  allowFullScreen
-                  className="absolute inset-0 w-full h-full"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Add to playlist while playing */}
-          {activeVideoId && !embedError && (
-            <div className="relative inline-block">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 border-slate-700 text-slate-300 hover:text-white"
-                onClick={() => setPlayerDropdownOpen((v) => !v)}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add to Playlist
-              </Button>
-              {playerDropdownOpen && (
-                <PlaylistDropdownMenu
-                  playlists={playlists}
-                  onSelect={onAddCurrentToPlaylist}
-                  onClose={() => setPlayerDropdownOpen(false)}
-                  anchor="bottom"
-                />
-              )}
-            </div>
-          )}
-
-          {activeVideoId && !embedSrc && !embedError && (
-            <Button variant="outline" size="sm" onClick={isPlaying ? pause : resume} className="gap-2">
-              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              {isPlaying ? "Pause" : "Resume"}
-            </Button>
-          )}
-        </div>
-      )}
-
-      {/* ── Browse / search results ────────────────────────────────────────── */}
-      {view === "browse" && (
-        <div className="space-y-4">
-          {isSearching && <SearchSkeleton />}
-
-          {!isSearching && searchError && (
-            <p className="text-sm text-amber-400 text-center py-3">{searchError}</p>
-          )}
-
-          {!isSearching && !searchError && hasSearchQuery && searchResults.length === 0 && (
-            <p className="text-sm text-slate-500 text-center py-4">No results found.</p>
-          )}
-
-          {!isSearching && searchResults.length > 0 && (
-            <div className="grid grid-cols-2 gap-3">
-              {searchResults.map((video) => (
-                <VideoCard
-                  key={video.videoId}
-                  video={video}
-                  isActive={activeVideoId === video.videoId}
-                  isPlaying={isPlaying}
-                  playlists={playlists}
-                  onPlay={() => handleSearchPlay(video)}
-                  onAddToPlaylist={(plId) => onAddToPlaylist(video, plId)}
-                />
-              ))}
-            </div>
-          )}
-
-          {!hasSearchQuery && (
-            <>
-              <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Quick Presets</p>
-                <div className="flex flex-wrap gap-2">
-                  {PRESETS.map((p) => (
-                    <Button
-                      key={p.videoId}
-                      variant={activeVideoId === p.videoId ? "default" : "secondary"}
-                      size="sm"
-                      className={cn(
-                        "gap-1.5",
-                        activeVideoId === p.videoId &&
-                          "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40",
-                      )}
-                      onClick={() => handlePlay(p.videoId, p.title)}
-                    >
-                      {activeVideoId === p.videoId && isPlaying
-                        ? <Pause className="h-3 w-3" />
-                        : <Play className="h-3 w-3 ml-0.5" />}
-                      {p.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {history.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider">Recent</p>
-                    <button
-                      type="button"
-                      className="text-xs text-slate-500 hover:text-slate-300"
-                      onClick={() => {
-                        setHistory([]);
-                        localStorage.removeItem("dailyflow:v1:youtube-history");
-                      }}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {history.map((h) => (
-                      <button
-                        key={h.videoId}
-                        type="button"
-                        onClick={() => handlePlay(h.videoId, h.title)}
-                        className={cn(
-                          "px-3 py-1 rounded-full text-sm transition-colors",
-                          activeVideoId === h.videoId
-                            ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                            : "bg-slate-800 text-slate-300 border border-slate-700 hover:border-cyan-500/40 hover:text-white",
-                        )}
-                      >
-                        {h.title}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── Always visible: URL input + presets when search active ────────── */}
-      <div className="border-t border-slate-700/60 pt-5 space-y-5">
-        <div>
-          <p className="text-xs text-slate-500 mb-2">Or paste a YouTube URL directly</p>
-          <div className="flex gap-2">
-            <Input
-              value={input}
-              onChange={(e) => { setInput(e.target.value); setUrlError(null); }}
-              onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
-              placeholder="https://youtube.com/watch?v=…"
-              className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
-              disabled={isLoadingTitle}
-            />
-            <Button onClick={handleSubmit} disabled={!input.trim() || isLoadingTitle}>
-              {isLoadingTitle ? "Loading…" : "Play"}
-            </Button>
-          </div>
-          {urlError && <p className="text-sm text-destructive mt-1.5">{urlError}</p>}
-          <p className="text-xs text-slate-500 mt-2">
-            Tip: Not all YouTube videos allow embedding. Try a preset or a different video.
-          </p>
-        </div>
-
-        {hasSearchQuery && (
-          <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Quick Presets</p>
-            <div className="flex flex-wrap gap-2">
-              {PRESETS.map((p) => (
-                <Button
-                  key={p.videoId}
-                  variant={activeVideoId === p.videoId ? "default" : "secondary"}
-                  size="sm"
-                  className={cn(
-                    "gap-1.5",
-                    activeVideoId === p.videoId &&
-                      "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40",
-                  )}
-                  onClick={() => handlePlay(p.videoId, p.title)}
-                >
-                  {activeVideoId === p.videoId && isPlaying
-                    ? <Pause className="h-3 w-3" />
-                    : <Play className="h-3 w-3 ml-0.5" />}
-                  {p.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Local files tab ──────────────────────────────────────────────────────────
-
-function LocalTab() {
-  const { localTracks, currentTrack, isPlaying, playLocal, pause, resume, removeLocalTrack, addLocalTracks } =
-    useMusicPlayer();
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFiles = useCallback(
-    (files: FileList | null) => {
-      if (!files) return;
-      addLocalTracks(Array.from(files));
-    },
-    [addLocalTracks],
-  );
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-      handleFiles(e.dataTransfer.files);
-    },
-    [handleFiles],
-  );
-
-  const activeId = currentTrack?.type === "local" ? currentTrack.id : null;
-
-  return (
-    <div className="space-y-4">
-      <label
-        htmlFor="local-file-input"
-        className={cn(
-          "block border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors",
-          isDragging
-            ? "border-cyan-400 bg-cyan-500/10"
-            : "border-slate-700 hover:border-cyan-500/50 hover:bg-slate-800/40",
-        )}
-        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
-      >
-        <Upload className="h-8 w-8 text-slate-400 mx-auto mb-3" />
-        <p className="text-sm text-slate-300 font-medium">Drop audio files here or click to browse</p>
-        <p className="text-xs text-slate-500 mt-1">MP3, WAV, OGG, M4A, FLAC</p>
-        <input
-          id="local-file-input"
-          ref={fileInputRef}
-          type="file"
-          accept=".mp3,.wav,.ogg,.m4a,.flac,audio/*"
-          multiple
-          className="sr-only"
-          onChange={(e) => handleFiles(e.target.files)}
-        />
-      </label>
-
-      {localTracks.length === 0 ? (
-        <p className="text-center text-sm text-slate-500 py-4">No tracks yet — upload some music above.</p>
-      ) : (
-        <div className="space-y-1">
-          {localTracks.map((track, idx) => {
-            const isActive = track.id === activeId;
-            return (
-              <div
-                key={track.id}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group",
-                  isActive ? "bg-cyan-500/10 border border-cyan-500/30" : "hover:bg-slate-800",
-                )}
-              >
-                <span className="text-xs text-slate-500 w-5 text-right flex-shrink-0">
-                  {isActive ? (
-                    <Music2 className={cn("h-3.5 w-3.5", isPlaying ? "text-cyan-400 animate-pulse" : "text-slate-400")} />
-                  ) : (
-                    idx + 1
-                  )}
-                </span>
-                <button
-                  type="button"
-                  className="flex-1 text-left min-w-0"
-                  onClick={() => {
-                    if (isActive) { if (isPlaying) { pause(); } else { resume(); } }
-                    else { playLocal(track); }
-                  }}
-                >
-                  <p className={cn("text-sm font-medium truncate", isActive ? "text-cyan-300" : "text-slate-200")}>
-                    {track.name}
-                  </p>
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Remove ${track.name}`}
-                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-slate-500 hover:text-red-400 transition-all"
-                  onClick={() => removeLocalTrack(track.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Collapsible Pomodoro panel ───────────────────────────────────────────────
-
-function CollapsiblePomodoro() {
-  const [open, setOpen] = useState(true);
-  return (
-    <div className="w-full lg:w-72 flex-shrink-0">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center justify-between w-full text-sm font-medium text-slate-300 hover:text-white mb-2 px-1"
-      >
-        <span>Pomodoro Timer</span>
-        {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-      </button>
-      {open && <PomodoroTimer />}
     </div>
   );
 }
@@ -805,209 +196,337 @@ function CollapsiblePomodoro() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MusicPage() {
-  const { playYouTube, currentTrack, isPlaying } = useMusicPlayer();
-  const { isShuffled, setPlaylistLabel } = usePlaylistPlayer();
+  const { t } = useT();
+  const navigate = useNavigate();
+  const { playYouTube, currentTrack, isPlaying, pause, resume } = useMusicPlayer();
+  const { setPlaylistLabel } = usePlaylistPlayer();
+  const { tasks } = useTasks();
+  const { linkedTaskTitle, running: pomodoroRunning, phase: pomodoroPhase } = usePomodoroStore();
 
-  const [playlists, setPlaylists] = useState<Playlist[]>(() => loadPlaylists());
-  const [activePlaylist, setActivePlaylist] = useState<Playlist | null>(null);
-  const [playlistIdx, setPlaylistIdx] = useState(0);
+  const { data: dbPlaylists = [] } = usePlaylists();
+  const { data: likedTracks = [] } = useLikedTracks();
+  const { data: playHistory = [] } = usePlayHistory();
+  const { mutate: addToHistory } = useAddToHistory();
+  const { mutate: likeTrack } = useLikeTrack();
+  const { mutate: unlikeTrack } = useUnlikeTrack();
+  const { mutate: createPlaylistMut } = useCreatePlaylist();
+  const { mutate: addTrackToPlaylist } = useAddTrackToPlaylist();
+
+  const likedIds = useMemo(() => new Set(likedTracks.map(t2 => t2.youtubeId)), [likedTracks]);
+
+  const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
+  const [activePlaylistTracks, setActivePlaylistTracks] = useState<PlaylistTrack[]>([]);
+  const [, setPlaylistIdx] = useState(0);
   const [createForVideo, setCreateForVideo] = useState<InvidiousVideo | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<InvidiousVideo[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [urlInput, setUrlInput] = useState("");
+  const [visibleVideoId, setVisibleVideoId] = useState<string | null>(null);
+  const [showNewPlaylist, setShowNewPlaylist] = useState(false);
+  const [newPlName, setNewPlName] = useState("");
 
-  // Refs keep fresh values inside stable callbacks
-  const activePlaylistRef = useRef<Playlist | null>(null);
+  const activePlaylistTracksRef = useRef<PlaylistTrack[]>([]);
   const isShuffledRef = useRef(false);
   const shuffleOrderRef = useRef<number[]>([]);
 
-  useEffect(() => { activePlaylistRef.current = activePlaylist; }, [activePlaylist]);
+  const { isShuffled } = usePlaylistPlayer();
+  useEffect(() => { activePlaylistTracksRef.current = activePlaylistTracks; }, [activePlaylistTracks]);
   useEffect(() => { isShuffledRef.current = isShuffled; }, [isShuffled]);
+  useEffect(() => { void migrateLS(); }, []);
 
-  // When shuffle is toggled (possibly from MiniPlayer), regenerate the order
   useEffect(() => {
-    const pl = activePlaylistRef.current;
-    if (!pl || pl.videos.length === 0) return;
-    if (isShuffled) {
-      const order = pl.videos.map((_, i) => i);
-      for (let i = order.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [order[i], order[j]] = [order[j], order[i]];
-      }
-      shuffleOrderRef.current = order;
-    } else {
-      shuffleOrderRef.current = pl.videos.map((_, i) => i);
-    }
-  }, [isShuffled]);
-
-  const persistPlaylists = useCallback(
-    (next: Playlist[]) => {
-      setPlaylists(next);
-      savePlaylists(next);
-      // Keep active playlist in sync if it was updated
-      if (activePlaylist) {
-        const updated = next.find((p) => p.id === activePlaylist.id);
-        setActivePlaylist(updated ?? null);
-        if (!updated) setPlaylistLabel(null);
-      }
-    },
-    [activePlaylist, setPlaylistLabel],
-  );
-
-  const handlePlayAll = useCallback(
-    (playlist: Playlist, startIdx = 0) => {
-      if (playlist.videos.length === 0) return;
-      const shuffled = isShuffledRef.current;
-      const order = playlist.videos.map((_, i) => i);
-      if (shuffled) {
-        for (let i = order.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [order[i], order[j]] = [order[j], order[i]];
-        }
-      }
-      shuffleOrderRef.current = order;
-      const firstIdx = order[startIdx] ?? 0;
-      setActivePlaylist(playlist);
-      setPlaylistIdx(firstIdx);
-      setPlaylistLabel(playlist.name);
-      const video = playlist.videos[firstIdx];
-      if (video) playYouTube(video.videoId, video.title);
-    },
-    [playYouTube, setPlaylistLabel],
-  );
-
-  const handleVideoEnded = useCallback(() => {
-    const pl = activePlaylistRef.current;
-    if (!pl || pl.videos.length === 0) return;
-    const order = isShuffledRef.current ? shuffleOrderRef.current : pl.videos.map((_, i) => i);
-    setPlaylistIdx((curr) => {
-      const pos = order.indexOf(curr);
-      const next = pos + 1;
-      if (next >= order.length) {
-        setActivePlaylist(null);
-        setPlaylistLabel(null);
-        return 0;
-      }
-      const nextIdx = order[next];
-      const nextVideo = pl.videos[nextIdx];
-      if (nextVideo) playYouTube(nextVideo.videoId, nextVideo.title);
-      return nextIdx;
-    });
-  }, [playYouTube, setPlaylistLabel]);
-
-  const handleAddToPlaylist = useCallback(
-    (video: InvidiousVideo, playlistId: string | "new") => {
-      if (playlistId === "new") {
-        setCreateForVideo(video);
-        return;
-      }
-      setPlaylists((prev) => {
-        const next = prev.map((pl) => {
-          if (pl.id !== playlistId) return pl;
-          if (pl.videos.some((v) => v.videoId === video.videoId)) {
-            toast(`Already in "${pl.name}"`);
-            return pl;
-          }
-          toast(`Added to "${pl.name}"`);
-          return { ...pl, videos: [...pl.videos, makePlaylistVideo(video)] };
-        });
-        savePlaylists(next);
-        return next;
-      });
-    },
-    [],
-  );
-
-  const handleAddCurrentToPlaylist = useCallback(
-    (playlistId: string | "new") => {
-      if (!currentTrack || currentTrack.type !== "youtube") return;
-      const fakeVideo: InvidiousVideo = {
-        type: "video",
-        videoId: currentTrack.videoId,
-        title: currentTrack.title,
-        author: "",
-        lengthSeconds: 0,
-        videoThumbnails: [],
-      };
-      handleAddToPlaylist(fakeVideo, playlistId);
-    },
-    [currentTrack, handleAddToPlaylist],
-  );
-
-  const handleCreateAndAdd = useCallback(
-    (name: string) => {
-      const video = createForVideo;
-      setCreateForVideo(null);
-      if (!name.trim() || !video) return;
-      const newPlaylist: Playlist = {
-        id: crypto.randomUUID(),
-        name: name.trim(),
-        createdAt: new Date().toISOString().split("T")[0],
-        videos: [makePlaylistVideo(video)],
-      };
-      setPlaylists((prev) => {
-        const next = [...prev, newPlaylist];
-        savePlaylists(next);
-        return next;
-      });
-      toast(`Created "${newPlaylist.name}" and added video`);
-    },
-    [createForVideo],
-  );
+    const q = searchQuery.trim();
+    if (!q) { setSearchResults([]); setSearchError(null); setIsSearching(false); return; }
+    setIsSearching(true); let cancelled = false;
+    const timer = setTimeout(() => { searchInvidious(q).then(r => { if (!cancelled) { setSearchResults(r); setSearchError(null); } }).catch(() => { if (!cancelled) { setSearchResults([]); setSearchError("Search unavailable."); } }).finally(() => { if (!cancelled) setIsSearching(false); }); }, 500);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [searchQuery]);
 
   const activeVideoId = currentTrack?.type === "youtube" ? currentTrack.videoId : null;
 
+  // KPI computed data
+  const listeningMins = useMemo(() => Math.round(playHistory.reduce((s, h) => s + (h.durationSeconds ?? 0), 0) / 60), [playHistory]);
+  const listeningLabel = listeningMins >= 60 ? `${Math.floor(listeningMins / 60)}h ${listeningMins % 60}m` : `${listeningMins}m`;
+
+  // ─── Handlers ──
+  const handlePlay = useCallback((videoId: string, title: string, artist?: string) => {
+    playYouTube(videoId, title); addToHistory({ youtubeId: videoId, title, artist });
+  }, [playYouTube, addToHistory]);
+
+  const handlePlayAll = useCallback((playlistId: string, tracks: PlaylistTrack[], startIdx = 0) => {
+    if (tracks.length === 0) return;
+    const order = tracks.map((_, i) => i);
+    if (isShuffledRef.current) { for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; } }
+    shuffleOrderRef.current = order; setActivePlaylistId(playlistId); setActivePlaylistTracks(tracks);
+    const first = order[startIdx] ?? 0; setPlaylistIdx(first);
+    setPlaylistLabel(dbPlaylists.find(p => p.id === playlistId)?.name ?? 'Playlist');
+    const tr = tracks[first]; if (tr) playYouTube(tr.youtubeId, tr.title);
+  }, [playYouTube, setPlaylistLabel, dbPlaylists]);
+
+  const handleVideoEnded = useCallback(() => {
+    const tracks = activePlaylistTracksRef.current; if (tracks.length === 0) return;
+    const order = isShuffledRef.current ? shuffleOrderRef.current : tracks.map((_, i) => i);
+    setPlaylistIdx(curr => { const pos = order.indexOf(curr); if (pos + 1 >= order.length) { setActivePlaylistId(null); setActivePlaylistTracks([]); setPlaylistLabel(null); return 0; }
+      const ni = order[pos + 1]; const nt = tracks[ni]; if (nt) playYouTube(nt.youtubeId, nt.title); return ni; });
+  }, [playYouTube, setPlaylistLabel]);
+
+  const handleAddToPlaylist = useCallback((video: InvidiousVideo, playlistId: string | "new") => {
+    if (playlistId === "new") { setCreateForVideo(video); return; }
+    addTrackToPlaylist({ playlistId, track: videoToTrack(video) });
+    toast(`Added to "${dbPlaylists.find(p => p.id === playlistId)?.name ?? 'playlist'}"`);
+  }, [addTrackToPlaylist, dbPlaylists]);
+
+  const handleCreateAndAdd = useCallback((name: string) => {
+    const video = createForVideo; setCreateForVideo(null);
+    if (!name.trim() || !video) return;
+    createPlaylistMut({ name: name.trim() }, { onSuccess: (c) => { addTrackToPlaylist({ playlistId: c.id, track: videoToTrack(video) }); toast(`Created "${name.trim()}"`); } });
+  }, [createForVideo, createPlaylistMut, addTrackToPlaylist]);
+
+  const handleNewPlaylist = () => {
+    const n = newPlName.trim(); if (!n) return;
+    createPlaylistMut({ name: n }); setNewPlName(""); setShowNewPlaylist(false);
+  };
+
+  const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
+  const fadeUp = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } };
+
   return (
-    <div className="p-6 lg:p-8 max-w-6xl mx-auto pb-28">
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-2xl lg:text-3xl font-semibold mb-1">Music</h1>
-        <p className="text-muted-foreground">YouTube player, playlists &amp; your own audio files</p>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="flex flex-col lg:flex-row gap-6"
-      >
-        <div className="flex-1 min-w-0">
-          <Tabs defaultValue="youtube">
-            <TabsList className="mb-5">
-              <TabsTrigger value="youtube">YouTube</TabsTrigger>
-              <TabsTrigger value="local">My Music</TabsTrigger>
-              <TabsTrigger value="playlists">Playlists</TabsTrigger>
-            </TabsList>
-            <TabsContent value="youtube">
-              <YouTubeTab
-                playlists={playlists}
-                onAddToPlaylist={handleAddToPlaylist}
-                onAddCurrentToPlaylist={handleAddCurrentToPlaylist}
-                onVideoEnded={handleVideoEnded}
-              />
-            </TabsContent>
-            <TabsContent value="local">
-              <LocalTab />
-            </TabsContent>
-            <TabsContent value="playlists">
-              <PlaylistsTab
-                playlists={playlists}
-                activePlaylistId={activePlaylist?.id ?? null}
-                activeVideoId={activeVideoId}
-                isPlaying={isPlaying}
-                onPlayAll={handlePlayAll}
-                onUpdatePlaylists={persistPlaylists}
-              />
-            </TabsContent>
-          </Tabs>
+    <div className="px-4 sm:px-6 lg:px-8 pb-28">
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between py-5">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-semibold mb-1">{t('mf_title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('mf_subtitle')}</p>
         </div>
-
-        <CollapsiblePomodoro />
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setShowNewPlaylist(true)}><Plus className="w-3.5 h-3.5" /> {t('mf_new_playlist')}</Button>
+          <Button className="gap-1.5 text-xs" style={{ background: 'var(--gradient-primary)' }} onClick={() => document.getElementById('mf-upload')?.click()}>
+            <Upload className="w-3.5 h-3.5" /> {t('mf_upload_audio')}</Button>
+        </div>
       </motion.div>
 
-      {createForVideo && (
-        <CreatePlaylistModal
-          videoTitle={createForVideo.title}
-          onConfirm={handleCreateAndAdd}
-          onCancel={() => setCreateForVideo(null)}
-        />
+      {/* Tabs */}
+      <Tabs defaultValue="youtube" className="mb-4">
+        <TabsList><TabsTrigger value="youtube" className="gap-1.5 text-xs sm:text-sm"><Play className="w-3 h-3" /> YouTube</TabsTrigger>
+          <TabsTrigger value="local" className="gap-1.5 text-xs sm:text-sm"><Music2 className="w-3 h-3" /> My Music</TabsTrigger>
+          <TabsTrigger value="playlists" className="gap-1.5 text-xs sm:text-sm"><ListMusic className="w-3 h-3" /> Playlists</TabsTrigger>
+        </TabsList>
+
+      <div className="flex flex-col lg:flex-row gap-5 lg:items-start mt-5">
+      <div className="flex-1 min-w-0 space-y-5">
+
+      {/* Audio playback is handled by the global MiniPlayer (AppLayout level) */}
+      {/* Now Playing info is shown in the sidebar NowPlayingCard */}
+
+      {/* KPI Cards */}
+      <motion.div variants={stagger} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { icon: Timer, label: t('mf_kpi_listening'), value: listeningLabel, sub: t('mf_kpi_listening_sub'), color: 'bg-indigo-500/15 text-indigo-400' },
+          { icon: Zap, label: t('mf_kpi_focus'), value: String(pomodoroRunning ? 1 : 0), sub: t('mf_kpi_focus_sub'), color: 'bg-emerald-500/15 text-emerald-400' },
+          { icon: BookOpen, label: t('mf_kpi_study'), value: String(likedTracks.length), sub: t('mf_kpi_study_sub'), color: 'bg-rose-500/15 text-rose-400' },
+          { icon: FolderOpen, label: t('mf_kpi_playlists'), value: String(dbPlaylists.length), sub: t('mf_kpi_playlists_sub'), color: 'bg-cyan-500/15 text-cyan-400' },
+        ].map(kpi => (
+          <motion.div key={kpi.label} variants={fadeUp}>
+            <Card className="glass-card card-accent surface-elevated"><CardContent className="p-3.5">
+              <div className="flex items-center gap-2.5 mb-2"><div className={cn("icon-tile w-8 h-8 rounded-md", kpi.color)}><kpi.icon className="w-4 h-4" /></div>
+                <span className="text-[10px] font-medium text-muted-foreground">{kpi.label}</span></div>
+              <p className="text-xl font-bold tracking-tight">{kpi.value}</p>
+              <p className="text-[10px] text-muted-foreground">{kpi.sub}</p>
+            </CardContent></Card>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* Search */}
+      <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder={t('mf_search')} className="pl-10 pr-10" />
+        <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /></div>
+
+      {/* Quick Modes */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-muted-foreground">{t('mf_quick_modes')}</p>
+        <div className="flex flex-wrap gap-2">
+          {QUICK_MODES.map(m => (
+            <button key={m.id} type="button" onClick={() => setSearchQuery(m.query)}
+              className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+                searchQuery === m.query ? "bg-primary text-primary-foreground border-primary" : "bg-secondary/40 text-muted-foreground border-border hover:text-foreground")}>
+              <m.icon className="w-3 h-3" /> {t(m.label)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* YouTube Tab Content */}
+      <TabsContent value="youtube" className="mt-0 space-y-5">
+        {/* Search results */}
+        {isSearching && <div className="grid grid-cols-2 gap-3">{[0,1,2,3].map(i => <div key={i} className="rounded-lg bg-secondary/30 animate-pulse"><div className="aspect-video bg-secondary/50 rounded-t-lg" /><div className="p-3 space-y-2"><div className="h-3 bg-secondary/50 rounded w-4/5" /><div className="h-3 bg-secondary/50 rounded w-3/5" /></div></div>)}</div>}
+        {!isSearching && searchError && <p className="text-sm text-amber-400 text-center py-3">{searchError}</p>}
+        {!isSearching && searchResults.length > 0 && (
+          <div className="grid grid-cols-2 gap-3">{searchResults.map(v => (
+            <button key={v.videoId} type="button" onClick={() => handlePlay(v.videoId, v.title, v.author)}
+              className={cn("rounded-lg border text-left overflow-hidden transition-colors", activeVideoId === v.videoId ? "border-primary/40 bg-primary/5" : "border-border bg-secondary/30 hover:border-primary/20")}>
+              <div className="relative aspect-video"><img src={`https://i.ytimg.com/vi/${v.videoId}/mqdefault.jpg`} alt={v.title} className="w-full h-full object-cover" loading="lazy" />{v.lengthSeconds > 0 && <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[10px] font-mono px-1 rounded">{fmtDuration(v.lengthSeconds)}</span>}</div>
+              <div className="p-2.5"><p className="text-xs font-medium line-clamp-2 leading-snug">{v.title}</p><p className="text-[11px] text-muted-foreground truncate mt-0.5">{v.author}</p></div>
+            </button>
+          ))}</div>
+        )}
+
+        {/* Main content when not searching */}
+        {!searchQuery.trim() && (
+          <>
+            {/* Focus Session Card */}
+            <Card className="glass-card card-accent border-primary/20">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2.5"><div className="icon-tile w-7 h-7 rounded-md bg-primary/15"><Zap className="w-3.5 h-3.5 text-primary" /></div>
+                  <span className="text-sm font-semibold">{t('mf_focus_session')}</span></div>
+                {linkedTaskTitle ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">{t('mf_current_task')}</p>
+                    <p className="text-sm font-medium">{linkedTaskTitle}</p>
+                    {pomodoroRunning && <p className="text-xs text-primary">{pomodoroPhase === 'focus' ? '🎯 Focus' : pomodoroPhase === 'break' ? '☕ Break' : '🌿 Long Break'}</p>}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">{t('mf_no_focus_task')}</p>
+                )}
+                <p className="text-[10px] text-muted-foreground">{t('mf_focus_hint')}</p>
+              </CardContent>
+            </Card>
+
+            {/* Recently Played + Top Playlists */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card className="glass-card card-accent"><CardContent className="p-4 space-y-3">
+                <h3 className="text-sm font-semibold">{t('mf_recently_played')}</h3>
+                {playHistory.length === 0 ? <p className="text-xs text-muted-foreground text-center py-6">{t('mf_no_history')}</p> : (
+                  <div className="space-y-1">{playHistory.slice(0, 5).map((h, idx) => (
+                    <button key={h.id} type="button" onClick={() => handlePlay(h.youtubeId, h.title, h.artist)}
+                      className={cn("w-full flex items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors", activeVideoId === h.youtubeId ? "bg-primary/10" : "hover:bg-secondary/30")}>
+                      <span className="text-xs text-muted-foreground w-4 text-right shrink-0">{idx + 1}</span>
+                      <img src={h.thumbnailUrl ?? `https://i.ytimg.com/vi/${h.youtubeId}/mqdefault.jpg`} alt="" className="w-10 h-10 rounded object-cover shrink-0" loading="lazy" />
+                      <div className="flex-1 min-w-0"><p className="text-xs font-medium truncate">{h.title}</p>{h.artist && <p className="text-[10px] text-muted-foreground truncate">{h.artist}</p>}</div>
+                      {h.durationSeconds && <span className="text-[10px] text-muted-foreground shrink-0">{fmtDuration(h.durationSeconds)}</span>}
+                    </button>
+                  ))}</div>
+                )}
+              </CardContent></Card>
+              <Card className="glass-card card-accent"><CardContent className="p-4 space-y-3">
+                <h3 className="text-sm font-semibold">{t('music_top_playlists')}</h3>
+                {dbPlaylists.length === 0 ? <p className="text-xs text-muted-foreground text-center py-6">{t('mf_no_playlists')}</p> : (
+                  <div className="grid grid-cols-2 gap-2">{dbPlaylists.slice(0, 6).map(pl => (
+                    <button key={pl.id} type="button" onClick={() => { musicService.getPlaylistTracks(pl.id).then(tracks => handlePlayAll(pl.id, tracks)).catch(() => {}); }}
+                      className="flex items-center gap-2 rounded-lg bg-secondary/20 p-2 hover:bg-secondary/40 transition-colors text-left">
+                      <div className="w-10 h-10 rounded-md bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0"><Play className="w-3.5 h-3.5 text-primary" /></div>
+                      <div className="min-w-0"><p className="text-xs font-medium truncate">{pl.name}</p><p className="text-[10px] text-muted-foreground">{pl.trackCount} tracks</p></div>
+                    </button>
+                  ))}</div>
+                )}
+              </CardContent></Card>
+            </div>
+
+            {/* Recommended */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">{t('mf_recommended')}</h3>
+              <p className="text-sm text-muted-foreground">{t('mf_recommended_hint')}</p>
+            </div>
+
+            {/* Study Audio */}
+            <Card className="glass-card card-accent"><CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold flex items-center gap-2"><Brain className="w-3.5 h-3.5 text-primary" /> {t('mf_study_audio')}</h3>
+              </div>
+              <div className="text-center py-6"><BookOpen className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" /><p className="text-xs text-muted-foreground">{t('mf_no_study_audio')}</p>
+                <Button variant="outline" size="sm" className="mt-3 text-xs gap-1.5" onClick={() => navigate('/documents')}>
+                  <ExternalLink className="w-3 h-3" /> {t('mf_generate_study_audio')}</Button></div>
+            </CardContent></Card>
+          </>
+        )}
+
+        {/* YouTube URL + visible video */}
+        <div className="border-t border-border/40 pt-4 space-y-3">
+          {visibleVideoId && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium">Now Playing</p>
+                <button type="button" onClick={() => setVisibleVideoId(null)} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+                  <X className="w-3 h-3" /> Close video
+                </button>
+              </div>
+              <iframe
+                src={`https://www.youtube.com/embed/${visibleVideoId}?autoplay=0&rel=0&enablejsapi=1`}
+                className="w-full rounded-xl border border-border"
+                style={{ height: '360px' }}
+                allow="encrypted-media; fullscreen"
+                allowFullScreen
+                title="YouTube video"
+              />
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">{t('mf_paste_url')}</p>
+          <div className="flex gap-2">
+            <Input value={urlInput} onChange={e => setUrlInput(e.target.value)} onKeyDown={e => {
+              if (e.key === 'Enter') {
+                const v = parseVideoId(urlInput.trim());
+                if (v) fetchYTInfo(v).then(r => { handlePlay(v, r.title); setVisibleVideoId(v); setUrlInput(''); });
+              }
+            }} placeholder="https://youtube.com/watch?v=…" className="flex-1" />
+            <Button onClick={() => {
+              const v = parseVideoId(urlInput.trim());
+              if (v) fetchYTInfo(v).then(r => { handlePlay(v, r.title); setVisibleVideoId(v); setUrlInput(''); });
+            }} disabled={!urlInput.trim()}>Play</Button>
+          </div>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="local" className="mt-0"><LocalTab /></TabsContent>
+      <TabsContent value="playlists" className="mt-0"><PlaylistsTab activePlaylistId={activePlaylistId} activeVideoId={activeVideoId} isPlaying={isPlaying} onPlayAll={handlePlayAll} /></TabsContent>
+
+      </div>
+
+      {/* Right Sidebar */}
+      <div className="w-full lg:w-[300px] shrink-0 space-y-4 lg:sticky lg:top-4 lg:self-start">
+        <NowPlayingCard />
+
+        <Card className="glass-card card-accent"><CardContent className="p-4">
+          <button type="button" className="flex items-center justify-between w-full text-sm font-semibold mb-2">
+            <span>{t('mf_pomodoro')}</span></button>
+          <PomodoroTimer />
+        </CardContent></Card>
+
+        {/* Quick Actions */}
+        <Card className="glass-card card-accent"><CardContent className="p-4 space-y-2">
+          <h3 className="text-sm font-semibold mb-1">{t('mf_quick_actions')}</h3>
+          <Button size="sm" variant="outline" className="w-full justify-start gap-2 text-xs" onClick={() => document.getElementById('mf-upload')?.click()}><Upload className="w-3.5 h-3.5 text-primary" /> {t('mf_upload_audio')}</Button>
+          <Button size="sm" variant="outline" className="w-full justify-start gap-2 text-xs" onClick={() => setShowNewPlaylist(true)}><Plus className="w-3.5 h-3.5 text-cyan-400" /> {t('mf_new_playlist')}</Button>
+          <Button size="sm" variant="outline" className="w-full justify-start gap-2 text-xs" onClick={() => navigate('/documents')}><Brain className="w-3.5 h-3.5 text-violet-400" /> {t('mf_generate_study_audio')}</Button>
+        </CardContent></Card>
+
+        {/* Audio Library */}
+        <Card className="glass-card card-accent"><CardContent className="p-4 space-y-2">
+          <h3 className="text-sm font-semibold">{t('mf_audio_library')}</h3>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs"><span className="flex items-center gap-2 text-muted-foreground"><FolderOpen className="w-3 h-3" /> {t('mf_kpi_playlists')}</span><span>{dbPlaylists.length}</span></div>
+            <div className="flex items-center justify-between text-xs"><span className="flex items-center gap-2 text-muted-foreground"><Heart className="w-3 h-3" /> {t('mf_liked_songs')}</span><span>{likedTracks.length}</span></div>
+            <div className="flex items-center justify-between text-xs"><span className="flex items-center gap-2 text-muted-foreground"><Clock className="w-3 h-3" /> {t('mf_recently_added')}</span><span>{playHistory.length}</span></div>
+          </div>
+        </CardContent></Card>
+      </div>
+      </div>
+      </Tabs>
+
+      <input id="mf-upload" type="file" title="Upload audio" accept=".mp3,.wav,.ogg,.m4a,.flac,audio/*" multiple className="sr-only" onChange={() => toast("Switch to My Music tab to upload files")} />
+
+      {showNewPlaylist && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-card border border-border rounded-xl p-6 w-80 shadow-2xl space-y-4">
+            <p className="font-semibold">{t('mf_new_playlist')}</p>
+            <Input autoFocus value={newPlName} onChange={e => setNewPlName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleNewPlaylist(); if (e.key === 'Escape') setShowNewPlaylist(false); }} placeholder="Playlist name…" />
+            <div className="flex gap-2 justify-end"><Button variant="ghost" size="sm" onClick={() => setShowNewPlaylist(false)}>Cancel</Button><Button size="sm" onClick={handleNewPlaylist} disabled={!newPlName.trim()}>Create</Button></div>
+          </div>
+        </div>
       )}
+
+      {createForVideo && <CreatePlaylistModal videoTitle={createForVideo.title} onConfirm={handleCreateAndAdd} onCancel={() => setCreateForVideo(null)} />}
     </div>
   );
 }

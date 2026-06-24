@@ -1,8 +1,6 @@
 import { createContext, useContext } from "react";
 import { safeGet, safeSet, storageKey } from "@/lib/storage";
 
-// ─── Track types ───────────────────────────────────────────────────────────────
-
 export interface YouTubeTrack {
   type: "youtube";
   videoId: string;
@@ -17,8 +15,7 @@ export interface LocalTrack {
 }
 
 export type ActiveTrack = YouTubeTrack | LocalTrack;
-
-// ─── YouTube history ────────────────────────────────────────────────────────────
+export type MusicSourceType = ActiveTrack["type"] | null;
 
 export interface HistoryEntry {
   videoId: string;
@@ -35,7 +32,6 @@ export const PRESETS = [
   { label: "Deep Focus", videoId: "WPni755-Krg", title: "Deep Focus" },
 ] as const;
 
-/** Extract an 11-char YouTube video ID from a URL, embed URL, or bare ID. */
 export function parseVideoId(input: string): string | null {
   const cleaned = input.trim();
   if (/^[a-zA-Z0-9_-]{11}$/.test(cleaned)) return cleaned;
@@ -51,8 +47,6 @@ export function parseVideoId(input: string): string | null {
   }
   return null;
 }
-
-// ─── Persistence helpers ────────────────────────────────────────────────────────
 
 export function loadVolume(): number {
   return safeGet<number>(VOLUME_KEY, 80);
@@ -73,13 +67,14 @@ export function addToHistory(entry: HistoryEntry, current: HistoryEntry[]): Hist
   return next;
 }
 
-// ─── Context ────────────────────────────────────────────────────────────────────
-
 export interface MusicPlayerState {
+  activeTrack: ActiveTrack | null;
   currentTrack: ActiveTrack | null;
+  sourceType: MusicSourceType;
   isPlaying: boolean;
   volume: number;
   currentTime: number;
+  progress: number;
   duration: number;
   localTracks: LocalTrack[];
   playYouTube: (videoId: string, title?: string) => void;
@@ -98,10 +93,13 @@ export interface MusicPlayerState {
 const noop = () => undefined;
 
 export const MusicPlayerContext = createContext<MusicPlayerState>({
+  activeTrack: null,
   currentTrack: null,
+  sourceType: null,
   isPlaying: false,
   volume: 80,
   currentTime: 0,
+  progress: 0,
   duration: 0,
   localTracks: [],
   playYouTube: noop,
