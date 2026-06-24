@@ -8,6 +8,11 @@ Keep this file under 2 pages; update after every session.
 
 | Date | Decision | Reason |
 | --- | --- | --- |
+| 2026-06-24 | Music: YouTube-only, no R2 audio storage | Spotify ToS blocks embed; R2 overkill for few files |
+| 2026-06-24 | Music: localStorage playlists → Supabase | Cloud sync across devices |
+| 2026-06-24 | Music: single iframe in MiniPlayer | Prevents duplicate player on /music page |
+| 2026-06-24 | Settings: "barakzahi" shows instead of full name | auth.user.email used instead of user_metadata.full_name — minor bug |
+| 2026-06-24 | Local audio upload = session-only | Browser security model prevents persistent local file access |
 | 2026-06-16 | Retired old `/briefing` endpoint + Weekly Life Briefing widget | Superseded by unified AgentBriefingCard with Today/This Week toggle |
 | 2026-06-15 | `agent_briefings.mode` column (daily/weekly, default daily) | Mode-filtered reads keep daily and weekly briefings separate |
 | 2026-06-15 | Memory writes deferred to Phase C (chat) | Briefing has no user input — wrong place to extract durable facts |
@@ -72,6 +77,45 @@ Keep this file under 2 pages; update after every session.
 | --- | --- | --- |
 | Persian TTS (fa-AF) | Azure key + region must be set in Cloudflare | AZURE_TTS_KEY ✅, AZURE_TTS_REGION ✅ |
 | Continue.dev local AI | Ollama crash on Windows/Intel Arc | Use Claude.ai instead |
+
+---
+
+## Completed This Session (2026-06-24) — Music + Settings
+
+### Music Page ✅
+
+- ✅ 4 new Supabase tables: playlists, playlist_tracks, play_history, liked_tracks
+- ✅ musicService.ts + useMusic.ts (11 TanStack Query hooks)
+- ✅ Cloud sync for playlists (migrated from localStorage)
+- ✅ Single player architecture:
+    MiniPlayer owns only YouTube iframe (never unmounts)
+    MusicPlayerProvider owns only HTMLAudioElement
+    MusicPage has zero player instances — purely UI
+- ✅ MiniPlayer hidden on /music route (sidebar Now Playing is primary UI)
+- ✅ Play history tracking from Supabase (last 50 per user)
+- ✅ Quick Mode presets (Deep Focus/Study/Relax/Sleep/Workout/Family)
+- ✅ KPI cards with real DB data
+- ✅ Fake "Recommended for You" removed
+- ⏳ PlaylistsTab full UI migration — next session
+    (musicService + hooks ready, MusicPage/PlaylistsTab rewrite pending)
+- ⏳ "Add track to playlist" button inside playlist detail — needs fix
+
+### Settings Page ✅
+
+- ✅ Hero profile card (real data: name, email, storage, member since, last briefing)
+- ✅ KPI row: Tasks / Documents / Photos / AI Memory (all real counts)
+- ✅ 6 tabs: Profile, Security, Appearance, Notifications, Data, AI Memory
+- ✅ AI Memory tab shows real user_context facts with delete
+- ✅ Infrastructure section: Supabase/Cloudflare/Gemini status
+- ✅ Full-width layout (was max-w-2xl before)
+
+### Known Issues After This Session
+
+- ⚠️ GitHub push 401 — PAT needs renewal: [GitHub tokens](https://github.com/settings/tokens)
+- ⚠️ Worker deploy needed: wrangler deploy (finance/habits/documents/journal AI endpoints)
+- ⚠️ Settings hero shows "barakzahi" instead of "Aryan Barakzai" — Fix: use auth.user.user_metadata.full_name with fallback to email
+- ⚠️ Music PlaylistsTab — "Add track" button missing in playlist detail
+- ⚠️ Supabase explicit GRANTs deadline: 2026-10-30
 
 ---
 
