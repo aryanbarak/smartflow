@@ -75,7 +75,30 @@ Keep this file under 2 pages; update after every session.
 
 ---
 
-## Completed This Session (2026-06-22/23) — Documents, Photos, Family, Journal
+## Completed This Session (2026-06-22/24) — Documents, Photos, Family, Journal, Music
+
+### Music Page Redesign (2026-06-24) ✅
+
+- ✅ 4 new Supabase tables: playlists, playlist_tracks, play_history, liked_tracks (migration `20260623130000`)
+- ✅ musicService.ts — full Supabase CRUD (playlists, tracks, history, likes)
+- ✅ useMusic.ts — 11 TanStack Query hooks (queries + mutations with invalidation)
+- ✅ Cloud sync for playlists (migrated from localStorage on first load)
+- ✅ Single player architecture: MiniPlayer owns the ONLY YouTube iframe (global, hidden sr-only)
+- ✅ MiniPlayer bottom bar hidden on /music (page has its own NowPlayingCard sidebar)
+- ✅ YouTube postMessage API for pause/play sync + video-ended detection
+- ✅ MusicPlayerProvider refactored: scoped onPlay/onPause to local tracks only, stopHtmlAudio helper
+- ✅ Play history tracking from Supabase (last 50, auto-prune)
+- ✅ Liked tracks with heart toggle (Supabase-backed)
+- ✅ Quick Mode presets (Deep Focus/Study/Relax/Sleep/Workout/Family) → trigger YouTube search
+- ✅ 4 KPI cards with real DB data (Listening Time/Focus Sessions/Study Audio/Playlists)
+- ✅ Focus Session card integrated with Pomodoro store (shows linked task)
+- ✅ Recently Played + Top Playlists side-by-side cards
+- ✅ Study Audio section (empty state → links to Documents)
+- ✅ YouTube URL input with visible video iframe + close button
+- ✅ Removed fake Recommended cards (PRESETS)
+- ✅ PlaylistsTab rewritten for Supabase (usePlaylistTracks, useCreatePlaylist, etc.)
+- ✅ Full i18n: ~48 new keys in en/de/fa (mf_* prefix)
+- ⏳ PlaylistsTab track reorder/move — deferred to next session
 
 ### Habits Page Redesign ✅
 

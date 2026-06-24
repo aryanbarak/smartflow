@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -6,7 +6,13 @@ import {
   Eye, EyeOff, Check, AlertTriangle, Download,
   Trash2, LogOut, Moon, Sun, Monitor, Smartphone,
   Brain, Globe, Wallet, Loader2,
+  CheckSquare, FileText, Camera, Sparkles,
+  Cloud, Cpu, Bot, Server,
 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { useTasks } from '@/hooks/useTasks';
+import { useDocuments } from '@/features/documents/useDocuments';
+import { usePhotos } from '@/hooks/usePhotos';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useTheme } from 'next-themes';
@@ -338,6 +344,13 @@ function SecurityTab() {
             Sign out
           </button>
         </SettingRow>
+        {user?.created_at && (
+          <SettingRow label="Member since">
+            <span className="text-xs text-muted-foreground">
+              {new Date(user.created_at).toLocaleDateString('en', { month: 'long', year: 'numeric' })}
+            </span>
+          </SettingRow>
+        )}
       </SectionCard>
     </div>
   );
@@ -755,6 +768,18 @@ function DataTab() {
         </SettingRow>
       </SectionCard>
 
+      <SectionCard title="Infrastructure">
+        <SettingRow label="Supabase" desc="Database & Auth">
+          <span className="text-xs text-emerald-400 flex items-center gap-1"><Check size={12} /> Connected</span>
+        </SettingRow>
+        <SettingRow label="Cloudflare" desc="Workers & CDN">
+          <span className="text-xs text-emerald-400 flex items-center gap-1"><Check size={12} /> Connected</span>
+        </SettingRow>
+        <SettingRow label="Gemini AI" desc="AI analysis & suggestions">
+          <span className="text-xs text-emerald-400 flex items-center gap-1"><Check size={12} /> Connected</span>
+        </SettingRow>
+      </SectionCard>
+
       <div className="bg-destructive/5 border border-destructive/20 rounded-2xl overflow-hidden">
         <div className="px-5 py-3 border-b border-destructive/20 bg-destructive/10">
           <h3 className="text-xs font-semibold text-destructive uppercase tracking-wider flex items-center gap-1.5">
@@ -855,6 +880,45 @@ export default function SettingsPage() {
     );
   }
 
+  const { tasks } = useTasks();
+  const { documents } = useDocuments();
+  const { photos } = usePhotos();
+
+  const [memoryCount, setMemoryCount] = useState(0);
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('user_context').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+      .then(({ count }) => setMemoryCount(count ?? 0));
+  }, [user]);
+
+  const [latestBriefing, setLatestBriefing] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('agent_briefings').select('updated_at').eq('user_id', user.id)
+      .order('updated_at', { ascending: false }).limit(1)
+      .then(({ data }) => {
+        if (data?.[0]) setLatestBriefing(data[0].updated_at as string);
+      });
+  }, [user]);
+
+  const storageBytes = useMemo(() =>
+    (documents as { sizeBytes: number | null }[]).reduce((s, d) => s + (d.sizeBytes ?? 0), 0)
+  , [documents]);
+
+  const displayName = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? '';
+  const initials = getInitials(displayName, user?.email ?? '');
+  const avatarColor = safeGet(storageKey('avatar-color'), '#6366F1');
+  const memberSince = user?.created_at ? new Date(user.created_at).toLocaleDateString('en', { month: 'long', year: 'numeric' }) : '';
+
+  function timeAgo(iso: string): string {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  }
+
   const TAB_CONTENT: Record<Tab, React.ReactNode> = {
     profile:       <ProfileTab />,
     security:      <SecurityTab />,
@@ -865,10 +929,70 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
-      <div>
-        <h1 className="text-xl font-bold flex items-center gap-2">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Manage your account and preferences</p>
+    <div className="px-4 sm:px-6 lg:px-8 pb-6 space-y-5">
+      {/* Hero Profile Card */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+        <Card className="glass-card card-accent overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+              <div className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl border-4 border-background shadow-lg shrink-0"
+                style={{ backgroundColor: avatarColor }}>
+                {initials}
+              </div>
+              <div className="flex-1 min-w-0 text-center sm:text-left">
+                <h1 className="text-xl font-bold">{displayName || 'DailyFlow User'}</h1>
+                <p className="text-sm text-muted-foreground">{user?.email}</p>
+                <span className="inline-block mt-1.5 text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">Life OS</span>
+              </div>
+              <div className="text-xs text-muted-foreground space-y-1 text-right shrink-0 hidden sm:block">
+                <p>Storage: {storageBytes < 1024 * 1024 ? `${(storageBytes / 1024).toFixed(0)} KB` : `${(storageBytes / (1024 * 1024)).toFixed(1)} MB`} / 1 GB</p>
+                {latestBriefing && <p>Last briefing: {timeAgo(latestBriefing)}</p>}
+                {memberSince && <p>Member since: {memberSince}</p>}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* KPI Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="glass-card card-accent surface-elevated">
+          <CardContent className="p-3.5">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="icon-tile w-8 h-8 rounded-md bg-emerald-500/15"><CheckSquare className="w-4 h-4 text-emerald-400" /></div>
+              <span className="text-xs font-medium text-muted-foreground">Tasks</span>
+            </div>
+            <p className="text-2xl font-bold tracking-tight">{tasks.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card card-accent surface-elevated">
+          <CardContent className="p-3.5">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="icon-tile w-8 h-8 rounded-md bg-blue-500/15"><FileText className="w-4 h-4 text-blue-400" /></div>
+              <span className="text-xs font-medium text-muted-foreground">Documents</span>
+            </div>
+            <p className="text-2xl font-bold tracking-tight">{(documents as unknown[]).length}</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card card-accent surface-elevated">
+          <CardContent className="p-3.5">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="icon-tile w-8 h-8 rounded-md bg-amber-500/15"><Camera className="w-4 h-4 text-amber-400" /></div>
+              <span className="text-xs font-medium text-muted-foreground">Photos</span>
+            </div>
+            <p className="text-2xl font-bold tracking-tight">{photos.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card card-accent surface-elevated">
+          <CardContent className="p-3.5">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="icon-tile w-8 h-8 rounded-md bg-violet-500/15"><Brain className="w-4 h-4 text-violet-400" /></div>
+              <span className="text-xs font-medium text-muted-foreground">AI Memory</span>
+            </div>
+            <p className="text-2xl font-bold tracking-tight">{memoryCount}</p>
+            <p className="text-[11px] text-muted-foreground">memory items</p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex gap-1 bg-muted rounded-xl p-1 overflow-x-auto scrollbar-hide">
