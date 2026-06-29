@@ -10,7 +10,7 @@ import type {
 type LearnAiRow = Database["public"]["Tables"]["learn_ai_messages"]["Row"];
 type LearnAiInsert = Database["public"]["Tables"]["learn_ai_messages"]["Insert"];
 
-const STORAGE_PREFIX = "dailyflow:learn-ai";
+const STORAGE_PREFIX = "smartflow:learn-ai";
 
 function getStorageKey(userId: string, mode: LearnAIMode) {
   return `${STORAGE_PREFIX}:${userId}:${mode}`;

@@ -8,7 +8,7 @@ interface Preferences {
   currency?: string;
 }
 
-const PREFERENCES_KEY = "dailyflow_preferences";
+const PREFERENCES_KEY = "smartflow_preferences";
 
 const defaultPreferences: Preferences = {
   theme: "system",

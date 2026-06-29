@@ -1,6 +1,6 @@
-# dailyFlow — Project Overview
+# smartFlow — Project Overview
 
-## What is dailyFlow?
+## What is smartFlow?
 Personal productivity web app (React SPA) for one user (barakzahi@web.de).
 Unified workspace for tasks, calendar, finances, family scheduling,
 documents, music, photos, and AI-powered learning.
@@ -8,7 +8,7 @@ documents, music, photos, and AI-powered learning.
 ## Live URLs
 - App: https://barakzai.cloud
 - AI Worker: https://api.barakzai.cloud/analyze
-- Repo: https://github.com/aryanbarak/dailyflow
+- Repo: https://github.com/aryanbarak/smartflow
 - Supabase: taqxwnlwllbywaklwyno (FREE tier)
 
 ## Tech Stack

@@ -1,4 +1,4 @@
-# Supabase Patterns — dailyFlow
+# Supabase Patterns — smartFlow
 
 ## Standard Service Function
 

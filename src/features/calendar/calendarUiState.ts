@@ -7,7 +7,7 @@ export type CalendarUiState = {
   hasNotesOnly: boolean;
 };
 
-const STORAGE_KEY = "dailyflow:calendar:ui";
+const STORAGE_KEY = "smartflow:calendar:ui";
 const VALID_TABS = new Set<CalendarUiState["activeTab"]>(["all", "today", "week"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {

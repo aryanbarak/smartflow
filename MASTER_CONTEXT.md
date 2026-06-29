@@ -1,10 +1,10 @@
-# dailyFlow — MASTER CONTEXT
+# smartFlow — MASTER CONTEXT
 # Last updated: 2026-06-04
 # Purpose: Single source of truth for AI assistants working on this codebase.
 
 ---
 
-## What is dailyFlow?
+## What is smartFlow?
 
 Personal LifeOS / productivity web app for one user (barakzahi@web.de / malekaryan@gmail.com).
 Unified workspace: Tasks, Calendar, Finance, Family Hub, Documents, Music, Photos, Links,
@@ -18,8 +18,8 @@ AI Tutor, Habits, Journal, Flashcards, Global Search, Settings.
 |----------|-----|
 | App | https://barakzai.cloud |
 | AI Worker | https://api.barakzai.cloud |
-| Frontend Repo | https://github.com/aryanbarak/dailyflow |
-| Worker Repo | https://github.com/aryanbarak/dailyflow-ai-worker |
+| Frontend Repo | https://github.com/aryanbarak/smartflow |
+| Worker Repo | https://github.com/aryanbarak/smartflow-ai-worker |
 | Supabase Project | taqxwnlwllbywaklwyno (FREE tier) |
 
 ---
@@ -30,7 +30,7 @@ AI Tutor, Habits, Journal, Flashcards, Global Search, Settings.
 Browser (barakzai.cloud)
   └── Cloudflare Pages (static SPA — dist/ auto-deployed on push to main)
         └── fetch() → api.barakzai.cloud
-                        └── Cloudflare Worker (dailyflow-ai-worker/src/index.js)
+                        └── Cloudflare Worker (smartflow-ai-worker/src/index.js)
                               ├── /analyze   → Gemini 2.5 Flash API
                               ├── /search    → YouTube InnerTube API
                               ├── /translate → DeepL API
@@ -51,7 +51,7 @@ Supabase (taqxwnlwllbywaklwyno)
 
 ## Tech Stack
 
-### Frontend (dailyflow/)
+### Frontend (smartflow/)
 | Layer | Library | Version |
 |-------|---------|---------|
 | Build | Vite + SWC | 7.x |
@@ -68,7 +68,7 @@ Supabase (taqxwnlwllbywaklwyno)
 | PWA | vite-plugin-pwa | latest |
 | i18n | Custom hook (en/de/fa, RTL for Farsi) | — |
 
-### Backend (dailyflow-ai-worker/)
+### Backend (smartflow-ai-worker/)
 | Layer | Detail |
 |-------|--------|
 | Runtime | Cloudflare Workers (JS ESM) |
@@ -86,7 +86,7 @@ Supabase (taqxwnlwllbywaklwyno)
 - No `as any` casts — types regenerated via `supabase gen types`
 - RLS on every table — user can only see their own rows
 - TanStack Query v5: `isPending` (not `isLoading`) for mutations
-- All persist keys prefixed `dailyflow:` in Zustand
+- All persist keys prefixed `smartflow:` in Zustand
 
 ### Components
 - Shadcn/ui components in `src/components/ui/`
@@ -170,7 +170,7 @@ git push origin main
 
 ### AI Worker
 ```
-cd dailyflow-ai-worker
+cd smartflow-ai-worker
 npx wrangler deploy
 → Live at api.barakzai.cloud
 ```

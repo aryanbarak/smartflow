@@ -1,4 +1,4 @@
-# Performance Review Prompt — dailyFlow
+# Performance Review Prompt — smartFlow
 
 Review this code for performance issues.
 

@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { DailyFlowLogo } from "@/components/DailyFlowLogo";
+import { SmartFlowLogo } from "@/components/SmartFlowLogo";
 import { useT } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 
@@ -77,7 +77,7 @@ export function MobileNav() {
           <SheetContent side="bottom" className="h-auto rounded-t-2xl">
             <div className="py-4">
               <div className="mb-6 px-2">
-                <DailyFlowLogo size={36} />
+                <SmartFlowLogo size={36} />
               </div>
               <div className="grid grid-cols-4 gap-4">
                 {moreNavItems.map((item) => {

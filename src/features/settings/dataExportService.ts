@@ -34,7 +34,7 @@ export const dataExportService = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `dailyflow-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `smartflow-export-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   },
@@ -61,7 +61,7 @@ export const dataExportService = {
   },
 
   getStorageStats(): { used: string; keyCount: number } {
-    const keys = Object.keys(localStorage).filter(k => k.startsWith('dailyflow:'));
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('smartflow:'));
     const totalBytes = keys.reduce(
       (sum, k) => sum + (localStorage.getItem(k)?.length ?? 0) * 2,
       0,
@@ -72,7 +72,7 @@ export const dataExportService = {
 
   clearLocalStorage(): void {
     Object.keys(localStorage)
-      .filter(k => k.startsWith('dailyflow:'))
+      .filter(k => k.startsWith('smartflow:'))
       .forEach(k => localStorage.removeItem(k));
   },
 };

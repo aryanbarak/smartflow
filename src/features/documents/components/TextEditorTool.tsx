@@ -61,7 +61,7 @@ const FONTS = [
 
 const FONT_SIZES = [10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 36, 48, 64];
 
-const DRAFT_KEY = 'dailyflow:editor-draft';
+const DRAFT_KEY = 'smartflow:editor-draft';
 
 type PageSizeKey  = keyof typeof PAGE_SIZES;
 type MarginKey    = keyof typeof MARGINS;

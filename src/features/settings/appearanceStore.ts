@@ -47,6 +47,6 @@ export const useAppearance = create<AppearanceState>()(
       setReducedMotion: reducedMotion => set({ reducedMotion }),
       setLanguage: language => set({ language }),
     }),
-    { name: 'dailyflow:appearance' },
+    { name: 'smartflow:appearance' },
   ),
 );

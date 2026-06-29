@@ -1,9 +1,9 @@
-# dailyFlow Project Context
+# smartFlow Project Context
 
 ## Project
 Personal productivity React SPA for one user (barakzahi@web.de).
 Live at: https://barakzai.cloud
-Repo: https://github.com/aryanbarak/dailyflow
+Repo: https://github.com/aryanbarak/smartflow
 
 ## Tech Stack
 - React 18.3.1 + TypeScript 5.8.3

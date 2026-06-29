@@ -2,13 +2,13 @@ import { budgetLimitsDbService } from './budgetLimitsDbService';
 import { savingsGoalsDbService } from './savingsGoalsDbService';
 import { recurringTransactionsDbService } from './recurringTransactionsDbService';
 
-const MIGRATED_KEY = 'dailyflow:localStorage-migrated-v1';
+const MIGRATED_KEY = 'smartflow:localStorage-migrated-v1';
 
 export async function migrateLocalStorageToDb(): Promise<void> {
   if (localStorage.getItem(MIGRATED_KEY)) return;
 
   try {
-    const rawLimits = localStorage.getItem('dailyflow:budget-limits');
+    const rawLimits = localStorage.getItem('smartflow:budget-limits');
     if (rawLimits) {
       const limits = JSON.parse(rawLimits) as { category: string; limit: number }[];
       for (const l of limits) {
@@ -16,7 +16,7 @@ export async function migrateLocalStorageToDb(): Promise<void> {
       }
     }
 
-    const rawGoals = localStorage.getItem('dailyflow:savings-goals');
+    const rawGoals = localStorage.getItem('smartflow:savings-goals');
     if (rawGoals) {
       const goals = JSON.parse(rawGoals) as {
         name: string; target: number; saved: number; color: string; deadline?: string;
@@ -32,7 +32,7 @@ export async function migrateLocalStorageToDb(): Promise<void> {
       }
     }
 
-    const rawRecurring = localStorage.getItem('dailyflow:recurring-transactions');
+    const rawRecurring = localStorage.getItem('smartflow:recurring-transactions');
     if (rawRecurring) {
       const items = JSON.parse(rawRecurring) as {
         title: string; amount: number; type: 'income' | 'expense';
@@ -53,9 +53,9 @@ export async function migrateLocalStorageToDb(): Promise<void> {
     }
 
     localStorage.setItem(MIGRATED_KEY, 'true');
-    localStorage.removeItem('dailyflow:budget-limits');
-    localStorage.removeItem('dailyflow:savings-goals');
-    localStorage.removeItem('dailyflow:recurring-transactions');
+    localStorage.removeItem('smartflow:budget-limits');
+    localStorage.removeItem('smartflow:savings-goals');
+    localStorage.removeItem('smartflow:recurring-transactions');
 
     console.log('[Migration] localStorage → DB complete');
   } catch (err) {

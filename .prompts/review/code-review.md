@@ -1,9 +1,9 @@
-# Code Review Prompt — dailyFlow
+# Code Review Prompt — smartFlow
 
-Review the following code for the dailyFlow React application.
+Review the following code for the smartFlow React application.
 
 ## Context
-{{PASTE CONTEXT FROM .prompts/system/dailyflow-context.md}}
+{{PASTE CONTEXT FROM .prompts/system/smartflow-context.md}}
 
 ## Check These
 

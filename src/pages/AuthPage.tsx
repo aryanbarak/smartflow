@@ -10,7 +10,7 @@ import { Loader2, Mail, Lock, AlertTriangle, CheckCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { AppLoader } from "@/components/AppLoader";
-import { DailyFlowIcon } from "@/components/DailyFlowLogo";
+import { SmartFlowIcon } from "@/components/SmartFlowLogo";
 
 const authSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -95,13 +95,13 @@ export default function AuthPage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                  DailyFlow
+                  SmartFlow
                 </p>
                 <h2 className="text-lg font-semibold font-display">
                   Organize with clarity.
                 </h2>
               </div>
-              <DailyFlowIcon size={40} />
+              <SmartFlowIcon size={40} />
             </div>
           </div>
           <CardHeader className="text-left space-y-2">
@@ -111,7 +111,7 @@ export default function AuthPage() {
             <CardDescription>
               {isSignUp
                 ? "Sign up to start organizing your life"
-                : "Sign in to continue to DailyFlow"}
+                : "Sign in to continue to SmartFlow"}
             </CardDescription>
             <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
               <span className="rounded-full border border-border/60 px-2 py-1">

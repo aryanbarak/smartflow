@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const svgPath = resolve(__dirname, "../public/dailyflow-icon.svg");
+const svgPath = resolve(__dirname, "../public/smartflow-icon.svg");
 const svg = readFileSync(svgPath, "utf8");
 
 for (const size of [192, 512]) {

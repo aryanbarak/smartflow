@@ -1,4 +1,4 @@
-# dailyFlow — Roadmap
+# smartFlow — Roadmap
 
 ## Completed Features
 - Authentication (Supabase email + password)
@@ -48,7 +48,7 @@
 
 ## Planned — Medium Priority (added)
 
-- Git-initialize dailyflow-ai-worker + add CI/CD deploy workflow
+- Git-initialize smartflow-ai-worker + add CI/CD deploy workflow
 
 ## Planned — Low Priority
 
@@ -63,5 +63,5 @@
 5. No rate limiting on /analyze endpoint (Medium)
 6. Short signed URL lifetime for documents (~20s on free tier config) (Low)
 7. No error tracking (Sentry or similar) (Low)
-8. dailyflow-ai-worker: no git repo, no CI/CD (Low)
+8. smartflow-ai-worker: no git repo, no CI/CD (Low)
 9. Supabase generated types not updated for new tables — new services use `as any` (Low)

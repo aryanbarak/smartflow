@@ -1,4 +1,4 @@
-# dailyFlow — Lessons Learned
+# smartFlow — Lessons Learned
 
 ## Technical Decisions & Why
 
@@ -59,7 +59,7 @@ Rule: Always use `isPending` (not `isLoading`) for mutation state in v5.
 ### Zustand v5
 Problem: v4 persist middleware had different API.
 Solution: v5 uses `create<State>()(persist(set => ({...}), { name: '...' }))` pattern.
-Rule: All persist keys prefixed with `dailyflow:` to avoid localStorage conflicts.
+Rule: All persist keys prefixed with `smartflow:` to avoid localStorage conflicts.
 
 ### ARIA Accessibility
 Problem: Linter flagged `aria-checked={boolean}` as invalid on role=switch.

@@ -209,11 +209,11 @@ export function DocumentPreviewDialog({
     [signedUrl],
   );
   const storageKey = useMemo(
-    () => (document?.id ? `dailyflow:doc:${document.id}:annotations` : null),
+    () => (document?.id ? `smartflow:doc:${document.id}:annotations` : null),
     [document?.id],
   );
   const textPrefsKey = useMemo(
-    () => (document?.id ? `dailyflow:doc:${document.id}:textPrefs` : null),
+    () => (document?.id ? `smartflow:doc:${document.id}:textPrefs` : null),
     [document?.id],
   );
 

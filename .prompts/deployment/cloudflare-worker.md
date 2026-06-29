@@ -1,7 +1,7 @@
-# Cloudflare Worker Deployment — dailyFlow AI Worker
+# Cloudflare Worker Deployment — smartFlow AI Worker
 
 ## Worker Info
-- Name: dailyflow-ai-worker
+- Name: smartflow-ai-worker
 - URL: https://api.barakzai.cloud/analyze
 - Runtime: Cloudflare Workers (Edge)
 - AI: Google Gemini 2.5 Flash
@@ -9,7 +9,7 @@
 
 ## Directory
 ```bash
-cd dailyflow-ai-worker
+cd smartflow-ai-worker
 ```
 
 ## Deploy Commands
@@ -35,7 +35,7 @@ npx wrangler dev
 
 ## ⚠️ Important Notes
 - Worker has NO CI/CD — deploy manually with `wrangler deploy`
-- Worker source is in `dailyflow-ai-worker/` (not version controlled)
+- Worker source is in `smartflow-ai-worker/` (not version controlled)
 - CORS only allows `barakzai.cloud` — localhost requests blocked in production
 - Use `wrangler dev` for local testing
 

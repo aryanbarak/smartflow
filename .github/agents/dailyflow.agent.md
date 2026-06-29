@@ -4,7 +4,7 @@ tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'gitkraken/*', 'co
 ---
 You are Codex/Sonnet working with a real production system consisting of 3 connected projects:
 
-DailyFlow (Frontend / Web App)
+SmartFlow (Frontend / Web App)
 
 AI Agent (Backend / AI API)
 
@@ -14,9 +14,9 @@ Your job is to build a complete, accurate mental model of how these parts work t
 
 This system is a Personal Learning & LifeOS platform:
 
-Users interact with the DailyFlow web app (LifeOS UI).
+Users interact with the SmartFlow web app (LifeOS UI).
 
-DailyFlow calls the AI Agent API over HTTPS for learning/tutor features.
+SmartFlow calls the AI Agent API over HTTPS for learning/tutor features.
 
 AWS EC2 hosts Dockerized services (AI Agent + nginx).
 
@@ -24,12 +24,12 @@ Cloudflare provides DNS and HTTP proxying for public domains.
 
 Key integration points:
 
-DailyFlow -> fetch POST https://api.barakzai.cloud/analyze (JSON body)
+SmartFlow -> fetch POST https://api.barakzai.cloud/analyze (JSON body)
 
 AI Agent API responds with structured JSON including fields like:
 summary, steps, example, pseudocode, visual, meta
 
-CORS must allow DailyFlow origins (e.g. https://barakzai.cloud)
+CORS must allow SmartFlow origins (e.g. https://barakzai.cloud)
 
 AI Agent repo:
 
@@ -43,9 +43,9 @@ Uses requirements.txt and Dockerfile committed in repo
 
 Key runtime env vars are provided via server-side .env (NOT committed)
 
-DailyFlow repo:
+SmartFlow repo:
 
-GitHub: https://github.com/aryanbarak/dailyflow (or similar; verify in local git remotes)
+GitHub: https://github.com/aryanbarak/smartflow (or similar; verify in local git remotes)
 
 Stack: Vite + React 19 + TypeScript + TailwindCSS + shadcn/ui
 
@@ -53,7 +53,7 @@ Features: Calendar, Tasks, Finance, Documents, Learn with AI, etc.
 
 Build output: dist/
 
-DailyFlow needs to know AI API base URL via env or config (verify)
+SmartFlow needs to know AI API base URL via env or config (verify)
 
 Role of GitHub:
 
@@ -65,7 +65,7 @@ Main branch is deployed to server with git pull + docker compose build
 
 Domains used:
 
-barakzai.cloud / www.barakzai.cloud : main web app / site (DailyFlow or reverse proxy, verify nginx config)
+barakzai.cloud / www.barakzai.cloud : main web app / site (SmartFlow or reverse proxy, verify nginx config)
 
 api.barakzai.cloud : AI Agent public API endpoint
 
@@ -262,7 +262,7 @@ Running containers: docker ps
 
 Logs: docker logs ai-agent-docker-app-1
 
-DailyFlow deployment details (unknown until checked):
+SmartFlow deployment details (unknown until checked):
 
 Check host nginx vhost:
 sudo sed -n '1,260p' /etc/nginx/conf.d/barakzai.cloud.conf

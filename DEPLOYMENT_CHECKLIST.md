@@ -1,4 +1,4 @@
-# DailyFlow Production Deployment Checklist
+# SmartFlow Production Deployment Checklist
 
 ## ✅ Pre-Deployment Verification (COMPLETED)
 
@@ -37,7 +37,7 @@ dist/
 ssh ec2-user@<EC2_PUBLIC_IP>
 
 # 2. Navigate to web root (verify path first!)
-# Common paths: /var/www/barakzai.cloud or /opt/dailyflow
+# Common paths: /var/www/barakzai.cloud or /opt/smartflow
 cd /var/www/barakzai.cloud  # OR wherever nginx serves from
 
 # 3. Backup current version
@@ -45,11 +45,11 @@ sudo mv dist dist.backup.$(date +%Y%m%d_%H%M%S)
 
 # 4. Upload new dist/ from local machine
 # Run this on your LOCAL machine:
-scp -r c:\Projects\dailyflow\dist ec2-user@<EC2_PUBLIC_IP>:/tmp/dailyflow-dist
+scp -r c:\Projects\smartflow\dist ec2-user@<EC2_PUBLIC_IP>:/tmp/smartflow-dist
 
 # 5. Back on SERVER, move to web root
 ssh ec2-user@<EC2_PUBLIC_IP>
-sudo mv /tmp/dailyflow-dist /var/www/barakzai.cloud/dist
+sudo mv /tmp/smartflow-dist /var/www/barakzai.cloud/dist
 sudo chown -R nginx:nginx /var/www/barakzai.cloud/dist  # Or www-data:www-data
 
 # 6. Verify nginx config and reload
@@ -63,10 +63,10 @@ curl -I https://www.barakzai.cloud
 
 ### Option 2: GitHub Actions CI/CD (Recommended)
 
-**Create `.github/workflows/deploy-frontend.yml` in dailyflow repo:**
+**Create `.github/workflows/deploy-frontend.yml` in smartflow repo:**
 
 ```yaml
-name: Deploy DailyFlow Frontend
+name: Deploy SmartFlow Frontend
 
 on:
   push:
@@ -110,12 +110,12 @@ jobs:
           # Upload new build
           rsync -avz --delete -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
             dist/ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/dailyflow-dist/
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/smartflow-dist/
           
           # Move to production
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "sudo mv /tmp/dailyflow-dist /var/www/barakzai.cloud/dist && \
+            "sudo mv /tmp/smartflow-dist /var/www/barakzai.cloud/dist && \
              sudo chown -R nginx:nginx /var/www/barakzai.cloud/dist && \
              sudo nginx -t && sudo systemctl reload nginx"
 ```

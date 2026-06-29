@@ -1,4 +1,4 @@
-# dailyFlow Prompt Library
+# smartFlow Prompt Library
 
 Structured prompts for local AI (Ollama + Continue.dev) development.
 
@@ -15,7 +15,7 @@ In ~/.continue/config.json, reference prompt files:
 
 ### Option 3: Use @file context
 
-In Continue chat: @.prompts/system/dailyflow-context.md
+In Continue chat: @.prompts/system/smartflow-context.md
 
 ## When to Use What
 
@@ -44,6 +44,6 @@ In Continue chat: @.prompts/system/dailyflow-context.md
 
 ## Maintenance
 
-- Update system/dailyflow-context.md when adding new features or tables
+- Update system/smartflow-context.md when adding new features or tables
 - Update system/supabase-patterns.md when adding new tables or patterns
 - These prompts are part of the codebase — commit them with git

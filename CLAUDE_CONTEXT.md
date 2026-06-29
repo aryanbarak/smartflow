@@ -1,4 +1,4 @@
-# CLAUDE_CONTEXT.md — dailyFlow
+# CLAUDE_CONTEXT.md — smartFlow
 
 *Last updated: 2026-05-28 (evening). Read this file at the start of every new session.*
 
@@ -6,13 +6,13 @@
 
 ## 1. Project Overview
 
-**dailyFlow** is a personal productivity web app (React SPA) for one user (`barakzahi@web.de`). It provides a unified workspace for tasks, calendar, finances, family scheduling, documents, music, AI-powered learning, habits, journaling, flashcards, and more — all behind a Supabase authentication layer.
+**smartFlow** is a personal productivity web app (React SPA) for one user (`barakzahi@web.de`). It provides a unified workspace for tasks, calendar, finances, family scheduling, documents, music, AI-powered learning, habits, journaling, flashcards, and more — all behind a Supabase authentication layer.
 
 | | |
 |---|---|
 | **Live app** | `https://barakzai.cloud` |
 | **AI Worker** | `https://api.barakzai.cloud/analyze` |
-| **Repo** | `https://github.com/aryanbarak/dailyflow` |
+| **Repo** | `https://github.com/aryanbarak/smartflow` |
 | **Supabase project** | `taqxwnlwllbywaklwyno` (aryanbarak's Project, FREE tier) |
 | **Supabase owner** | `barakzahi@web.de` |
 | **Hosting** | Cloudflare Pages (auto-deploy from `main` via GitHub Actions) |
@@ -44,7 +44,7 @@
 |---------|------|
 | Supabase (PostgreSQL) | Primary database (13 tables) + Auth + Storage |
 | Cloudflare Pages | Static frontend hosting |
-| Cloudflare Worker (`dailyflow-ai-worker`) | AI proxy → Google Gemini 2.5 Flash |
+| Cloudflare Worker (`smartflow-ai-worker`) | AI proxy → Google Gemini 2.5 Flash |
 
 ### CI/CD
 - **GitHub Actions** → `.github/workflows/deploy-cloudflare-pages.yml`
@@ -159,9 +159,9 @@ All tables use `user_id` FK → `auth.users` with RLS enforced.
 - `documents` — user PDFs at `{userId}/{fileName}`
 
 ### localStorage Keys (fallback/offline only)
-- `dailyflow:v1:events` — calendar events offline cache
-- `dailyflow:v1:calendar-ui-state` — view state
-- `dailyflow:learn-ai:{userId}:{mode}` — AI message fallback
+- `smartflow:v1:events` — calendar events offline cache
+- `smartflow:v1:calendar-ui-state` — view state
+- `smartflow:learn-ai:{userId}:{mode}` — AI message fallback
 
 ---
 
@@ -251,8 +251,8 @@ KEY:  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...TmhuyWcwEUwnSvxXJiZ2HueY6Jr0sudmyJW
 - Always use `.maybeSingle()` (not `.single()`) when querying for an optionally-present row (e.g., today's mood, today's journal entry). `.single()` throws if no row is found.
 
 ### AI Worker
-- Source lives in `dailyflow-ai-worker/` (NOT in this repo's git history — no version control)
-- `GEMINI_API_KEY` must be set manually via `npx wrangler secret put GEMINI_API_KEY` inside `dailyflow-ai-worker/`
+- Source lives in `smartflow-ai-worker/` (NOT in this repo's git history — no version control)
+- `GEMINI_API_KEY` must be set manually via `npx wrangler secret put GEMINI_API_KEY` inside `smartflow-ai-worker/`
 - CORS is hardcoded to `https://barakzai.cloud` only — localhost requests are blocked in production
 
 ### Deployment
@@ -279,7 +279,7 @@ Lightweight custom i18n — **no i18next library**.
 - `useT()` reads `language` from `useAppearance()` Zustand store; returns `{ t, lang, isRTL }`
 - `t('key', { count: 5 })` replaces `{{count}}` in the string
 - `LanguageProvider` (rendered inside `App.tsx`) syncs `html[lang]`, `html[dir]` (RTL for fa), and font class
-- Language persisted to `localStorage` via `dailyflow:appearance` Zustand key
+- Language persisted to `localStorage` via `smartflow:appearance` Zustand key
 
 ### Usage in components
 
@@ -330,7 +330,7 @@ Translated: Navigation, common actions, Habits, Journal, Flashcards, Mood, Shopp
 | 5 | No rate limiting on `/analyze` endpoint | Medium |
 | 6 | Signed URL lifetime for documents is short (~20s in some configs) | Low |
 | 7 | No error tracking (Sentry / CF Analytics) | Low |
-| 8 | `dailyflow-ai-worker` has no CI/CD and no git repo | Low |
+| 8 | `smartflow-ai-worker` has no CI/CD and no git repo | Low |
 | 9 | Supabase generated types (`types.ts`) not updated for new tables — new services use `as any` casts | Low |
 
 ---
@@ -347,14 +347,14 @@ Translated: Navigation, common actions, Habits, Journal, Flashcards, Mood, Shopp
 | Medium | Extend i18n to remaining pages (Dashboard, Tasks, Calendar, Finance, Documents, Music, Photos, Links, Learn AI) |
 | Low | Sentry / error tracking |
 | Low | Expand Vitest test coverage for service layer |
-| Low | Git-initialize `dailyflow-ai-worker` and add deploy workflow |
+| Low | Git-initialize `smartflow-ai-worker` and add deploy workflow |
 
 ---
 
 ## 10. Local Development
 
 ```bash
-cd dailyflow
+cd smartflow
 npm install
 npm run dev          # starts on http://localhost:8080
 ```

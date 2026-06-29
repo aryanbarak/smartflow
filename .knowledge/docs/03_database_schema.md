@@ -1,4 +1,4 @@
-# dailyFlow — Database Schema
+# smartFlow — Database Schema
 
 ## Supabase Project
 - Project ID: taqxwnlwllbywaklwyno

@@ -1,7 +1,7 @@
-# Cloudflare Pages Deployment — dailyFlow
+# Cloudflare Pages Deployment — smartFlow
 
 ## Project Info
-- Repo: https://github.com/aryanbarak/dailyflow
+- Repo: https://github.com/aryanbarak/smartflow
 - Live: https://barakzai.cloud
 - Hosting: Cloudflare Pages
 - CI/CD: GitHub Actions → .github/workflows/deploy-cloudflare-pages.yml

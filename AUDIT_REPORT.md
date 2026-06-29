@@ -1,4 +1,4 @@
-# dailyFlow — Cleanup Audit Report
+# smartFlow — Cleanup Audit Report
 
 **Date:** 2026-05-30
 **Branch:** `cleanup/audit-2026-05-30`
@@ -27,9 +27,9 @@
 
 | File | Recommendation | Reason |
 |------|---------------|--------|
-| `dailyflow_phase1_revised.md` | **DELETE** | Persian planning doc for Phase 1 Ollama setup. Fully superseded — content is now in `.knowledge/docs/` and `.knowledge/راهنما.md`. Left over in root after implementation. |
-| `dailyflow_prompt_discipline.md` | **DELETE** | Source plan document that was used to generate `.prompts/` library. The actual files now live in `.prompts/`. Keeping the source doc adds confusion. |
-| `dailyflow_prompt_extension.md` | **DELETE** | Same as above — source plan for the debugging/deployment/testing prompts in `.prompts/`. Already implemented. |
+| `smartflow_phase1_revised.md` | **DELETE** | Persian planning doc for Phase 1 Ollama setup. Fully superseded — content is now in `.knowledge/docs/` and `.knowledge/راهنما.md`. Left over in root after implementation. |
+| `smartflow_prompt_discipline.md` | **DELETE** | Source plan document that was used to generate `.prompts/` library. The actual files now live in `.prompts/`. Keeping the source doc adds confusion. |
+| `smartflow_prompt_extension.md` | **DELETE** | Same as above — source plan for the debugging/deployment/testing prompts in `.prompts/`. Already implemented. |
 
 ### 1.2 Deployment Docs (partially superseded by CLAUDE_CONTEXT.md + .prompts/deployment/)
 
@@ -184,7 +184,7 @@ These files in the project root have no role in the codebase, build, or deployme
 | `test-api.json` | **DELETE** | Test data file. Not referenced in any source file or script. |
 | `test-persian.json` | **DELETE** | Test data file for Persian text testing. Not referenced anywhere. |
 | `test-production.json` | **DELETE** | Test data file. Not referenced anywhere. |
-| `dailyflow-dist.zip` | **DELETE** | Old distribution archive. Build artifacts should not be committed to git. |
+| `smartflow-dist.zip` | **DELETE** | Old distribution archive. Build artifacts should not be committed to git. |
 | `dist.zip` | **DELETE** | Same — old build artifact. |
 | `git-push-deployment.bat` | **DELETE** | Old Windows batch script for manual EC2/SSH deployment. The entire deployment pipeline was replaced by Cloudflare Pages + GitHub Actions. |
 | `test-deploy.bat` | **DELETE** | Old test deploy script, same era as `git-push-deployment.bat`. |
@@ -262,7 +262,7 @@ All config files are standard and expected:
 
 ```
 # Root junk files
-dailyflow-dist.zip
+smartflow-dist.zip
 dist.zip
 git-push-deployment.bat
 test-deploy.bat
@@ -272,9 +272,9 @@ test-persian.json
 test-production.json
 
 # Outdated planning docs
-dailyflow_phase1_revised.md
-dailyflow_prompt_discipline.md
-dailyflow_prompt_extension.md
+smartflow_phase1_revised.md
+smartflow_prompt_discipline.md
+smartflow_prompt_extension.md
 verify-secrets.md
 PROJECT_REPORT.md
 DEPLOYMENT_SETUP.md

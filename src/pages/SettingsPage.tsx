@@ -711,7 +711,7 @@ function DataTab() {
       <SectionCard title="Install app">
         <div className="py-4">
           {isStandalone ? (
-            <p className="text-sm text-emerald-400">DailyFlow is already installed on this device.</p>
+            <p className="text-sm text-emerald-400">SmartFlow is already installed on this device.</p>
           ) : canInstall ? (
             <button
               type="button"
@@ -719,7 +719,7 @@ function DataTab() {
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
             >
               <Smartphone size={15} />
-              Install DailyFlow
+              Install SmartFlow
             </button>
           ) : isIos ? (
             <p className="text-sm text-muted-foreground">
@@ -760,7 +760,7 @@ function DataTab() {
       </SectionCard>
 
       <SectionCard title="About">
-        <SettingRow label="Version" desc="dailyFlow — Personal Life Organizer">
+        <SettingRow label="Version" desc="smartFlow — Personal Life Organizer">
           <span className="text-xs text-muted-foreground">1.0.0</span>
         </SettingRow>
         <SettingRow label="Built by">
@@ -940,7 +940,7 @@ export default function SettingsPage() {
                 {initials}
               </div>
               <div className="flex-1 min-w-0 text-center sm:text-left">
-                <h1 className="text-xl font-bold">{displayName || 'DailyFlow User'}</h1>
+                <h1 className="text-xl font-bold">{displayName || 'SmartFlow User'}</h1>
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
                 <span className="inline-block mt-1.5 text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">Life OS</span>
               </div>

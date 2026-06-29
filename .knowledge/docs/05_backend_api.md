@@ -1,14 +1,14 @@
-# dailyFlow — Backend & API
+# smartFlow — Backend & API
 
 ## Cloudflare Worker
-- Name: dailyflow-ai-worker
+- Name: smartflow-ai-worker
 - URL: https://api.barakzai.cloud/analyze
 - Runtime: Cloudflare Workers Edge
 - Primary AI: Gemini 2.5 Flash
 - Rate limit: 20 requests/minute per IP
 - CORS: hardcoded to https://barakzai.cloud only
 - Deploy: `npx wrangler deploy` (manual — no CI/CD yet)
-- Source: dailyflow-ai-worker/ (not version controlled)
+- Source: smartflow-ai-worker/ (not version controlled)
 
 ## Worker Secrets
 - GEMINI_API_KEY: `npx wrangler secret put GEMINI_API_KEY`

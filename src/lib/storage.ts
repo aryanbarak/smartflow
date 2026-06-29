@@ -1,4 +1,4 @@
-const STORAGE_PREFIX = "dailyflow:v1:";
+const STORAGE_PREFIX = "smartflow:v1:";
 
 export function storageKey(key: string) {
   return `${STORAGE_PREFIX}${key}`;

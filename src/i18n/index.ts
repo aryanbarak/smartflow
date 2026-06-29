@@ -65,7 +65,7 @@ const en = {
   sign_in: 'Sign in',
 
   // Auth
-  auth_welcome: 'Welcome to dailyFlow',
+  auth_welcome: 'Welcome to smartFlow',
   auth_subtitle: 'Your personal productivity hub',
   auth_email: 'Email',
   auth_password: 'Password',
@@ -659,7 +659,7 @@ const en = {
   settings_storage_used: '{{used}} used ({{count}} keys)',
   settings_storage_clear: 'Clear cache',
   settings_install_app: 'Install app',
-  settings_install_desc: 'Add dailyFlow to your home screen',
+  settings_install_desc: 'Add smartFlow to your home screen',
   settings_install_btn: 'Install',
   settings_danger_zone: 'Danger zone',
   settings_delete_account_data: 'Delete all data',
@@ -845,7 +845,7 @@ const de: TranslationDict = {
   sign_out: 'Abmelden',
   sign_in: 'Anmelden',
 
-  auth_welcome: 'Willkommen bei dailyFlow',
+  auth_welcome: 'Willkommen bei smartFlow',
   auth_subtitle: 'Dein persoenlicher Produktivitaets-Hub',
   auth_email: 'E-Mail',
   auth_password: 'Passwort',
@@ -1474,7 +1474,7 @@ const de: TranslationDict = {
   settings_storage_used: '{{used}} verwendet ({{count}} Eintraege)',
   settings_storage_clear: 'Cache leeren',
   settings_install_app: 'App installieren',
-  settings_install_desc: 'dailyFlow zum Startbildschirm hinzufuegen',
+  settings_install_desc: 'smartFlow zum Startbildschirm hinzufuegen',
   settings_install_btn: 'Installieren',
   settings_danger_zone: 'Gefahrenzone',
   settings_delete_account_data: 'Alle Daten loeschen',
@@ -1600,7 +1600,7 @@ const fa: TranslationDict = {
   sign_out: 'خروج',
   sign_in: 'ورود',
 
-  auth_welcome: 'به dailyFlow خوش آمدید',
+  auth_welcome: 'به smartFlow خوش آمدید',
   auth_subtitle: 'مرکز بهره‌وری شخصی شما',
   auth_email: 'ایمیل',
   auth_password: 'رمز عبور',
@@ -2229,7 +2229,7 @@ const fa: TranslationDict = {
   settings_storage_used: '{{used}} استفاده شده ({{count}} کلید)',
   settings_storage_clear: 'پاک کردن کش',
   settings_install_app: 'نصب اپ',
-  settings_install_desc: 'dailyFlow را به صفحه اصلی اضافه کنید',
+  settings_install_desc: 'smartFlow را به صفحه اصلی اضافه کنید',
   settings_install_btn: 'نصب',
   settings_danger_zone: 'منطقه خطر',
   settings_delete_account_data: 'حذف همه داده‌ها',

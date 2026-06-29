@@ -1,6 +1,6 @@
 <div align="center">
 
-# DailyFlow
+# SmartFlow
 
 **AI-powered productivity and life management platform**
 
@@ -10,7 +10,7 @@
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 [![Cloudflare](https://img.shields.io/badge/Cloudflare-Pages_+_Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://pages.cloudflare.com/)
 
-*DailyFlow combines productivity tools, personal organization, document intelligence, AI memory and workflow automation in a single modern application.*
+*SmartFlow combines productivity tools, personal organization, document intelligence, AI memory and workflow automation in a single modern application.*
 
 </div>
 
@@ -18,7 +18,7 @@
 
 ## Overview
 
-DailyFlow is designed as a **personal operating system** — a single platform where tasks, finances, documents, family information and AI assistance live together and connect to each other.
+SmartFlow is designed as a **personal operating system** — a single platform where tasks, finances, documents, family information and AI assistance live together and connect to each other.
 
 The goal is not only to store information, but to **transform information into actionable outcomes**.
 
@@ -118,7 +118,7 @@ Supported document types: medical reports, government letters, job center docume
       │                     │
       ▼                     ▼
 Supabase (DB)       Cloudflare Workers
-PostgreSQL          (dailyflow-ai-worker)
+PostgreSQL          (smartflow-ai-worker)
 Auth / RLS                  │
 Storage              AI Gateway
                      │           │
@@ -152,8 +152,8 @@ Storage              AI Gateway
 
 ```bash
 # Clone the repository
-git clone https://github.com/aryanbarak/dailyflow.git
-cd dailyflow
+git clone https://github.com/aryanbarak/smartflow.git
+cd smartflow
 
 # Install dependencies
 npm install

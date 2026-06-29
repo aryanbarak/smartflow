@@ -1,4 +1,4 @@
-# CLAUDE.md — Claude Code Working Rules for DailyFlow
+# CLAUDE.md — Claude Code Working Rules for SmartFlow
 
 ## Startup procedure (before every task)
 1. Read PROJECT_STATUS.md for current state and backlog.

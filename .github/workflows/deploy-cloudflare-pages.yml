@@ -1,4 +1,4 @@
-name: Deploy DailyFlow to Cloudflare Pages
+name: Deploy SmartFlow to Cloudflare Pages
 
 on:
   push:

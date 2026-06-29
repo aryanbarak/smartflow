@@ -40,6 +40,6 @@ export const useNotificationPrefs = create<NotificationState>()(
       setDailySummary: dailySummary => set({ dailySummary }),
       setDailySummaryTime: dailySummaryTime => set({ dailySummaryTime }),
     }),
-    { name: 'dailyflow:notification-prefs' },
+    { name: 'smartflow:notification-prefs' },
   ),
 );

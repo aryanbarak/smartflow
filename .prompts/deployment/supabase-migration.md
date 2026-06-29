@@ -1,4 +1,4 @@
-# Supabase Migration — dailyFlow
+# Supabase Migration — smartFlow
 
 ## Project
 - Supabase project: taqxwnlwllbywaklwyno

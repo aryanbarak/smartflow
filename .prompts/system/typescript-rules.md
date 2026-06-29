@@ -1,4 +1,4 @@
-# TypeScript Rules — dailyFlow
+# TypeScript Rules — smartFlow
 
 ## Strict Rules
 - No `any` type — use `unknown` and narrow, or define proper interface

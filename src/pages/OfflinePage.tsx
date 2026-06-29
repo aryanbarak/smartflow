@@ -1,6 +1,6 @@
 import { WifiOff, CheckCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DailyFlowLogo } from "@/components/DailyFlowLogo";
+import { SmartFlowLogo } from "@/components/SmartFlowLogo";
 
 const CACHED_FEATURES = [
   "Previously viewed tasks and notes",
@@ -11,7 +11,7 @@ const CACHED_FEATURES = [
 export default function OfflinePage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center gap-8">
-      <DailyFlowLogo />
+      <SmartFlowLogo />
 
       <div className="space-y-2">
         <div className="flex items-center justify-center gap-2 text-amber-400">

@@ -1,4 +1,4 @@
-# dailyFlow — Architecture
+# smartFlow — Architecture
 
 ## Frontend Structure
 
@@ -54,7 +54,7 @@ User → React App → Cloudflare Worker → Gemini 2.5 Flash (primary)
 - RTL: only for fa (sets html[dir=rtl])
 - LanguageProvider syncs html[lang], html[dir], Vazirmatn font class
 - All UI strings must use t('key') — no hardcoded strings
-- Language stored in appearanceStore (Zustand persist to dailyflow:appearance)
+- Language stored in appearanceStore (Zustand persist to smartflow:appearance)
 
 ## Global State (Zustand stores)
 - appearanceStore: density, accentColor, reducedMotion, language

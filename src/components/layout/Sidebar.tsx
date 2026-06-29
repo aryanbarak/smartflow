@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { GlobalSearch } from "@/features/search/GlobalSearch";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/features/profile/useProfile";
-import { DailyFlowIcon } from "@/components/DailyFlowLogo";
+import { SmartFlowIcon } from "@/components/SmartFlowLogo";
 import { useT } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 
@@ -59,10 +59,10 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <DailyFlowIcon size={36} />
+          <SmartFlowIcon size={36} />
           <div>
             <h1 className="text-lg leading-none">
-              <span className="font-light text-sidebar-foreground">daily</span>
+              <span className="font-light text-sidebar-foreground">Smart</span>
               <span className="font-semibold text-sidebar-foreground">Flow</span>
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">Intelligent productivity</p>

@@ -1,4 +1,4 @@
-# dailyFlow — Deployment Guide
+# smartFlow — Deployment Guide
 
 ## Frontend Deploy (Cloudflare Pages)
 
@@ -20,7 +20,7 @@ npm run build
 ## AI Worker Deploy
 
 ```bash
-cd dailyflow-ai-worker
+cd smartflow-ai-worker
 npx wrangler deploy
 npx wrangler tail              # live logs
 npx wrangler secret put GEMINI_API_KEY

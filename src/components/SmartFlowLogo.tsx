@@ -1,9 +1,9 @@
-interface DailyFlowLogoProps {
+interface SmartFlowLogoProps {
   size?: number;
   showTagline?: boolean;
 }
 
-export function DailyFlowIcon({ size = 40 }: Readonly<Pick<DailyFlowLogoProps, "size">>) {
+export function SmartFlowIcon({ size = 40 }: Readonly<Pick<SmartFlowLogoProps, "size">>) {
   const width = Math.round((size * 4) / 3);
   return (
     <img
@@ -16,16 +16,16 @@ export function DailyFlowIcon({ size = 40 }: Readonly<Pick<DailyFlowLogoProps, "
   );
 }
 
-export function DailyFlowLogo({ size = 40, showTagline = false }: Readonly<DailyFlowLogoProps>) {
+export function SmartFlowLogo({ size = 40, showTagline = false }: Readonly<SmartFlowLogoProps>) {
   const fontSize = Math.round(size * 0.45);
   const tagSize = Math.round(size * 0.275);
 
   return (
     <div className="flex items-center gap-3">
-      <DailyFlowIcon size={size} />
+      <SmartFlowIcon size={size} />
       <div>
         <div style={{ fontSize, lineHeight: 1.2 }}>
-          <span className="font-light text-foreground">daily</span>
+          <span className="font-light text-foreground">Smart</span>
           <span className="font-semibold text-foreground">Flow</span>
         </div>
         {showTagline && (

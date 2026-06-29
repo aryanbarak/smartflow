@@ -1,4 +1,4 @@
-# dailyFlow — PROJECT STATUS
+# smartFlow — PROJECT STATUS
 
 Keep this file under 2 pages; update after every session.
 
@@ -381,7 +381,7 @@ Branch: `redesign/ui-cleanup`
 - ✅ **Language persistence fix**: root cause — UI only wrote language to localStorage, never to DB; fixed: `SettingsPage` upserts `{ user_id, language }` to `user_settings` on change; `LanguageProvider` loads from DB on mount + `SIGNED_IN` event; UI and agent now share one source of truth
 - ✅ **Daily/Weekly merge**: added `mode` column to `agent_briefings` (migration `20260615000000`); `/generate` accepts `mode=daily|weekly`; weekly mode fetches tasks, habits, journal + uses week-scope Gemini prompts with 1500 token budget; journal context (last 7 days, mood + notes) added for both modes
 - ✅ **Today / This Week toggle**: `AgentBriefingCard` has a two-button pill toggle; switches fetch query (filtered by mode) and the `/generate` call; each mode's briefings stay separate
-- ✅ **Retired old Weekly Life Briefing**: removed `handleBriefing` from `dailyflow-ai-worker` + its route in `wrangler.toml` (redeployed); deleted `briefingService.ts`, `useBriefing.ts`, `BriefingPage.tsx`; removed Dashboard widget, `/briefing` route, sidebar entry, and all `briefing_*` + `nav_briefing` i18n keys (en/de/fa); one unified system remains
+- ✅ **Retired old Weekly Life Briefing**: removed `handleBriefing` from `smartflow-ai-worker` + its route in `wrangler.toml` (redeployed); deleted `briefingService.ts`, `useBriefing.ts`, `BriefingPage.tsx`; removed Dashboard widget, `/briefing` route, sidebar entry, and all `briefing_*` + `nav_briefing` i18n keys (en/de/fa); one unified system remains
 
 ### AI Personal Agent — Worker security ✅
 

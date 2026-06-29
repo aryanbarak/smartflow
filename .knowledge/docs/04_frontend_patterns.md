@@ -1,4 +1,4 @@
-# dailyFlow — Frontend Patterns
+# smartFlow — Frontend Patterns
 
 ## Supabase Service Pattern (MUST follow exactly)
 
@@ -142,9 +142,9 @@ export const useMyStore = create<MyState>()(
       value: 'default',
       setValue: value => set({ value }),
     }),
-    { name: 'dailyflow:my-store' },
+    { name: 'smartflow:my-store' },
   ),
 );
 ```
 
-All Zustand persist keys are prefixed with `dailyflow:`.
+All Zustand persist keys are prefixed with `smartflow:`.
