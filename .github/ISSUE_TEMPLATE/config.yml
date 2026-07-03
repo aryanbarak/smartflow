@@ -1,0 +1,10 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: 💬 SmartFlow Discussions
+    url: https://github.com/aryanbarak/smartflow/discussions
+    about: Ask questions, share ideas or discuss features.
+
+  - name: 📖 SmartFlow Documentation
+    url: https://github.com/aryanbarak/smartflow/wiki
+    about: Read the documentation before opening an issue.
