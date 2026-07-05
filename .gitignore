@@ -40,5 +40,6 @@ dist-ssr
 # .knowledge/راهنما.md
 
 supabase/.temp/
+android/app/src/main/assets/
 
 .wrangler/
