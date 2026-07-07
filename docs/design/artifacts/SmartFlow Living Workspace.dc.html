@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { background: #07060E; margin: 0; }
+    a { color: #9B8FFF; } a:hover { color: #C4B8FF; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; background: #0D0B18; }
+    ::-webkit-scrollbar-thumb { background: #2A2050; border-radius: 3px; }
+    @keyframes orbBreathe {
+      0%,100% { box-shadow: 0 0 24px #7B6FE870, 0 0 60px #4A3FD435, 0 0 100px #1A0F6B15; }
+      50%      { box-shadow: 0 0 44px #7B6FE8A0, 0 0 90px #4A3FD458, 0 0 140px #1A0F6B25; }
+    }
+    @keyframes orbBreatheSmall {
+      0%,100% { box-shadow: 0 0 12px #7B6FE868, 0 0 28px #4A3FD430; }
+      50%      { box-shadow: 0 0 22px #7B6FE898, 0 0 48px #4A3FD450; }
+    }
+    @keyframes orbPulse {
+      0%,100% { box-shadow: 0 0 30px #9B8FFF90, 0 0 80px #7B6FE860, 0 0 140px #4A3FD430; }
+      40%      { box-shadow: 0 0 60px #B4A8FFB0, 0 0 130px #9B8FFF80, 0 0 200px #7B6FE848; }
+    }
+    @keyframes ambientDrift {
+      0%,100% { opacity: 0.20; transform: scale(1); }
+      50%      { opacity: 0.32; transform: scale(1.04); }
+    }
+    @keyframes borderGlow {
+      0%,100% { border-color: rgba(107,95,232,0.13); }
+      50%      { border-color: rgba(107,95,232,0.26); }
+    }
+    @keyframes shimmerSlide {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(200%); }
+    }
+    @keyframes textFadeUp {
+      0%   { opacity: 0; transform: translateY(6px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</helmet>
+
+<div style="min-height:100vh; background:#07060E; font-family:'DM Sans',sans-serif; color:#E8E4FF; padding:72px 80px 120px; max-width:1560px; margin:0 auto;">
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- HEADER -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:52px;">
+    <div>
+      <div style="font-family:'DM Mono',monospace; font-size:10px; letter-spacing:0.38em; color:#5A4F98; text-transform:uppercase; font-weight:500; margin-bottom:14px;">SmartFlow · Sprint 1 · After the Orb Arrives</div>
+      <h1 style="font-family:'Syne',sans-serif; font-size:52px; font-weight:800; color:#F0EEFF; line-height:1; letter-spacing:-0.025em; margin:0 0 12px 0;">Living Workspace</h1>
+      <div style="font-size:14px; font-weight:300; color:#6B6390; letter-spacing:0.18em; text-transform:uppercase;">Design Specification v1.0</div>
+    </div>
+    <div style="font-family:'DM Mono',monospace; font-size:10px; color:#3A3458; line-height:2; text-align:right;">
+      <div style="font-size:11px; color:#5A4F98; font-weight:500; letter-spacing:0.1em;">WORKSPACE SPEC v1.0</div>
+      <div>Sprint 1 · 07 Jul 2026</div>
+      <div style="margin-top:10px; display:inline-block; padding:5px 14px; border:1px solid rgba(107,95,232,0.28); border-radius:4px; color:#7B6FE8; font-size:9px; letter-spacing:0.28em;">Continues from Storyboard v2</div>
+    </div>
+  </div>
+
+  <div style="height:1px; background:linear-gradient(to right,rgba(107,95,232,0.35),rgba(58,47,120,0.15),transparent); margin-bottom:64px;"></div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- 01 · WORKSPACE PHILOSOPHY -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.45em; color:#3A3458; text-transform:uppercase; margin-bottom:36px;">01 — Workspace Philosophy</div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:32px; margin-bottom:72px;">
+    <div>
+      <div style="font-family:'Syne',sans-serif; font-size:26px; font-weight:700; color:#D8D4F0; line-height:1.3; letter-spacing:-0.01em; margin-bottom:24px;">
+        "The workspace is not a container for your information.<br/>
+        <span style="color:#9B8FFF;">It is an environment prepared by an intelligence that knows you.</span>"
+      </div>
+      <div style="font-size:13px; color:#5A5488; line-height:1.8; font-weight:300; margin-bottom:20px;">
+        When you arrive, Flow AI has already been thinking. The workspace is the physical manifestation of that thought — your priorities surfaced, your context assembled, your day made coherent. You did not configure this. It was prepared for you.
+      </div>
+      <div style="font-size:13px; color:#5A5488; line-height:1.8; font-weight:300;">
+        This is the core distinction from every dashboard that came before. Traditional dashboards are organized by the user. SmartFlow's workspace is organized by intelligence. The user's job is not to manage it — only to inhabit it.
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:14px;">
+      <div style="padding:16px 18px; background:rgba(12,10,26,0.8); border:1px solid rgba(107,95,232,0.15); border-radius:8px; border-left:2px solid rgba(107,95,232,0.5);">
+        <div style="font-family:'Syne',sans-serif; font-size:12px; font-weight:700; color:#9080C8; margin-bottom:5px;">Not a dashboard. A prepared desk.</div>
+        <div style="font-size:11px; color:#3F3A60; line-height:1.55; font-weight:300;">Someone has already placed the most important document in the center, cleared the noise, and made space for you to think.</div>
+      </div>
+      <div style="padding:16px 18px; background:rgba(12,10,26,0.8); border:1px solid rgba(107,95,232,0.15); border-radius:8px; border-left:2px solid rgba(107,95,232,0.5);">
+        <div style="font-family:'Syne',sans-serif; font-size:12px; font-weight:700; color:#9080C8; margin-bottom:5px;">One primary narrative. Not many equal fragments.</div>
+        <div style="font-size:11px; color:#3F3A60; line-height:1.55; font-weight:300;">Flow AI decides what matters most and surfaces it prominently. Supporting context exists but never competes.</div>
+      </div>
+      <div style="padding:16px 18px; background:rgba(12,10,26,0.8); border:1px solid rgba(107,95,232,0.15); border-radius:8px; border-left:2px solid rgba(107,95,232,0.5);">
+        <div style="font-family:'Syne',sans-serif; font-size:12px; font-weight:700; color:#9080C8; margin-bottom:5px;">Alive but never distracting.</div>
+        <div style="font-size:11px; color:#3F3A60; line-height:1.55; font-weight:300;">Motion communicates presence. It does not demand attention. The workspace breathes at the periphery of awareness.</div>
+      </div>
+      <div style="padding:16px 18px; background:rgba(12,10,26,0.8); border:1px solid rgba(107,95,232,0.15); border-radius:8px; border-left:2px solid rgba(107,95,232,0.5);">
+        <div style="font-family:'Syne',sans-serif; font-size:12px; font-weight:700; color:#9080C8; margin-bottom:5px;">The Orb is the center of all things.</div>
+        <div style="font-size:11px; color:#3F3A60; line-height:1.55; font-weight:300;">Every visual decision traces back to the Orb. It created this space. Its light falls across everything. Its breathing is the pulse of the whole system.</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- 02 · THE THREE ZONES -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.45em; color:#3A3458; text-transform:uppercase; margin-bottom:36px;">02 — Visual Hierarchy · The Three Zones</div>
+
+  <div style="background:rgba(10,8,20,0.9); border:1px solid rgba(107,95,232,0.18); border-radius:12px; padding:36px; margin-bottom:72px;">
+    <div style="display:grid; grid-template-columns:2fr 1fr; gap:40px; align-items:start;">
+
+      <!-- Zone diagram -->
+      <div>
+        <div style="font-size:12px; color:#5A5488; line-height:1.7; font-weight:300; margin-bottom:24px;">Three zones, not three UI regions. Presence, intention, and context — each with its own visual weight, motion language, and relationship to the Orb.</div>
+        <!-- Schematic workspace diagram -->
+        <div style="position:relative; background:#07060E; border-radius:10px; border:1px solid rgba(107,95,232,0.15); overflow:hidden; height:280px;">
+          <!-- Orb ambient light source -->
+          <div style="position:absolute;top:0;left:0;width:200px;height:160px;background:radial-gradient(ellipse at 10% 12%,rgba(107,95,232,0.20) 0%,transparent 70%);animation:ambientDrift 3.6s ease-in-out infinite;pointer-events:none;"></div>
+
+          <!-- ZONE 1: PRESENCE — Nav bar -->
+          <div style="position:absolute;top:0;left:0;right:0;height:44px;background:rgba(12,9,28,0.96);border-bottom:1px solid rgba(107,95,232,0.1);">
+            <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(107,95,232,0.08),transparent 40%);"></div>
+            <!-- Orb -->
+            <div style="position:absolute;top:22px;left:20px;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#B4A8FF 18%,#7B6FE8 46%,#3D2FBE 72%,#1A0F6B 92%);animation:orbBreatheSmall 2.4s ease-in-out infinite;"></div>
+            <!-- Nav items -->
+            <div style="position:absolute;top:50%;left:50px;transform:translateY(-50%);display:flex;gap:6px;">
+              <div style="width:24px;height:4px;border-radius:2px;background:rgba(107,95,232,0.22);"></div>
+              <div style="width:24px;height:4px;border-radius:2px;background:rgba(107,95,232,0.14);"></div>
+              <div style="width:24px;height:4px;border-radius:2px;background:rgba(107,95,232,0.14);"></div>
+            </div>
+            <div style="position:absolute;top:50%;right:14px;transform:translateY(-50%);display:flex;gap:8px;align-items:center;">
+              <div style="width:16px;height:16px;border-radius:50%;background:rgba(44,36,80,0.7);border:1px solid rgba(107,95,232,0.2);"></div>
+            </div>
+            <!-- Zone label -->
+            <div style="position:absolute;top:50%;right:40px;transform:translateY(-50%);font-family:'DM Mono',monospace;font-size:7px;color:rgba(107,95,232,0.45);letter-spacing:0.2em;text-transform:uppercase;">PRESENCE ZONE</div>
+          </div>
+
+          <!-- ZONE 2: INTENTION — Primary surface (left, large) -->
+          <div style="position:absolute;top:54px;left:14px;width:55%;bottom:14px;background:rgba(18,13,42,0.75);border:1px solid rgba(107,95,232,0.18);border-radius:8px;animation:borderGlow 3.6s ease-in-out infinite;overflow:hidden;">
+            <!-- shimmer top edge -->
+            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(107,95,232,0.4),transparent);"></div>
+            <div style="padding:16px;">
+              <div style="font-family:'DM Mono',monospace;font-size:7px;color:rgba(107,95,232,0.45);letter-spacing:0.25em;text-transform:uppercase;margin-bottom:8px;">FLOW AI · TODAY</div>
+              <div style="width:80%;height:5px;border-radius:3px;background:rgba(168,151,255,0.28);margin-bottom:6px;"></div>
+              <div style="width:60%;height:5px;border-radius:3px;background:rgba(168,151,255,0.16);margin-bottom:16px;"></div>
+              <div style="display:flex;flex-direction:column;gap:5px;">
+                <div style="width:95%;height:4px;border-radius:2px;background:rgba(168,151,255,0.12);"></div>
+                <div style="width:88%;height:4px;border-radius:2px;background:rgba(168,151,255,0.09);"></div>
+                <div style="width:92%;height:4px;border-radius:2px;background:rgba(168,151,255,0.09);"></div>
+                <div style="width:70%;height:4px;border-radius:2px;background:rgba(168,151,255,0.07);"></div>
+              </div>
+              <div style="margin-top:14px;display:flex;gap:6px;">
+                <div style="padding:4px 10px;background:rgba(107,95,232,0.18);border:1px solid rgba(107,95,232,0.25);border-radius:4px;font-family:'DM Mono',monospace;font-size:7px;color:rgba(168,151,255,0.65);letter-spacing:0.15em;">PRIMARY SURFACE</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ZONE 3: CONTEXT — Supporting cards (right column) -->
+          <div style="position:absolute;top:54px;right:14px;width:calc(45% - 28px - 8px);bottom:14px;display:flex;flex-direction:column;gap:8px;">
+            <!-- Card A -->
+            <div style="flex:1;background:rgba(14,10,32,0.65);border:1px solid rgba(107,95,232,0.11);border-radius:7px;padding:10px;position:relative;overflow:hidden;">
+              <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(107,95,232,0.25),transparent);"></div>
+              <div style="width:55%;height:3px;border-radius:2px;background:rgba(168,151,255,0.22);margin-bottom:5px;"></div>
+              <div style="width:35%;height:3px;border-radius:2px;background:rgba(168,151,255,0.12);"></div>
+              <div style="position:absolute;bottom:8px;right:10px;font-family:'DM Mono',monospace;font-size:6px;color:rgba(107,95,232,0.3);letter-spacing:0.2em;">CONTEXT</div>
+            </div>
+            <!-- Card B -->
+            <div style="flex:1;background:rgba(14,10,32,0.65);border:1px solid rgba(107,95,232,0.11);border-radius:7px;padding:10px;position:relative;overflow:hidden;">
+              <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(107,95,232,0.25),transparent);"></div>
+              <div style="width:45%;height:3px;border-radius:2px;background:rgba(168,151,255,0.22);margin-bottom:5px;"></div>
+              <div style="width:65%;height:3px;border-radius:2px;background:rgba(168,151,255,0.12);"></div>
+            </div>
+            <!-- Card C -->
+            <div style="flex:1;background:rgba(12,8,28,0.55);border:1px solid rgba(107,95,232,0.08);border-radius:7px;padding:10px;position:relative;overflow:hidden;opacity:0.85;">
+              <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(107,95,232,0.15),transparent);"></div>
+              <div style="width:40%;height:3px;border-radius:2px;background:rgba(168,151,255,0.16);margin-bottom:5px;"></div>
+              <div style="width:58%;height:3px;border-radius:2px;background:rgba(168,151,255,0.09);"></div>
+            </div>
+          </div>
+
+          <!-- Zone annotations on diagram -->
+          <div style="position:absolute;bottom:18px;left:20px;font-family:'DM Mono',monospace;font-size:7px;color:rgba(107,95,232,0.35);letter-spacing:0.2em;text-transform:uppercase;">INTENTION ZONE</div>
+          <div style="position:absolute;bottom:18px;right:14px;font-family:'DM Mono',monospace;font-size:7px;color:rgba(58,52,88,0.5);letter-spacing:0.2em;text-transform:uppercase;">CONTEXT ZONE</div>
+        </div>
+      </div>
+
+      <!-- Zone descriptions -->
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <div style="padding:18px; background:rgba(22,14,52,0.7); border:1px solid rgba(107,95,232,0.22); border-radius:8px;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#7B6FE8;box-shadow:0 0 8px #7B6FE880;flex:0 0 auto;"></div>
+            <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#A090C8;">Presence Zone</div>
+          </div>
+          <div style="font-size:11px; color:#4A4468; line-height:1.6; font-weight:300;">The nav rail. The Orb lives here permanently. This zone never changes — it is the constant in the system. The Orb's glow originates here and falls across everything below.</div>
+          <div style="margin-top:8px; font-family:'DM Mono',monospace; font-size:8px; color:#5A4F88;">Height: 48px · Always visible · Highest z-order</div>
+        </div>
+        <div style="padding:18px; background:rgba(18,12,44,0.7); border:1px solid rgba(107,95,232,0.18); border-radius:8px;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#5A4FA8;box-shadow:0 0 8px #5A4FA850;flex:0 0 auto;"></div>
+            <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#8880B8;">Intention Zone</div>
+          </div>
+          <div style="font-size:11px; color:#4A4468; line-height:1.6; font-weight:300;">The primary surface. Flow AI's prepared narrative for this moment. One dominant card — the most important thing — occupies this zone. It changes with the day and the user's rhythm.</div>
+          <div style="margin-top:8px; font-family:'DM Mono',monospace; font-size:8px; color:#5A4F88;">~62% of content width · AI-curated · Always singular</div>
+        </div>
+        <div style="padding:18px; background:rgba(14,10,34,0.6); border:1px solid rgba(58,52,88,0.35); border-radius:8px;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#3A3468;flex:0 0 auto;"></div>
+            <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#706890;">Context Zone</div>
+          </div>
+          <div style="font-size:11px; color:#4A4468; line-height:1.6; font-weight:300;">Supporting cards. Lower visual weight. These provide peripheral context without competing with the primary narrative. They can be minimized entirely without loss of function.</div>
+          <div style="margin-top:8px; font-family:'DM Mono',monospace; font-size:8px; color:#4A4468;">~35% of content width · Peripheral · Collapsible</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- 03 · MOTION HIERARCHY -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.45em; color:#3A3458; text-transform:uppercase; margin-bottom:36px;">03 — Motion Hierarchy · Five Layers</div>
+
+  <div style="background:rgba(10,8,20,0.8); border:1px solid rgba(58,52,88,0.3); border-radius:12px; padding:36px; margin-bottom:72px;">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:40px;">
+      <!-- Motion stack -->
+      <div>
+        <div style="font-size:12px; color:#5A5488; font-weight:300; line-height:1.7; margin-bottom:20px;">Five layers of motion, ordered by visibility. The user consciously perceives only the top two. The rest exist at the edge of awareness — felt, not seen.</div>
+        <div style="display:flex; flex-direction:column; gap:3px;">
+          <!-- Layer 5: most visible -->
+          <div style="padding:14px 16px; background:rgba(22,16,52,0.8); border:1px solid rgba(138,120,255,0.25); border-radius:6px 6px 0 0; position:relative; overflow:hidden;">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:#A090FF;border-radius:3px 0 0 3px;"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+              <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#A090FF;">L5 · Card expansion</div>
+              <div style="font-family:'DM Mono',monospace; font-size:8px; color:#6B5FE8; background:rgba(107,95,232,0.15); padding:2px 6px; border-radius:3px;">USER-TRIGGERED</div>
+            </div>
+            <div style="font-size:10px; color:#5A5488; font-weight:300;">A card fills the available space in-place. The rest of the workspace recedes. No navigation — the space breathes open.</div>
+          </div>
+          <!-- Layer 4 -->
+          <div style="padding:14px 16px; background:rgba(18,13,42,0.75); border:1px solid rgba(107,95,232,0.2); position:relative; overflow:hidden;">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:#7B6FE8;border-radius:0;"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+              <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#9888C8;">L4 · Flow AI response</div>
+              <div style="font-family:'DM Mono',monospace; font-size:8px; color:#5A4F88; background:rgba(74,63,212,0.12); padding:2px 6px; border-radius:3px;">AI-TRIGGERED</div>
+            </div>
+            <div style="font-size:10px; color:#5A5488; font-weight:300;">Orb intensifies. A conversation surface rises. Cards dim by 30%. The AI has the floor.</div>
+          </div>
+          <!-- Layer 3 -->
+          <div style="padding:14px 16px; background:rgba(16,11,36,0.7); border:1px solid rgba(74,63,212,0.15); position:relative; overflow:hidden;">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:#5A4FA0;border-radius:0;"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+              <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#8080B0;">L3 · Hover / interaction</div>
+              <div style="font-family:'DM Mono',monospace; font-size:8px; color:#4A4468; background:rgba(58,52,88,0.3); padding:2px 6px; border-radius:3px;">POINTER</div>
+            </div>
+            <div style="font-size:10px; color:#4A4478; font-weight:300;">Card scale: 1.0 → 1.012. Border brightness +25%. 180ms ease-out. Gentle acknowledgment — not a UI affordance shout.</div>
+          </div>
+          <!-- Layer 2 -->
+          <div style="padding:14px 16px; background:rgba(14,10,30,0.65); border:1px solid rgba(58,52,88,0.25); position:relative; overflow:hidden;">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:#3A3468;border-radius:0;"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+              <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#6060A0;">L2 · Orb breathing</div>
+              <div style="font-family:'DM Mono',monospace; font-size:8px; color:#3A3458; background:rgba(30,24,60,0.5); padding:2px 6px; border-radius:3px;">PERPETUAL</div>
+            </div>
+            <div style="font-size:10px; color:#3A3458; font-weight:300;">2400ms cycle. Glow ±30%. Drives the ambient field. This is the heartbeat of the entire interface — never stops, never demands attention.</div>
+          </div>
+          <!-- Layer 1: least visible -->
+          <div style="padding:14px 16px; background:rgba(12,9,26,0.6); border:1px solid rgba(42,32,80,0.2); border-radius:0 0 6px 6px; position:relative; overflow:hidden;">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:#2A2448;border-radius:0 0 0 3px;"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+              <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#484470;">L1 · Ambient hue drift</div>
+              <div style="font-family:'DM Mono',monospace; font-size:8px; color:#2A2448; background:rgba(20,16,44,0.5); padding:2px 6px; border-radius:3px;">~5 MIN CYCLE</div>
+            </div>
+            <div style="font-size:10px; color:#2A2445; font-weight:300;">Background temperature shifts imperceptibly. Warm violet at morning. Cool indigo at night. The workspace has a circadian rhythm.</div>
+          </div>
+        </div>
+      </div>
+      <!-- Motion principles -->
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div style="font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:#9890C0; margin-bottom:4px;">Motion governs state. Never decoration.</div>
+        <div style="font-size:12px; color:#4A4468; line-height:1.7; font-weight:300;">Every layer of motion communicates something specific. Remove any layer and the user loses information — not just aesthetics. This is the discipline of motion design at SmartFlow.</div>
+
+        <div style="margin-top:8px; display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; gap:12px; padding:12px; background:rgba(14,10,30,0.6); border-radius:6px; align-items:flex-start;">
+            <div style="font-family:'DM Mono',monospace; font-size:9px; color:#5A4F88; background:rgba(74,63,212,0.12); padding:3px 6px; border-radius:3px; flex:0 0 auto; margin-top:1px;">RULE</div>
+            <div style="font-size:11px; color:#4A4468; font-weight:300; line-height:1.5;">No two motions at the same scale should run simultaneously. When Flow AI speaks (L4), hover effects (L3) are suppressed. Orb breathing (L2) always continues — it is the substrate.</div>
+          </div>
+          <div style="display:flex; gap:12px; padding:12px; background:rgba(14,10,30,0.6); border-radius:6px; align-items:flex-start;">
+            <div style="font-family:'DM Mono',monospace; font-size:9px; color:#5A4F88; background:rgba(74,63,212,0.12); padding:3px 6px; border-radius:3px; flex:0 0 auto; margin-top:1px;">RULE</div>
+            <div style="font-size:11px; color:#4A4468; font-weight:300; line-height:1.5;">All easing is spring or ease-out. Ease-in is banned — it creates a sense of struggle. Nothing in SmartFlow struggles.</div>
+          </div>
+          <div style="display:flex; gap:12px; padding:12px; background:rgba(14,10,30,0.6); border-radius:6px; align-items:flex-start;">
+            <div style="font-family:'DM Mono',monospace; font-size:9px; color:#5A4F88; background:rgba(74,63,212,0.12); padding:3px 6px; border-radius:3px; flex:0 0 auto; margin-top:1px;">RULE</div>
+            <div style="font-size:11px; color:#4A4468; font-weight:300; line-height:1.5;">Duration maxima: 400ms for user-triggered motion, 2400ms for system-driven cycles. Nothing should feel like it's making the user wait.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- 04 · AI PRESENCE STATES -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.45em; color:#3A3458; text-transform:uppercase; margin-bottom:36px;">04 — AI Presence · Three States of Flow AI</div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:24px; margin-bottom:72px;">
+
+    <!-- State 1: Resting -->
+    <div style="background:rgba(10,8,20,0.8); border:1px solid rgba(58,52,88,0.35); border-radius:12px; padding:24px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+        <div style="width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#B4A8FF 18%,#7B6FE8 46%,#3D2FBE 72%,#1A0F6B 92%);animation:orbBreatheSmall 2.4s ease-in-out infinite;flex:0 0 auto;"></div>
+        <div>
+          <div style="font-family:'Syne',sans-serif; font-size:14px; font-weight:700; color:#8880B8;">Resting</div>
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#4A4468; letter-spacing:0.15em;">ALWAYS PRESENT</div>
+        </div>
+      </div>
+      <div style="height:100px; background:#07060E; border-radius:7px; border:1px solid rgba(58,52,88,0.3); position:relative; overflow:hidden; margin-bottom:14px;">
+        <div style="position:absolute;top:0;left:0;width:60px;height:50px;background:radial-gradient(ellipse at 15% 20%,rgba(107,95,232,0.18) 0%,transparent 70%);animation:ambientDrift 2.4s ease-in-out infinite;"></div>
+        <div style="position:absolute;top:10px;left:10px;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#B4A8FF 18%,#7B6FE8 46%,#3D2FBE 72%,#1A0F6B 92%);animation:orbBreatheSmall 2.4s ease-in-out infinite;"></div>
+        <div style="position:absolute;bottom:12px;left:10px;right:10px;display:flex;flex-direction:column;gap:4px;">
+          <div style="width:70%;height:3px;border-radius:2px;background:rgba(168,151,255,0.2);"></div>
+          <div style="width:50%;height:3px;border-radius:2px;background:rgba(168,151,255,0.12);"></div>
+        </div>
+      </div>
+      <div style="font-size:11px; color:#3F3A60; line-height:1.6; font-weight:300;">Orb breathes at base rhythm. Glow is present but quiet. Flow AI is aware but not active. The interface belongs to the user.</div>
+    </div>
+
+    <!-- State 2: Attentive -->
+    <div style="background:rgba(12,9,26,0.9); border:1px solid rgba(107,95,232,0.25); border-radius:12px; padding:24px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+        <div style="width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#B4A8FF 18%,#7B6FE8 46%,#3D2FBE 72%,#1A0F6B 92%);box-shadow:0 0 18px #9B8FFF80,0 0 40px #7B6FE840;flex:0 0 auto;"></div>
+        <div>
+          <div style="font-family:'Syne',sans-serif; font-size:14px; font-weight:700; color:#A090C8;">Attentive</div>
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#5A4F88; letter-spacing:0.15em;">USER INPUT DETECTED</div>
+        </div>
+      </div>
+      <div style="height:100px; background:#07060E; border-radius:7px; border:1px solid rgba(107,95,232,0.2); position:relative; overflow:hidden; margin-bottom:14px;">
+        <div style="position:absolute;top:0;left:0;width:80px;height:60px;background:radial-gradient(ellipse at 15% 20%,rgba(107,95,232,0.28) 0%,transparent 68%);"></div>
+        <div style="position:absolute;top:10px;left:10px;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#B4A8FF 18%,#7B6FE8 46%,#3D2FBE 72%,#1A0F6B 92%);box-shadow:0 0 12px #9B8FFF80,0 0 24px #7B6FE840;"></div>
+        <!-- listening indicator: 3 dots -->
+        <div style="position:absolute;bottom:14px;left:10px;display:flex;gap:4px;align-items:flex-end;">
+          <div style="width:4px;height:10px;border-radius:2px;background:rgba(107,95,232,0.5);"></div>
+          <div style="width:4px;height:16px;border-radius:2px;background:rgba(107,95,232,0.65);"></div>
+          <div style="width:4px;height:8px;border-radius:2px;background:rgba(107,95,232,0.4);"></div>
+          <div style="width:4px;height:14px;border-radius:2px;background:rgba(107,95,232,0.55);"></div>
+          <div style="width:4px;height:6px;border-radius:2px;background:rgba(107,95,232,0.35);"></div>
+        </div>
+      </div>
+      <div style="font-size:11px; color:#4A4478; line-height:1.6; font-weight:300;">Orb glow intensifies. A waveform appears below nav — Flow AI is listening. Cards dim slightly. The user has the floor.</div>
+    </div>
+
+    <!-- State 3: Speaking -->
+    <div style="background:rgba(14,10,30,0.9); border:1px solid rgba(138,120,255,0.3); border-radius:12px; padding:24px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+        <div style="width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#C4B8FF 18%,#9B8FFF 46%,#5D50D0 72%,#2A1A80 92%);animation:orbPulse 1.2s ease-in-out infinite;flex:0 0 auto;"></div>
+        <div>
+          <div style="font-family:'Syne',sans-serif; font-size:14px; font-weight:700; color:#B8ADFF;">Speaking</div>
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#6B5FE8; letter-spacing:0.15em;">FLOW AI RESPONDING</div>
+        </div>
+      </div>
+      <div style="height:100px; background:#07060E; border-radius:7px; border:1px solid rgba(138,120,255,0.22); position:relative; overflow:hidden; margin-bottom:14px;">
+        <div style="position:absolute;top:0;left:0;width:100%;height:60px;background:radial-gradient(ellipse at 12% 18%,rgba(155,143,255,0.22) 0%,transparent 65%);"></div>
+        <div style="position:absolute;top:10px;left:10px;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#C4B8FF 18%,#9B8FFF 46%,#5D50D0 72%,#2A1A80 92%);box-shadow:0 0 16px #B4A8FFa0,0 0 32px #9B8FFF60;"></div>
+        <!-- response surface -->
+        <div style="position:absolute;top:32px;left:8px;right:8px;height:52px;background:rgba(20,14,52,0.8);border-radius:5px;border:1px solid rgba(138,120,255,0.18);padding:7px 8px;overflow:hidden;">
+          <div style="width:85%;height:3px;border-radius:2px;background:rgba(168,151,255,0.35);margin-bottom:4px;animation:textFadeUp 0.4s ease-out;"></div>
+          <div style="width:60%;height:3px;border-radius:2px;background:rgba(168,151,255,0.22);margin-bottom:4px;animation:textFadeUp 0.4s ease-out 0.1s both;"></div>
+          <div style="width:75%;height:3px;border-radius:2px;background:rgba(168,151,255,0.18);animation:textFadeUp 0.4s ease-out 0.2s both;"></div>
+        </div>
+      </div>
+      <div style="font-size:11px; color:#4A4478; line-height:1.6; font-weight:300;">Orb pulses brighter. A response surface appears below nav. Text arrives with a gentle fade-up — never typing. It is already there, becoming visible.</div>
+    </div>
+
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- 05 · SIDEBAR PHILOSOPHY -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.45em; color:#3A3458; text-transform:uppercase; margin-bottom:36px;">05 — Sidebar Philosophy · The Context Rail</div>
+
+  <div style="background:rgba(10,8,20,0.8); border:1px solid rgba(58,52,88,0.3); border-radius:12px; padding:36px; margin-bottom:72px;">
+    <div style="font-size:13px; color:#5A5488; line-height:1.7; font-weight:300; max-width:680px; margin-bottom:28px;">
+      There is no navigation sidebar in SmartFlow. Navigation is replaced by the <strong style="color:#8880B8; font-weight:400;">Context Rail</strong> — a living strip of relevant information, surfaced by Flow AI. It has nothing to do with where you go. It knows where you are.
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px;">
+
+      <!-- Collapsed state -->
+      <div>
+        <div style="font-family:'DM Mono',monospace; font-size:9px; color:#3A3458; letter-spacing:0.3em; text-transform:uppercase; margin-bottom:14px;">State 01 · Collapsed · Default</div>
+        <div style="height:220px; background:#07060E; border-radius:8px; border:1px solid rgba(58,52,88,0.3); position:relative; overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;width:80px;height:50px;background:radial-gradient(ellipse at 12% 20%,rgba(107,95,232,0.16) 0%,transparent 68%);"></div>
+          <!-- Nav -->
+          <div style="position:absolute;top:0;left:0;right:0;height:28px;background:rgba(12,9,24,0.95);border-bottom:1px solid rgba(107,95,232,0.1);"></div>
+          <div style="position:absolute;top:14px;left:10px;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#B4A8FF 18%,#7B6FE8 46%,#3D2FBE 72%,#1A0F6B 92%);animation:orbBreatheSmall 2.4s ease-in-out infinite;"></div>
+          <!-- Collapsed rail: just a luminous line -->
+          <div style="position:absolute;top:28px;left:0;bottom:0;width:4px;background:linear-gradient(to bottom,rgba(107,95,232,0.3),rgba(107,95,232,0.08),transparent);"></div>
+          <!-- Content fills full width -->
+          <div style="position:absolute;top:36px;left:12px;right:8px;height:36px;background:rgba(18,13,42,0.7);border:1px solid rgba(107,95,232,0.14);border-radius:5px;"></div>
+          <div style="position:absolute;top:80px;left:12px;right:8px;height:24px;background:rgba(14,10,32,0.6);border:1px solid rgba(107,95,232,0.1);border-radius:4px;"></div>
+          <div style="position:absolute;top:112px;left:12px;right:8px;height:24px;background:rgba(14,10,32,0.6);border:1px solid rgba(107,95,232,0.1);border-radius:4px;"></div>
+          <div style="position:absolute;top:144px;left:12px;right:8px;height:24px;background:rgba(12,8,26,0.5);border:1px solid rgba(58,52,88,0.2);border-radius:4px;opacity:0.7;"></div>
+        </div>
+        <div style="margin-top:12px; font-size:11px; color:#3A3458; line-height:1.6; font-weight:300;">A 4px luminous line at the edge. The Orb's glow. Content fills the full width. The rail exists but does not intrude.</div>
+      </div>
+
+      <!-- Ambient state -->
+      <div>
+        <div style="font-family:'DM Mono',monospace; font-size:9px; color:#4A4468; letter-spacing:0.3em; text-transform:uppercase; margin-bottom:14px;">State 02 · Ambient · On Hover</div>
+        <div style="height:220px; background:#07060E; border-radius:8px; border:1px solid rgba(58,52,88,0.3); position:relative; overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;width:80px;height:50px;background:radial-gradient(ellipse at 12% 20%,rgba(107,95,232,0.18) 0%,transparent 68%);"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:28px;background:rgba(12,9,24,0.95);border-bottom:1px solid rgba(107,95,232,0.1);"></div>
+          <div style="position:absolute;top:14px;left:10px;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#B4A8FF 18%,#7B6FE8 46%,#3D2FBE 72%,#1A0F6B 92%);animation:orbBreatheSmall 2.4s ease-in-out infinite;"></div>
+          <!-- Ambient rail: 40px, icon-only -->
+          <div style="position:absolute;top:28px;left:0;bottom:0;width:36px;background:rgba(16,11,34,0.7);border-right:1px solid rgba(107,95,232,0.1);">
+            <div style="display:flex;flex-direction:column;gap:10px;padding:10px 0 0;align-items:center;">
+              <div style="width:16px;height:16px;border-radius:50%;background:rgba(107,95,232,0.25);border:1px solid rgba(107,95,232,0.3);"></div>
+              <div style="width:14px;height:14px;border-radius:3px;background:rgba(107,95,232,0.18);border:1px solid rgba(107,95,232,0.22);"></div>
+              <div style="width:14px;height:14px;border-radius:3px;background:rgba(107,95,232,0.15);border:1px solid rgba(107,95,232,0.18);"></div>
+              <div style="width:14px;height:14px;border-radius:3px;background:rgba(74,63,212,0.12);border:1px solid rgba(74,63,212,0.16);"></div>
+            </div>
+          </div>
+          <!-- Content shifted right -->
+          <div style="position:absolute;top:36px;left:44px;right:8px;height:34px;background:rgba(18,13,42,0.7);border:1px solid rgba(107,95,232,0.14);border-radius:5px;"></div>
+          <div style="position:absolute;top:78px;left:44px;right:8px;height:22px;background:rgba(14,10,32,0.6);border:1px solid rgba(107,95,232,0.1);border-radius:4px;"></div>
+          <div style="position:absolute;top:108px;left:44px;right:8px;height:22px;background:rgba(14,10,32,0.6);border:1px solid rgba(107,95,232,0.1);border-radius:4px;"></div>
+        </div>
+        <div style="margin-top:12px; font-size:11px; color:#3A3458; line-height:1.6; font-weight:300;">36px. Icon-only context signals. Hovering reveals what Flow AI considers relevant. Content gently shifts right.</div>
+      </div>
+
+      <!-- Open state -->
+      <div>
+        <div style="font-family:'DM Mono',monospace; font-size:9px; color:#5A4F88; letter-spacing:0.3em; text-transform:uppercase; margin-bottom:14px;">State 03 · Open · On Expand</div>
+        <div style="height:220px; background:#07060E; border-radius:8px; border:1px solid rgba(107,95,232,0.2); position:relative; overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;width:100%;height:60px;background:radial-gradient(ellipse at 12% 20%,rgba(107,95,232,0.20) 0%,transparent 65%);"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:28px;background:rgba(12,9,24,0.95);border-bottom:1px solid rgba(107,95,232,0.1);"></div>
+          <div style="position:absolute;top:14px;left:10px;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#B4A8FF 18%,#7B6FE8 46%,#3D2FBE 72%,#1A0F6B 92%);animation:orbBreatheSmall 2.4s ease-in-out infinite;"></div>
+          <!-- Open rail: 90px for this frame scale -->
+          <div style="position:absolute;top:28px;left:0;bottom:0;width:88px;background:rgba(16,11,36,0.85);border-right:1px solid rgba(107,95,232,0.12);">
+            <div style="padding:8px 6px;display:flex;flex-direction:column;gap:6px;">
+              <div style="font-family:'DM Mono',monospace;font-size:6px;color:rgba(107,95,232,0.45);letter-spacing:0.2em;margin-bottom:2px;padding-left:2px;">CONTEXT</div>
+              <div style="background:rgba(22,16,50,0.8);border:1px solid rgba(107,95,232,0.16);border-radius:4px;padding:6px;">
+                <div style="width:55%;height:2px;border-radius:2px;background:rgba(168,151,255,0.3);margin-bottom:3px;"></div>
+                <div style="width:75%;height:2px;border-radius:2px;background:rgba(168,151,255,0.16);"></div>
+              </div>
+              <div style="background:rgba(18,12,42,0.7);border:1px solid rgba(74,63,212,0.12);border-radius:4px;padding:6px;">
+                <div style="width:40%;height:2px;border-radius:2px;background:rgba(168,151,255,0.25);margin-bottom:3px;"></div>
+                <div style="width:65%;height:2px;border-radius:2px;background:rgba(168,151,255,0.13);"></div>
+              </div>
+              <div style="background:rgba(14,10,32,0.6);border:1px solid rgba(58,52,88,0.2);border-radius:4px;padding:6px;opacity:0.8;">
+                <div style="width:60%;height:2px;border-radius:2px;background:rgba(168,151,255,0.18);margin-bottom:3px;"></div>
+                <div style="width:45%;height:2px;border-radius:2px;background:rgba(168,151,255,0.10);"></div>
+              </div>
+            </div>
+          </div>
+          <!-- Content right -->
+          <div style="position:absolute;top:36px;left:96px;right:6px;height:32px;background:rgba(18,13,42,0.7);border:1px solid rgba(107,95,232,0.14);border-radius:4px;"></div>
+          <div style="position:absolute;top:76px;left:96px;right:6px;height:20px;background:rgba(14,10,32,0.6);border:1px solid rgba(107,95,232,0.10);border-radius:4px;"></div>
+          <div style="position:absolute;top:104px;left:96px;right:6px;height:20px;background:rgba(14,10,32,0.6);border:1px solid rgba(107,95,232,0.10);border-radius:4px;"></div>
+        </div>
+        <div style="margin-top:12px; font-size:11px; color:#3A3458; line-height:1.6; font-weight:300;">Full context rail. Flow AI's relevant cards. Never navigation links — always live context. Slide-in from left, spring easing.</div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- 06 · CARD BEHAVIOR -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.45em; color:#3A3458; text-transform:uppercase; margin-bottom:36px;">06 — Card Behavior · Five States</div>
+
+  <div style="background:rgba(10,8,20,0.8); border:1px solid rgba(58,52,88,0.3); border-radius:12px; padding:36px; margin-bottom:72px;">
+    <div style="font-size:12px; color:#5A5488; line-height:1.7; font-weight:300; max-width:640px; margin-bottom:28px;">Cards are not containers. They are living objects — born from the Orb's light, breathing with the system, expanding when called upon. Each state change is a piece of communication.</div>
+    <div style="display:flex; gap:16px; overflow-x:auto; padding-bottom:4px;">
+
+      <!-- State 1: Forming -->
+      <div style="flex:0 0 auto; width:170px;">
+        <div style="height:130px; background:#07060E; border-radius:8px; position:relative; overflow:hidden; border:1px solid rgba(138,120,255,0.35);">
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(to right,transparent,rgba(168,151,255,0.8),transparent);"></div>
+          <!-- shimmer overlay -->
+          <div style="position:absolute;top:0;bottom:0;width:40px;background:linear-gradient(to right,transparent,rgba(168,151,255,0.12),transparent);animation:shimmerSlide 1.8s ease-in-out infinite;"></div>
+          <div style="padding:12px;">
+            <div style="width:55%;height:4px;border-radius:2px;background:rgba(168,151,255,0.35);margin-bottom:6px;"></div>
+            <div style="width:75%;height:3px;border-radius:2px;background:rgba(168,151,255,0.2);margin-bottom:4px;"></div>
+            <div style="width:60%;height:3px;border-radius:2px;background:rgba(168,151,255,0.15);"></div>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <div style="font-family:'Syne',sans-serif; font-size:11px; font-weight:700; color:#A090C8; margin-bottom:3px;">Forming</div>
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#4A4468; margin-bottom:5px;">Birth · Crystallizing</div>
+          <div style="font-size:9px; color:#3A3458; line-height:1.5; font-weight:300;">Top-edge shimmer. Opacity 0→100%. Enters from 16px below final position.</div>
+        </div>
+      </div>
+
+      <!-- State 2: Resting -->
+      <div style="flex:0 0 auto; width:170px;">
+        <div style="height:130px; background:rgba(18,13,42,0.75); border-radius:8px; position:relative; overflow:hidden; border:1px solid rgba(107,95,232,0.14); animation:borderGlow 3.6s ease-in-out infinite;">
+          <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(107,95,232,0.3),transparent);"></div>
+          <div style="padding:12px;">
+            <div style="width:55%;height:4px;border-radius:2px;background:rgba(168,151,255,0.26);margin-bottom:6px;"></div>
+            <div style="width:75%;height:3px;border-radius:2px;background:rgba(168,151,255,0.14);margin-bottom:4px;"></div>
+            <div style="width:60%;height:3px;border-radius:2px;background:rgba(168,151,255,0.10);"></div>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <div style="font-family:'Syne',sans-serif; font-size:11px; font-weight:700; color:#8880B8; margin-bottom:3px;">Resting</div>
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#4A4468; margin-bottom:5px;">Default · Alive</div>
+          <div style="font-size:9px; color:#3A3458; line-height:1.5; font-weight:300;">Border pulses gently with Orb rhythm. Ambient glow from top-left.</div>
+        </div>
+      </div>
+
+      <!-- State 3: Hover -->
+      <div style="flex:0 0 auto; width:170px;">
+        <div style="height:130px; background:rgba(22,16,52,0.85); border-radius:8px; position:relative; overflow:hidden; border:1px solid rgba(107,95,232,0.30); transform:scale(1.012); box-shadow:0 4px 24px rgba(74,63,212,0.2);">
+          <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(168,151,255,0.5),transparent);"></div>
+          <div style="padding:12px;">
+            <div style="width:55%;height:4px;border-radius:2px;background:rgba(168,151,255,0.38);margin-bottom:6px;"></div>
+            <div style="width:75%;height:3px;border-radius:2px;background:rgba(168,151,255,0.22);margin-bottom:4px;"></div>
+            <div style="width:60%;height:3px;border-radius:2px;background:rgba(168,151,255,0.17);"></div>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <div style="font-family:'Syne',sans-serif; font-size:11px; font-weight:700; color:#9890C8; margin-bottom:3px;">Active</div>
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#5A4F88; margin-bottom:5px;">Hover / Touch</div>
+          <div style="font-size:9px; color:#3A3458; line-height:1.5; font-weight:300;">Scale 1.012. Border +25% brightness. 180ms ease-out. Gentle, not urgent.</div>
+        </div>
+      </div>
+
+      <!-- State 4: Update pulse -->
+      <div style="flex:0 0 auto; width:170px;">
+        <div style="height:130px; background:rgba(18,13,42,0.8); border-radius:8px; position:relative; overflow:hidden; border:1px solid rgba(138,120,255,0.45); box-shadow:0 0 20px rgba(107,95,232,0.2);">
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(to right,transparent,rgba(168,151,255,0.65),transparent);"></div>
+          <!-- content updating indicator: a single line refreshing -->
+          <div style="padding:12px;">
+            <div style="width:55%;height:4px;border-radius:2px;background:rgba(168,151,255,0.38);margin-bottom:6px;"></div>
+            <div style="width:80%;height:3px;border-radius:2px;background:rgba(168,151,255,0.26);margin-bottom:4px;position:relative;overflow:hidden;">
+              <div style="position:absolute;inset:0;background:linear-gradient(to right,transparent,rgba(255,255,255,0.2),transparent);animation:shimmerSlide 1.2s ease-out;"></div>
+            </div>
+            <div style="width:60%;height:3px;border-radius:2px;background:rgba(168,151,255,0.18);"></div>
+          </div>
+          <div style="position:absolute;top:8px;right:8px;width:5px;height:5px;border-radius:50%;background:#9B8FFF;box-shadow:0 0 6px #9B8FFF90;"></div>
+        </div>
+        <div style="margin-top:10px;">
+          <div style="font-family:'Syne',sans-serif; font-size:11px; font-weight:700; color:#9888C8; margin-bottom:3px;">Update Pulse</div>
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#5A4F88; margin-bottom:5px;">Data Refresh</div>
+          <div style="font-size:9px; color:#3A3458; line-height:1.5; font-weight:300;">Border flash 180ms. Content shimmer. Small glow dot signals freshness — not a badge.</div>
+        </div>
+      </div>
+
+      <!-- State 5: Expanding -->
+      <div style="flex:0 0 auto; width:170px;">
+        <div style="height:130px; background:rgba(20,14,50,0.9); border-radius:8px; position:relative; overflow:hidden; border:1px solid rgba(107,95,232,0.3); box-shadow:0 8px 40px rgba(74,63,212,0.3);">
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(to right,transparent,rgba(168,151,255,0.55),transparent);"></div>
+          <div style="padding:12px;">
+            <div style="width:55%;height:5px;border-radius:3px;background:rgba(168,151,255,0.38);margin-bottom:8px;"></div>
+            <div style="width:95%;height:3px;border-radius:2px;background:rgba(168,151,255,0.22);margin-bottom:5px;"></div>
+            <div style="width:85%;height:3px;border-radius:2px;background:rgba(168,151,255,0.18);margin-bottom:5px;"></div>
+            <div style="width:90%;height:3px;border-radius:2px;background:rgba(168,151,255,0.15);margin-bottom:5px;"></div>
+            <div style="width:70%;height:3px;border-radius:2px;background:rgba(168,151,255,0.12);"></div>
+          </div>
+          <!-- expansion indicator corners -->
+          <div style="position:absolute;bottom:6px;right:6px;width:12px;height:12px;border-right:1.5px solid rgba(107,95,232,0.5);border-bottom:1.5px solid rgba(107,95,232,0.5);border-radius:0 0 3px 0;"></div>
+          <div style="position:absolute;top:6px;right:6px;width:12px;height:12px;border-right:1.5px solid rgba(107,95,232,0.5);border-top:1.5px solid rgba(107,95,232,0.5);border-radius:0 3px 0 0;"></div>
+        </div>
+        <div style="margin-top:10px;">
+          <div style="font-family:'Syne',sans-serif; font-size:11px; font-weight:700; color:#A090C8; margin-bottom:3px;">Expanding</div>
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#5A4F88; margin-bottom:5px;">In-place · No nav</div>
+          <div style="font-size:9px; color:#3A3458; line-height:1.5; font-weight:300;">Card fills available space. Others recede. No new page. The workspace breathes open.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- 07 · EMPTY STATES -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.45em; color:#3A3458; text-transform:uppercase; margin-bottom:36px;">07 — Empty States · Never Truly Empty</div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin-bottom:72px;">
+
+    <!-- Empty state 1: New user, main surface -->
+    <div style="background:rgba(10,8,20,0.8); border:1px solid rgba(58,52,88,0.3); border-radius:10px; padding:20px;">
+      <div style="font-family:'DM Mono',monospace; font-size:8px; color:#3A3458; letter-spacing:0.3em; text-transform:uppercase; margin-bottom:14px;">Main Surface · First Day</div>
+      <div style="height:160px; background:#07060E; border-radius:7px; border:1px solid rgba(107,95,232,0.15); position:relative; overflow:hidden; margin-bottom:14px;">
+        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,rgba(74,63,212,0.14) 0%,transparent 65%);animation:ambientDrift 4s ease-in-out infinite;"></div>
+        <!-- Orb glow fills center -->
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);width:32px;height:32px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#B4A8FF 18%,#7B6FE8 46%,#3D2FBE 72%,#1A0F6B 92%);animation:orbBreathe 2.4s ease-in-out infinite;opacity:0.5;"></div>
+        <!-- calm prompt -->
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:12px 14px;text-align:center;">
+          <div style="font-family:'DM Sans',sans-serif;font-size:10px;font-weight:300;font-style:italic;color:rgba(168,151,255,0.55);line-height:1.5;">Flow AI is learning<br/>your rhythm.</div>
+        </div>
+      </div>
+      <div style="font-size:11px; color:#3A3458; line-height:1.6; font-weight:300;">The Orb's glow fills the empty space. A single, calm note from Flow AI. No illustrations, no generic prompts. The space is alive — it is simply waiting.</div>
+    </div>
+
+    <!-- Empty state 2: Habit tracker, no data -->
+    <div style="background:rgba(10,8,20,0.8); border:1px solid rgba(58,52,88,0.3); border-radius:10px; padding:20px;">
+      <div style="font-family:'DM Mono',monospace; font-size:8px; color:#3A3458; letter-spacing:0.3em; text-transform:uppercase; margin-bottom:14px;">Habits Card · No History</div>
+      <div style="height:160px; background:#07060E; border-radius:7px; border:1px solid rgba(107,95,232,0.12); position:relative; overflow:hidden; margin-bottom:14px;">
+        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 30%,rgba(74,63,212,0.10) 0%,transparent 60%);"></div>
+        <!-- Empty rings / habit circles -->
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-60%);display:flex;gap:10px;align-items:center;">
+          <div style="width:28px;height:28px;border-radius:50%;border:1.5px dashed rgba(107,95,232,0.2);"></div>
+          <div style="width:28px;height:28px;border-radius:50%;border:1.5px dashed rgba(107,95,232,0.2);"></div>
+          <div style="width:28px;height:28px;border-radius:50%;border:1.5px dashed rgba(107,95,232,0.2);"></div>
+        </div>
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:12px 14px;text-align:center;">
+          <div style="font-family:'DM Sans',sans-serif;font-size:10px;font-weight:300;font-style:italic;color:rgba(168,151,255,0.5);line-height:1.5;">Your patterns will<br/>emerge here.</div>
+        </div>
+      </div>
+      <div style="font-size:11px; color:#3A3458; line-height:1.6; font-weight:300;">Dashed outlines suggest the shape of what's coming. Flow AI's note is forward-looking, not apologetic. Emptiness implies potential.</div>
+    </div>
+
+    <!-- Empty state 3: Calendar, no events -->
+    <div style="background:rgba(10,8,20,0.8); border:1px solid rgba(58,52,88,0.3); border-radius:10px; padding:20px;">
+      <div style="font-family:'DM Mono',monospace; font-size:8px; color:#3A3458; letter-spacing:0.3em; text-transform:uppercase; margin-bottom:14px;">Schedule Card · Clear Day</div>
+      <div style="height:160px; background:#07060E; border-radius:7px; border:1px solid rgba(107,95,232,0.12); position:relative; overflow:hidden; margin-bottom:14px;">
+        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 40% 40%,rgba(74,63,212,0.08) 0%,transparent 58%);"></div>
+        <!-- Clear day visualization: open horizon line -->
+        <div style="position:absolute;top:50%;left:20%;right:20%;height:1px;background:linear-gradient(to right,transparent,rgba(107,95,232,0.25),transparent);transform:translateY(-50%);"></div>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:rgba(107,95,232,0.4);box-shadow:0 0 8px rgba(107,95,232,0.3);"></div>
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:12px 14px;text-align:center;">
+          <div style="font-family:'DM Sans',sans-serif;font-size:10px;font-weight:300;font-style:italic;color:rgba(168,151,255,0.5);line-height:1.5;">An open day.<br/>Use it well.</div>
+        </div>
+      </div>
+      <div style="font-size:11px; color:#3A3458; line-height:1.6; font-weight:300;">An empty calendar is not a failure state. Flow AI frames it as opportunity. The horizon line is a design choice — visual space communicates openness.</div>
+    </div>
+
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- 08 · AMBIENT LIGHTING -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.45em; color:#3A3458; text-transform:uppercase; margin-bottom:36px;">08 — Ambient Lighting · Three Light Sources</div>
+
+  <div style="background:rgba(10,8,20,0.8); border:1px solid rgba(58,52,88,0.3); border-radius:12px; padding:36px; margin-bottom:72px;">
+    <div style="display:grid; grid-template-columns:2fr 1fr; gap:40px; align-items:start;">
+      <!-- Lighting diagram -->
+      <div>
+        <div style="font-size:12px; color:#5A5488; font-weight:300; line-height:1.7; margin-bottom:20px;">The workspace has no external light source. All light originates from within — from the Orb, from the system's ambient field, and from the time of day. Light communicates state. It does not decorate.</div>
+        <div style="height:200px; background:#07060E; border-radius:10px; border:1px solid rgba(58,52,88,0.3); position:relative; overflow:hidden;">
+          <!-- Light source 1: Orb (top-left) — primary -->
+          <div style="position:absolute;top:0;left:0;width:200px;height:140px;background:radial-gradient(ellipse at 8% 12%,rgba(107,95,232,0.24) 0%,transparent 65%);"></div>
+          <!-- Light source 2: Ambient field (center-bottom) — secondary -->
+          <div style="position:absolute;bottom:0;left:0;right:0;height:100px;background:radial-gradient(ellipse at 50% 100%,rgba(40,30,90,0.2) 0%,transparent 60%);animation:ambientDrift 5s ease-in-out infinite;"></div>
+          <!-- Light source 3: Time tint (right edge) — tertiary, warm example -->
+          <div style="position:absolute;top:0;right:0;width:120px;height:100%;background:linear-gradient(to left,rgba(80,50,120,0.08),transparent);"></div>
+
+          <!-- Nav bar (shows how light falls on it) -->
+          <div style="position:absolute;top:0;left:0;right:0;height:32px;background:rgba(14,10,30,0.92);border-bottom:1px solid rgba(107,95,232,0.10);">
+            <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(107,95,232,0.1),transparent 40%);"></div>
+          </div>
+          <!-- Orb -->
+          <div style="position:absolute;top:16px;left:14px;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#B4A8FF 18%,#7B6FE8 46%,#3D2FBE 72%,#1A0F6B 92%);animation:orbBreatheSmall 2.4s ease-in-out infinite;"></div>
+
+          <!-- Cards, receiving light at different intensities -->
+          <div style="position:absolute;top:40px;left:10px;width:55%;height:52px;background:rgba(18,13,42,0.75);border:1px solid rgba(107,95,232,0.18);border-radius:6px;">
+            <div style="padding:8px;display:flex;flex-direction:column;gap:3px;">
+              <div style="width:55%;height:3px;border-radius:2px;background:rgba(168,151,255,0.28);"></div>
+              <div style="width:75%;height:3px;border-radius:2px;background:rgba(168,151,255,0.15);"></div>
+            </div>
+          </div>
+          <div style="position:absolute;top:40px;right:10px;width:37%;height:22px;background:rgba(14,10,32,0.6);border:1px solid rgba(107,95,232,0.10);border-radius:5px;"></div>
+          <div style="position:absolute;top:70px;right:10px;width:37%;height:22px;background:rgba(12,8,28,0.55);border:1px solid rgba(58,52,88,0.2);border-radius:5px;opacity:0.85;"></div>
+          <div style="position:absolute;top:100px;left:10px;width:55%;height:36px;background:rgba(14,10,32,0.6);border:1px solid rgba(107,95,232,0.10);border-radius:6px;opacity:0.9;"></div>
+
+          <!-- Light source labels -->
+          <svg style="position:absolute;inset:0;width:100%;height:100%;" viewBox="0 0 600 200" fill="none">
+            <text x="36" y="14" font-family="monospace" font-size="8" fill="rgba(107,95,232,0.5)" letter-spacing="1">① ORB — PRIMARY</text>
+            <text x="200" y="195" text-anchor="middle" font-family="monospace" font-size="8" fill="rgba(58,52,88,0.6)" letter-spacing="1">② AMBIENT FIELD</text>
+            <text x="580" y="80" text-anchor="end" font-family="monospace" font-size="8" fill="rgba(80,50,100,0.45)" letter-spacing="1">③ TIME TINT</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Light source cards -->
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div style="padding:14px 16px; background:rgba(22,14,52,0.7); border:1px solid rgba(107,95,232,0.22); border-radius:7px;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#7B6FE8;box-shadow:0 0 6px #7B6FE880;flex:0 0 auto;"></div>
+            <div style="font-family:'Syne',sans-serif; font-size:12px; font-weight:700; color:#9080C8;">Orb Light</div>
+          </div>
+          <div style="font-size:10px; color:#4A4468; line-height:1.55; font-weight:300;">Origin: top-left nav. Cold violet. Pulsing with breathing cycle. Most intense card receives 20–24% opacity glow. Falloff: radial, natural.</div>
+          <div style="margin-top:6px; font-family:'DM Mono',monospace; font-size:8px; color:#5A4F88;">Primary · Always active · Synchronised to breathing</div>
+        </div>
+        <div style="padding:14px 16px; background:rgba(16,12,34,0.65); border:1px solid rgba(58,52,88,0.3); border-radius:7px;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#3A3468;flex:0 0 auto;"></div>
+            <div style="font-family:'Syne',sans-serif; font-size:12px; font-weight:700; color:#706890;">Ambient Field</div>
+          </div>
+          <div style="font-size:10px; color:#3A3458; line-height:1.55; font-weight:300;">Origin: center-bottom. Deep indigo. Very slow drift (5min). Creates depth and the sense that the workspace extends beyond the visible frame.</div>
+          <div style="margin-top:6px; font-family:'DM Mono',monospace; font-size:8px; color:#3A3458;">Secondary · Slow drift · Below threshold of perception</div>
+        </div>
+        <div style="padding:14px 16px; background:rgba(14,10,30,0.6); border:1px solid rgba(42,32,64,0.3); border-radius:7px;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#382850;flex:0 0 auto;"></div>
+            <div style="font-family:'Syne',sans-serif; font-size:12px; font-weight:700; color:#605878;">Time Tint</div>
+          </div>
+          <div style="font-size:10px; color:#3A3458; line-height:1.55; font-weight:300;">Origin: edge gradient. Warm violet at dawn. Cool indigo at dusk. Changes over 24h. Imperceptible to conscious mind. Felt as comfort.</div>
+          <div style="margin-top:6px; font-family:'DM Mono',monospace; font-size:8px; color:#3A3458;">Tertiary · Circadian · Never noticed, always felt</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- 09 · LAUNCH → WORKSPACE TRANSITION -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.45em; color:#3A3458; text-transform:uppercase; margin-bottom:36px;">09 — Launch → Workspace · The Continuous Thread</div>
+
+  <div style="background:rgba(10,8,20,0.9); border:1px solid rgba(107,95,232,0.2); border-radius:12px; padding:36px; margin-bottom:72px;">
+    <div style="font-family:'Syne',sans-serif; font-size:18px; font-weight:700; color:#C0B8E8; line-height:1.35; max-width:640px; margin-bottom:24px; letter-spacing:-0.01em;">
+      "The workspace does not begin after the launch experience. <span style="color:#A090FF;">It is the same experience, continued.</span>"
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
+      <div style="padding:16px; background:rgba(16,12,34,0.7); border-radius:7px; border:1px solid rgba(58,52,88,0.3);">
+        <div style="font-family:'DM Mono',monospace; font-size:8px; color:#5A4F88; letter-spacing:0.2em; text-transform:uppercase; margin-bottom:8px;">The Orb</div>
+        <div style="font-size:11px; color:#4A4468; line-height:1.6; font-weight:300;">Travels from center to nav (F06 of launch storyboard). Arrives at its permanent position. Begins perpetual breathing. One entity — no visual discontinuity.</div>
+      </div>
+      <div style="padding:16px; background:rgba(20,14,44,0.7); border-radius:7px; border:1px solid rgba(107,95,232,0.18);">
+        <div style="font-family:'DM Mono',monospace; font-size:8px; color:#6B5FE8; letter-spacing:0.2em; text-transform:uppercase; margin-bottom:8px;">The Cards</div>
+        <div style="font-size:11px; color:#4A4478; line-height:1.6; font-weight:300;">Born from the Orb's light trail (F07). The workspace's first cards are a direct continuation of the launch. They exist because the Orb passed through.</div>
+      </div>
+      <div style="padding:16px; background:rgba(16,12,34,0.7); border-radius:7px; border:1px solid rgba(58,52,88,0.3);">
+        <div style="font-family:'DM Mono',monospace; font-size:8px; color:#5A4F88; letter-spacing:0.2em; text-transform:uppercase; margin-bottom:8px;">The Ambient Field</div>
+        <div style="font-size:11px; color:#4A4468; line-height:1.6; font-weight:300;">The warm ambient peak from the launch experience settles and cools into the workspace's base temperature. The warmth is still present — just quieter.</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- 10 · OVERALL STORYBOARD -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.45em; color:#3A3458; text-transform:uppercase; margin-bottom:36px;">10 — Workspace Storyboard · 5 Key States</div>
+
+  <div style="display:flex; gap:0; overflow-x:auto; align-items:flex-start; padding-bottom:8px; margin-bottom:72px;">
+
+    <!-- S01: ARRIVAL STATE -->
+    <div style="flex:0 0 auto;">
+      <div style="width:260px; height:164px; background:#07060E; border-radius:10px; border:1px solid rgba(138,120,255,0.28); position:relative; overflow:hidden;">
+        <!-- Warm glow from launch still settling -->
+        <div style="position:absolute;top:0;left:0;width:180px;height:120px;background:radial-gradient(ellipse at 8% 12%,rgba(107,95,232,0.26) 0%,transparent 65%);"></div>
+        <!-- Nav -->
+        <div style="position:absolute;top:0;left:0;right:0;height:24px;background:rgba(14,10,30,0.95);border-bottom:1px solid rgba(107,95,232,0.12);">
+          <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(107,95,232,0.15),transparent 50%);"></div>
+        </div>
+        <div style="position:absolute;top:12px;left:10px;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#B4A8FF 18%,#7B6FE8 46%,#3D2FBE 72%,#1A0F6B 92%);box-shadow:0 0 18px #9B8FFF90,0 0 36px #7B6FE840;animation:orbBreatheSmall 2.4s ease-in-out infinite;"></div>
+        <!-- Cards still settling (borders bright with birth shimmer) -->
+        <div style="position:absolute;top:30px;left:8px;width:55%;height:42px;background:rgba(22,16,52,0.75);border:1px solid rgba(138,120,255,0.4);border-radius:5px;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(to right,transparent,rgba(168,151,255,0.7),transparent);"></div>
+          <div style="position:absolute;top:0;bottom:0;width:30px;background:linear-gradient(to right,transparent,rgba(168,151,255,0.12),transparent);animation:shimmerSlide 1.8s ease-in-out infinite;"></div>
+          <div style="padding:8px;"><div style="width:65%;height:3px;border-radius:2px;background:rgba(168,151,255,0.38);margin-bottom:4px;"></div><div style="width:45%;height:2px;border-radius:2px;background:rgba(168,151,255,0.22);"></div></div>
+        </div>
+        <div style="position:absolute;top:30px;right:8px;width:38%;height:18px;background:rgba(18,13,44,0.7);border:1px solid rgba(138,120,255,0.3);border-radius:4px;overflow:hidden;"><div style="position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(to right,transparent,rgba(168,151,255,0.6),transparent);"></div></div>
+        <div style="position:absolute;top:56px;right:8px;width:38%;height:16px;background:rgba(16,11,38,0.65);border:1px solid rgba(138,120,255,0.22);border-radius:4px;overflow:hidden;opacity:0.85;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(168,151,255,0.5),transparent);"></div></div>
+        <div style="position:absolute;top:80px;left:8px;width:55%;height:34px;background:rgba(18,13,44,0.65);border:1px solid rgba(107,95,232,0.3);border-radius:5px;overflow:hidden;opacity:0.85;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(168,151,255,0.55),transparent);"></div></div>
+        <div style="position:absolute;top:80px;right:8px;width:38%;height:16px;background:rgba(14,10,34,0.55);border:1px solid rgba(107,95,232,0.18);border-radius:4px;opacity:0.7;overflow:hidden;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(168,151,255,0.35),transparent);"></div></div>
+        <div style="position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(to bottom,transparent,#07060E);"></div>
+      </div>
+      <div style="margin-top:14px; width:260px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#3A3458; letter-spacing:0.28em;">S01</div>
+          <div style="flex:1; height:1px; background:rgba(138,120,255,0.3);"></div>
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#7B6FE8; background:rgba(74,63,212,0.15); padding:2px 6px; border-radius:3px;">~3000ms</div>
+        </div>
+        <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#A89FC8; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:5px;">Arrival State</div>
+        <div style="font-size:10px; color:#3F3A60; line-height:1.55; font-weight:300;">Cards still carry birth shimmer. Orb glow elevated from launch warmth. Everything settling into its resting state.</div>
+      </div>
+    </div>
+
+    <div style="flex:0 0 18px; display:flex; align-items:center; justify-content:center; height:164px;">
+      <svg width="18" height="10" viewBox="0 0 18 10" fill="none"><path d="M0 5H12M9 1.5L16 5L9 8.5" stroke="rgba(107,95,232,0.4)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+
+    <!-- S02: SETTLED / PREPARED DESK -->
+    <div style="flex:0 0 auto;">
+      <div style="width:260px; height:164px; background:#08070F; border-radius:10px; border:1px solid rgba(107,95,232,0.22); position:relative; overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;width:140px;height:100px;background:radial-gradient(ellipse at 8% 12%,rgba(107,95,232,0.18) 0%,transparent 65%);animation:ambientDrift 3.6s ease-in-out infinite;"></div>
+        <div style="position:absolute;top:0;left:0;right:0;height:24px;background:rgba(14,10,30,0.95);border-bottom:1px solid rgba(107,95,232,0.1);"><div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(107,95,232,0.08),transparent 45%);"></div></div>
+        <div style="position:absolute;top:12px;left:10px;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#B4A8FF 18%,#7B6FE8 46%,#3D2FBE 72%,#1A0F6B 92%);animation:orbBreatheSmall 2.4s ease-in-out infinite;"></div>
+        <!-- Primary surface (large, left) -->
+        <div style="position:absolute;top:30px;left:8px;width:57%;bottom:8px;background:rgba(18,13,44,0.8);border:1px solid rgba(107,95,232,0.16);border-radius:6px;overflow:hidden;animation:borderGlow 3.6s ease-in-out infinite;">
+          <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(107,95,232,0.35),transparent);"></div>
+          <div style="padding:10px;">
+            <div style="font-family:'DM Mono',monospace;font-size:6px;color:rgba(107,95,232,0.4);letter-spacing:0.2em;margin-bottom:6px;">FLOW AI · TODAY</div>
+            <div style="width:72%;height:4px;border-radius:2px;background:rgba(168,151,255,0.3);margin-bottom:5px;"></div>
+            <div style="width:55%;height:4px;border-radius:2px;background:rgba(168,151,255,0.18);margin-bottom:10px;"></div>
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              <div style="width:90%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.12);"></div>
+              <div style="width:78%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.09);"></div>
+              <div style="width:85%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.09);"></div>
+              <div style="width:62%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.07);"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Supporting cards (right) -->
+        <div style="position:absolute;top:30px;right:8px;width:37%;height:36px;background:rgba(14,10,34,0.7);border:1px solid rgba(107,95,232,0.11);border-radius:5px;padding:6px;"><div style="width:55%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.22);margin-bottom:4px;"></div><div style="width:75%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.12);"></div></div>
+        <div style="position:absolute;top:74px;right:8px;width:37%;height:36px;background:rgba(14,10,32,0.65);border:1px solid rgba(74,63,212,0.09);border-radius:5px;padding:6px;"><div style="width:45%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.18);margin-bottom:4px;"></div><div style="width:65%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.10);"></div></div>
+        <div style="position:absolute;top:118px;right:8px;width:37%;height:34px;background:rgba(12,8,28,0.55);border:1px solid rgba(58,52,88,0.18);border-radius:5px;opacity:0.8;padding:6px;"><div style="width:40%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.14);margin-bottom:4px;"></div><div style="width:60%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.08);"></div></div>
+        <div style="position:absolute;bottom:0;left:0;right:0;height:18px;background:linear-gradient(to bottom,transparent,#08070F);"></div>
+      </div>
+      <div style="margin-top:14px; width:260px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#3A3458; letter-spacing:0.28em;">S02</div>
+          <div style="flex:1; height:1px; background:rgba(107,95,232,0.22);"></div>
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#5A4F88; background:rgba(26,20,50,0.6); padding:2px 6px; border-radius:3px;">Settled state</div>
+        </div>
+        <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#A89FC8; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:5px;">The Prepared Desk</div>
+        <div style="font-size:10px; color:#3F3A60; line-height:1.55; font-weight:300;">Orb at base rhythm. Primary surface dominant. Supporting cards at rest. The workspace belongs to the user.</div>
+      </div>
+    </div>
+
+    <div style="flex:0 0 18px; display:flex; align-items:center; justify-content:center; height:164px;">
+      <svg width="18" height="10" viewBox="0 0 18 10" fill="none"><path d="M0 5H12M9 1.5L16 5L9 8.5" stroke="rgba(107,95,232,0.4)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+
+    <!-- S03: FLOW AI ACTIVE -->
+    <div style="flex:0 0 auto;">
+      <div style="width:260px; height:164px; background:#08070F; border-radius:10px; border:1px solid rgba(138,120,255,0.3); position:relative; overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;width:180px;height:110px;background:radial-gradient(ellipse at 8% 12%,rgba(155,143,255,0.26) 0%,transparent 60%);"></div>
+        <div style="position:absolute;top:0;left:0;right:0;height:24px;background:rgba(14,10,30,0.95);border-bottom:1px solid rgba(138,120,255,0.15);"><div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(155,143,255,0.15),transparent 50%);"></div></div>
+        <!-- Orb pulsing brighter -->
+        <div style="position:absolute;top:12px;left:10px;transform:translate(-50%,-50%);width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#C4B8FF 18%,#9B8FFF 46%,#5D50D0 72%,#2A1A80 92%);box-shadow:0 0 16px #B4A8FF90,0 0 32px #9B8FFF50;animation:orbPulse 1.2s ease-in-out infinite;"></div>
+        <!-- Response surface below nav -->
+        <div style="position:absolute;top:28px;left:6px;right:6px;height:38px;background:rgba(20,14,52,0.85);border:1px solid rgba(138,120,255,0.22);border-radius:6px;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(to right,transparent,rgba(168,151,255,0.6),transparent);"></div>
+          <div style="padding:7px 9px;display:flex;flex-direction:column;gap:3px;">
+            <div style="width:78%;height:3px;border-radius:2px;background:rgba(168,151,255,0.32);animation:textFadeUp 0.4s ease-out;"></div>
+            <div style="width:58%;height:3px;border-radius:2px;background:rgba(168,151,255,0.20);animation:textFadeUp 0.4s ease-out 0.1s both;"></div>
+            <div style="width:68%;height:3px;border-radius:2px;background:rgba(168,151,255,0.16);animation:textFadeUp 0.4s ease-out 0.2s both;"></div>
+          </div>
+        </div>
+        <!-- Cards dimmed -->
+        <div style="position:absolute;top:74px;left:8px;width:57%;height:36px;background:rgba(16,11,38,0.55);border:1px solid rgba(74,63,212,0.10);border-radius:5px;opacity:0.5;"></div>
+        <div style="position:absolute;top:74px;right:8px;width:37%;height:34px;background:rgba(14,10,32,0.5);border:1px solid rgba(58,52,88,0.15);border-radius:5px;opacity:0.5;"></div>
+        <div style="position:absolute;top:118px;left:8px;width:57%;height:28px;background:rgba(14,10,32,0.45);border:1px solid rgba(58,52,88,0.12);border-radius:5px;opacity:0.4;"></div>
+        <div style="position:absolute;bottom:0;left:0;right:0;height:20px;background:linear-gradient(to bottom,transparent,#08070F);"></div>
+      </div>
+      <div style="margin-top:14px; width:260px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#3A3458; letter-spacing:0.28em;">S03</div>
+          <div style="flex:1; height:1px; background:rgba(138,120,255,0.3);"></div>
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#7B6FE8; background:rgba(74,63,212,0.15); padding:2px 6px; border-radius:3px;">AI speaking</div>
+        </div>
+        <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#A89FC8; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:5px;">Flow AI Active</div>
+        <div style="font-size:10px; color:#3F3A60; line-height:1.55; font-weight:300;">Orb intensifies. Response surface appears. Cards recede — the AI has the floor.</div>
+      </div>
+    </div>
+
+    <div style="flex:0 0 18px; display:flex; align-items:center; justify-content:center; height:164px;">
+      <svg width="18" height="10" viewBox="0 0 18 10" fill="none"><path d="M0 5H12M9 1.5L16 5L9 8.5" stroke="rgba(107,95,232,0.4)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+
+    <!-- S04: CARD EXPANDED -->
+    <div style="flex:0 0 auto;">
+      <div style="width:260px; height:164px; background:#08070F; border-radius:10px; border:1px solid rgba(107,95,232,0.25); position:relative; overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;width:160px;height:100px;background:radial-gradient(ellipse at 8% 12%,rgba(107,95,232,0.18) 0%,transparent 62%);"></div>
+        <div style="position:absolute;top:0;left:0;right:0;height:24px;background:rgba(14,10,30,0.95);border-bottom:1px solid rgba(107,95,232,0.10);"></div>
+        <div style="position:absolute;top:12px;left:10px;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#B4A8FF 18%,#7B6FE8 46%,#3D2FBE 72%,#1A0F6B 92%);animation:orbBreatheSmall 2.4s ease-in-out infinite;"></div>
+        <!-- Expanded card fills most of the space -->
+        <div style="position:absolute;top:30px;left:8px;right:8px;height:120px;background:rgba(20,14,50,0.9);border:1px solid rgba(107,95,232,0.28);border-radius:7px;overflow:hidden;box-shadow:0 6px 30px rgba(74,63,212,0.25);">
+          <div style="position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(to right,transparent,rgba(168,151,255,0.5),transparent);"></div>
+          <div style="padding:10px 11px;">
+            <div style="font-family:'DM Mono',monospace;font-size:6px;color:rgba(107,95,232,0.45);letter-spacing:0.2em;margin-bottom:6px;">EXPANDED</div>
+            <div style="width:60%;height:4px;border-radius:2px;background:rgba(168,151,255,0.32);margin-bottom:6px;"></div>
+            <div style="display:flex;flex-direction:column;gap:3px;margin-bottom:8px;">
+              <div style="width:92%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.18);"></div>
+              <div style="width:85%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.14);"></div>
+              <div style="width:78%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.12);"></div>
+              <div style="width:88%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.10);"></div>
+              <div style="width:65%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.08);"></div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <div style="padding:3px 8px;background:rgba(107,95,232,0.18);border:1px solid rgba(107,95,232,0.28);border-radius:3px;"><div style="width:24px;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.45);"></div></div>
+              <div style="padding:3px 8px;background:rgba(40,32,80,0.4);border:1px solid rgba(58,52,88,0.3);border-radius:3px;"><div style="width:20px;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.25);"></div></div>
+            </div>
+          </div>
+          <!-- expansion corners -->
+          <div style="position:absolute;top:6px;right:7px;width:10px;height:10px;border-right:1.5px solid rgba(107,95,232,0.45);border-top:1.5px solid rgba(107,95,232,0.45);border-radius:0 2px 0 0;"></div>
+          <div style="position:absolute;bottom:6px;right:7px;width:10px;height:10px;border-right:1.5px solid rgba(107,95,232,0.45);border-bottom:1.5px solid rgba(107,95,232,0.45);border-radius:0 0 2px 0;"></div>
+        </div>
+      </div>
+      <div style="margin-top:14px; width:260px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#3A3458; letter-spacing:0.28em;">S04</div>
+          <div style="flex:1; height:1px; background:rgba(107,95,232,0.22);"></div>
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#5A4F88; background:rgba(26,20,50,0.6); padding:2px 6px; border-radius:3px;">In-place</div>
+        </div>
+        <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#A89FC8; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:5px;">Deep Focus</div>
+        <div style="font-size:10px; color:#3F3A60; line-height:1.55; font-weight:300;">One card fills the intention zone. No navigation. The workspace breathes open around it.</div>
+      </div>
+    </div>
+
+    <div style="flex:0 0 18px; display:flex; align-items:center; justify-content:center; height:164px;">
+      <svg width="18" height="10" viewBox="0 0 18 10" fill="none"><path d="M0 5H12M9 1.5L16 5L9 8.5" stroke="rgba(58,52,88,0.5)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+
+    <!-- S05: CONTEXT RAIL OPEN -->
+    <div style="flex:0 0 auto;">
+      <div style="width:260px; height:164px; background:#08070F; border-radius:10px; border:1px solid rgba(107,95,232,0.22); position:relative; overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;width:160px;height:100px;background:radial-gradient(ellipse at 8% 12%,rgba(107,95,232,0.18) 0%,transparent 62%);"></div>
+        <div style="position:absolute;top:0;left:0;right:0;height:24px;background:rgba(14,10,30,0.95);border-bottom:1px solid rgba(107,95,232,0.10);"></div>
+        <div style="position:absolute;top:12px;left:10px;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#EDE8FF 0%,#B4A8FF 18%,#7B6FE8 46%,#3D2FBE 72%,#1A0F6B 92%);animation:orbBreatheSmall 2.4s ease-in-out infinite;"></div>
+        <!-- Context rail open (left ~28%) -->
+        <div style="position:absolute;top:24px;left:0;bottom:0;width:72px;background:rgba(16,11,34,0.88);border-right:1px solid rgba(107,95,232,0.12);">
+          <div style="padding:6px 5px;display:flex;flex-direction:column;gap:5px;">
+            <div style="font-family:'DM Mono',monospace;font-size:5px;color:rgba(107,95,232,0.4);letter-spacing:0.2em;padding:0 3px;margin-bottom:2px;">CONTEXT</div>
+            <div style="background:rgba(22,16,50,0.8);border:1px solid rgba(107,95,232,0.16);border-radius:4px;padding:5px;">
+              <div style="width:55%;height:2px;border-radius:2px;background:rgba(168,151,255,0.3);margin-bottom:3px;"></div>
+              <div style="width:75%;height:2px;border-radius:2px;background:rgba(168,151,255,0.15);"></div>
+            </div>
+            <div style="background:rgba(18,12,42,0.7);border:1px solid rgba(74,63,212,0.12);border-radius:4px;padding:5px;">
+              <div style="width:40%;height:2px;border-radius:2px;background:rgba(168,151,255,0.24);margin-bottom:3px;"></div>
+              <div style="width:65%;height:2px;border-radius:2px;background:rgba(168,151,255,0.12);"></div>
+            </div>
+            <div style="background:rgba(14,10,30,0.65);border:1px solid rgba(58,52,88,0.22);border-radius:4px;padding:5px;opacity:0.85;">
+              <div style="width:60%;height:2px;border-radius:2px;background:rgba(168,151,255,0.18);margin-bottom:3px;"></div>
+              <div style="width:45%;height:2px;border-radius:2px;background:rgba(168,151,255,0.10);"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Main content shifted right -->
+        <div style="position:absolute;top:30px;left:78px;right:8px;height:44px;background:rgba(18,13,42,0.75);border:1px solid rgba(107,95,232,0.14);border-radius:5px;padding:7px;"><div style="width:68%;height:3px;border-radius:2px;background:rgba(168,151,255,0.26);margin-bottom:4px;"></div><div style="width:50%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.14);"></div></div>
+        <div style="position:absolute;top:82px;left:78px;right:8px;height:28px;background:rgba(14,10,32,0.6);border:1px solid rgba(74,63,212,0.10);border-radius:5px;padding:7px;"><div style="width:55%;height:2.5px;border-radius:2px;background:rgba(168,151,255,0.18);"></div></div>
+        <div style="position:absolute;top:118px;left:78px;right:8px;height:24px;background:rgba(12,8,28,0.5);border:1px solid rgba(58,52,88,0.15);border-radius:4px;opacity:0.8;"></div>
+        <div style="position:absolute;bottom:0;left:0;right:0;height:16px;background:linear-gradient(to bottom,transparent,#08070F);"></div>
+      </div>
+      <div style="margin-top:14px; width:260px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#3A3458; letter-spacing:0.28em;">S05</div>
+          <div style="flex:1; height:1px; background:rgba(58,52,88,0.4);"></div>
+          <div style="font-family:'DM Mono',monospace; font-size:8px; color:#4A4468; background:rgba(26,20,50,0.6); padding:2px 6px; border-radius:3px;">Contextual</div>
+        </div>
+        <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#9890B8; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:5px;">Context Rail</div>
+        <div style="font-size:10px; color:#3F3A60; line-height:1.55; font-weight:300;">Flow AI's live context. Not navigation — intelligence made visible. Slides in from left on demand.</div>
+      </div>
+    </div>
+
+  </div><!-- /storyboard frames -->
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- PRINCIPLES -->
+  <!-- ════════════════════════════════════════════ -->
+  <div style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.45em; color:#3A3458; text-transform:uppercase; margin-bottom:28px;">Design Decisions · Non-Negotiable</div>
+
+  <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:64px;">
+    <div style="padding:18px 16px; background:rgba(12,10,24,0.7); border:1px solid rgba(107,95,232,0.15); border-radius:7px;">
+      <div style="font-family:'DM Mono',monospace; font-size:9px; color:#5A4F88; letter-spacing:0.15em; margin-bottom:8px;">D1</div>
+      <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#8880B8; margin-bottom:6px;">No grid layout</div>
+      <div style="font-size:10px; color:#3A3458; line-height:1.5; font-weight:300;">One dominant card + supporting context. Never equal-weight widget grids. Flow AI decides what matters, not spatial convention.</div>
+    </div>
+    <div style="padding:18px 16px; background:rgba(12,10,24,0.7); border:1px solid rgba(107,95,232,0.15); border-radius:7px;">
+      <div style="font-family:'DM Mono',monospace; font-size:9px; color:#5A4F88; letter-spacing:0.15em; margin-bottom:8px;">D2</div>
+      <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#8880B8; margin-bottom:6px;">No page navigation</div>
+      <div style="font-size:10px; color:#3A3458; line-height:1.5; font-weight:300;">Cards expand in-place. Content arrives from within the workspace. The user never feels they have left.</div>
+    </div>
+    <div style="padding:18px 16px; background:rgba(12,10,24,0.7); border:1px solid rgba(107,95,232,0.15); border-radius:7px;">
+      <div style="font-family:'DM Mono',monospace; font-size:9px; color:#5A4F88; letter-spacing:0.15em; margin-bottom:8px;">D3</div>
+      <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#8880B8; margin-bottom:6px;">The Orb governs all</div>
+      <div style="font-size:10px; color:#3A3458; line-height:1.5; font-weight:300;">All light, motion rhythm, and AI state is expressed through the Orb. No secondary status indicators. One signal, total clarity.</div>
+    </div>
+    <div style="padding:18px 16px; background:rgba(12,10,24,0.7); border:1px solid rgba(107,95,232,0.15); border-radius:7px;">
+      <div style="font-family:'DM Mono',monospace; font-size:9px; color:#5A4F88; letter-spacing:0.15em; margin-bottom:8px;">D4</div>
+      <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#8880B8; margin-bottom:6px;">Empty is alive</div>
+      <div style="font-size:10px; color:#3A3458; line-height:1.5; font-weight:300;">No empty states show emptiness. The Orb's ambient light fills every void. Flow AI provides a single, forward-looking note. Nothing is inert.</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="height:1px; background:linear-gradient(to right,rgba(58,52,88,0.3),rgba(107,95,232,0.15),transparent); margin-bottom:28px;"></div>
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div style="font-family:'DM Mono',monospace; font-size:10px; color:#2A2445;">SmartFlow · Living Workspace · Specification v1.0 · Sprint 1</div>
+    <div style="font-family:'DM Mono',monospace; font-size:10px; color:#2A2445;">Next: Module design → Flow AI conversation UI</div>
+  </div>
+
+</div>
+
+</x-dc>
+</body>
+</html>
