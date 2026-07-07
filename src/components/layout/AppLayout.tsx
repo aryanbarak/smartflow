@@ -8,6 +8,8 @@ import { GlobalSearch } from "@/features/search/GlobalSearch";
 import { useAlarms } from "@/features/calendar/useAlarms";
 import { aiMemoryService } from "@/features/ai-memory/aiMemoryService";
 import { PageTitleProvider } from "@/contexts/PageTitleContext";
+import { LaunchExperience } from "@/components/LaunchExperience";
+import { LaunchProvider } from "@/contexts/LaunchContext";
 
 function AppLayoutInner() {
   useAlarms();
@@ -28,6 +30,7 @@ function AppLayoutInner() {
 
   return (
     <div className="min-h-screen bg-background">
+      <LaunchExperience />
       <OfflineBadge />
 
       {/* Desktop */}
@@ -57,7 +60,9 @@ function AppLayoutInner() {
 export function AppLayout() {
   return (
     <PageTitleProvider>
-      <AppLayoutInner />
+      <LaunchProvider>
+        <AppLayoutInner />
+      </LaunchProvider>
     </PageTitleProvider>
   );
 }

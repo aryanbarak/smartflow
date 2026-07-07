@@ -247,8 +247,18 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* ── SmartFlow Launch System ─────────────────────────────────────────── */
+@keyframes sfSidebarOrbBreathe {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(107,95,232,0.38)) drop-shadow(0 0 14px rgba(74,63,212,0.20)); }
+  50%       { filter: drop-shadow(0 0 10px rgba(123,111,232,0.62)) drop-shadow(0 0 26px rgba(74,63,212,0.36)); }
+}
+
+.sf-orb-breathe {
+  animation: sfSidebarOrbBreathe 2.4s ease-in-out infinite;
 }

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { FadeUp, ScaleIn, CardReveal } from "@/components/motion";
 import { useNavigate } from "react-router-dom";
 import {
   AreaChart,
@@ -285,7 +286,14 @@ export default function Dashboard() {
   useSetPageTitle("Dashboard", todayLabel);
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 pb-6 space-y-5">
+    <div className="px-4 sm:px-6 lg:px-8 pt-6 lg:pt-8 pb-8 space-y-6">
+      {/* Date label — living workspace context header */}
+      <FadeUp>
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+          {todayLabel}
+        </p>
+      </FadeUp>
+
       {/* ── Two-column grid: left (stats+widgets+briefing) | right (Flow AI+actions+playlist) ──
            Mobile: single column via contents + flex order
            Desktop: Flow AI top-aligns with the stat cards row */}
@@ -293,7 +301,8 @@ export default function Dashboard() {
         {/* ── Left column ── */}
         <div className="contents lg:block lg:space-y-4">
           {/* Stats row — 3 equal columns on desktop, stacked on mobile */}
-          <div className="order-1 lg:order-none grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <FadeUp delay={0.04} className="order-1 lg:order-none">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Open tasks */}
             <Card className="glass-card card-accent surface-elevated">
               <CardContent className="p-3.5">
@@ -394,15 +403,19 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+          </FadeUp>
 
-          <div className="order-3 lg:order-none grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
+          <FadeUp delay={0.1} className="order-3 lg:order-none">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
             <SmartAcademyWidget />
             <TodaysFocusWidget />
             <AiInsightsWidget />
           </div>
+          </FadeUp>
 
           {/* Daily Briefing */}
-          <div className="order-4 lg:order-none glass-card rounded-2xl shadow-elevated overflow-hidden relative">
+          <CardReveal delay={0.15} className="order-4 lg:order-none">
+          <div className="glass-card rounded-2xl shadow-elevated overflow-hidden relative">
             <img
               src={briefingBg}
               alt=""
@@ -412,17 +425,18 @@ export default function Dashboard() {
               <AgentBriefingCard />
             </div>
           </div>
+          </CardReveal>
 
           {/* Recommended Topics */}
-          <div className="order-5 lg:order-none">
+          <FadeUp delay={0.18} className="order-5 lg:order-none">
             <RecommendedTopicsWidget />
-          </div>
+          </FadeUp>
         </div>
 
         {/* ── Right column (sidebar) ── */}
         <div className="contents lg:block lg:space-y-4">
           {/* Flow AI — featured assistant card */}
-          <div className="order-2 lg:order-none">
+          <ScaleIn delay={0.06} className="order-2 lg:order-none">
             <Card className="glass-card card-accent surface-elevated">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-3">
@@ -482,10 +496,10 @@ export default function Dashboard() {
                 </Button>
               </CardContent>
             </Card>
-          </div>
+          </ScaleIn>
 
           {/* Quick Actions */}
-          <div className="order-6 lg:order-none">
+          <FadeUp delay={0.12} className="order-6 lg:order-none">
             <Card className="glass-card card-accent">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-3">
@@ -543,12 +557,12 @@ export default function Dashboard() {
             {showAddHabit && (
               <AddHabitModal onClose={() => setShowAddHabit(false)} />
             )}
-          </div>
+          </FadeUp>
 
           {/* Focus Playlist — live player widget */}
-          <div className="order-7 lg:order-none">
+          <FadeUp delay={0.16} className="order-7 lg:order-none">
             <FocusPlaylistCard />
-          </div>
+          </FadeUp>
         </div>
       </div>
     </div>

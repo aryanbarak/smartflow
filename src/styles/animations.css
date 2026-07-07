@@ -1,0 +1,207 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   SmartFlow Workspace Birth Sequence — CSS Keyframes
+   All names are prefixed sf to avoid collision with Tailwind / other libs.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Phase 2: Photon Awakens ─────────────────────────────────────────────── */
+@keyframes sfDotAppear {
+  0%   { opacity: 0; }
+  25%  { opacity: 1; }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── Phase 3: Heartbeat rings emanating from photon ─────────────────────── */
+@keyframes sfRingExpand {
+  0%   { transform: translate(-50%,-50%) scale(0.04); opacity: 0.75; }
+  100% { transform: translate(-50%,-50%) scale(1);    opacity: 0; }
+}
+
+/* ── Phase 3: Orb formation — blur clears, opacity rises ────────────────── */
+@keyframes sfOrbForm {
+  0%   { opacity: 0; filter: blur(18px); }
+  100% { opacity: 1; filter: blur(0px); }
+}
+
+/* Separate size animation so transform isn't overridden by breathing */
+@keyframes sfOrbExpand {
+  0%   { width: 5px; height: 5px; }
+  100% { width: 80px; height: 80px; }
+}
+
+/* ── Phase 3–5: Thinking breath — calm scale oscillation ────────────────── */
+@keyframes sfOrbBreatheLarge {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow:
+      0 0 40px rgba(123,111,232,0.50),
+      0 0 80px rgba(74,63,212,0.25);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+    box-shadow:
+      0 0 65px rgba(123,111,232,0.82),
+      0 0 130px rgba(74,63,212,0.46),
+      0 0 220px rgba(74,63,212,0.18);
+  }
+}
+
+/* ── Phase 4: Deep-thinking rings — slow, dotted, expanding ─────────────── */
+@keyframes sfDeepRingExpand {
+  0%   { transform: translate(-50%,-50%) scale(0.15); opacity: 0.55; }
+  100% { transform: translate(-50%,-50%) scale(2.4);  opacity: 0; }
+}
+
+/* ── Phase 5: Decision — orb glow spikes then releases ──────────────────── */
+@keyframes sfDecisionGlowPeak {
+  0%   {
+    box-shadow:
+      0 0 40px rgba(123,111,232,0.50),
+      0 0 80px rgba(74,63,212,0.25);
+  }
+  50%  {
+    box-shadow:
+      0 0 100px rgba(196,184,255,0.95),
+      0 0 200px rgba(123,111,232,0.70),
+      0 0 320px rgba(74,63,212,0.45);
+  }
+  100% {
+    box-shadow:
+      0 0 40px rgba(123,111,232,0.50),
+      0 0 80px rgba(74,63,212,0.25);
+  }
+}
+
+/* ── Phase 5: Decision beam shoots upward ───────────────────────────────── */
+@keyframes sfBeamShoot {
+  0%   { transform: scaleY(0); opacity: 0; }
+  15%  { opacity: 0.9; }
+  100% { transform: scaleY(1); opacity: 0.65; }
+}
+
+@keyframes sfBeamFade {
+  0%   { opacity: 0.65; }
+  100% { opacity: 0; }
+}
+
+/* ── Phase 5→6: Thinker orb exits as journey orb takes over ─────────────── */
+@keyframes sfOrbThinkerExit {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── Phase 6: Orb ascent — center → sidebar logo position ───────────────── */
+@keyframes sfOrbAscent {
+  0%  {
+    top: 50%; left: 50%; width: 80px; height: 80px; opacity: 1;
+    transform: translate(-50%,-50%);
+    box-shadow: 0 0 40px rgba(123,111,232,.63), 0 0 100px rgba(74,63,212,.33);
+  }
+  30% {
+    top: 35%; left: 32%; width: 55px; height: 55px; opacity: 1;
+    transform: translate(-50%,-50%);
+    box-shadow: 0 0 28px rgba(123,111,232,.50);
+  }
+  70% {
+    top: 12%; left: 8%; width: 32px; height: 32px; opacity: 1;
+    transform: translate(-50%,-50%) scale(1.05);
+    box-shadow: 0 0 20px rgba(123,111,232,.44);
+  }
+  88% {
+    top: 54px; left: 54px; width: 24px; height: 24px; opacity: 1;
+    transform: translate(-50%,-50%);
+    box-shadow: 0 0 14px rgba(123,111,232,.44), 0 0 32px rgba(74,63,212,.24);
+  }
+  100% {
+    top: 54px; left: 54px; width: 24px; height: 24px; opacity: 0;
+    transform: translate(-50%,-50%);
+    box-shadow: none;
+  }
+}
+
+/* ── Phase 6: Light trail along ascent arc ───────────────────────────────── */
+@keyframes sfTrailLife {
+  0%   { opacity: 0; }
+  18%  { opacity: 0.7; }
+  65%  { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+
+/* ── Phase 6: Light spreading from nav into workspace ───────────────────── */
+@keyframes sfLightSpread {
+  0%   { opacity: 0; transform: scale(0.3); }
+  40%  { opacity: 0.9; }
+  100% { opacity: 0.75; transform: scale(1); }
+}
+
+/* ── Phase 6: Sidebar glow ambient ──────────────────────────────────────── */
+@keyframes sfNavGlowAppear {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes sfNavGlowBreathe {
+  0%, 100% { opacity: 0.18; }
+  50%       { opacity: 0.32; }
+}
+
+/* ── Phase 6: Nav orb arrives and breathes forever ──────────────────────── */
+@keyframes sfNavOrbArrive {
+  from { opacity: 0; transform: scale(0.65); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes sfOrbBreatheNav {
+  0%, 100% {
+    box-shadow: 0 0 14px rgba(123,111,232,.44), 0 0 32px rgba(74,63,212,.24);
+  }
+  50% {
+    box-shadow: 0 0 26px rgba(123,111,232,.68), 0 0 58px rgba(74,63,212,.40);
+  }
+}
+
+/* ── Phase 7: Structure — card container surfaces emerge ─────────────────── */
+@keyframes sfSurfaceReveal {
+  0%   { opacity: 0; transform: scale(0.97) translateY(10px); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Phase 8: Card crystallization — born from light ────────────────────── */
+@keyframes sfCardCrystalize {
+  0%   { opacity: 0; transform: scale(0.95); }
+  55%  { opacity: 1; }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes sfShimmerOnce {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+/* ── Phase 9: Content lines fade in ─────────────────────────────────────── */
+@keyframes sfContentLineFade {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Phase 10: Greeting appears and dissolves with overlay ──────────────── */
+@keyframes sfGreetingReveal {
+  0%   { opacity: 0;    transform: translate(-50%, 10px); }
+  20%  { opacity: 0.80; transform: translate(-50%, 0); }
+  70%  { opacity: 0.80; transform: translate(-50%, 0); }
+  100% { opacity: 0;    transform: translate(-50%, -6px); }
+}
+
+@keyframes sfSubtitleReveal {
+  0%   { opacity: 0;    transform: translate(-50%, 6px); }
+  20%  { opacity: 0.50; transform: translate(-50%, 0); }
+  70%  { opacity: 0.50; transform: translate(-50%, 0); }
+  100% { opacity: 0;    transform: translate(-50%, -4px); }
+}
+
+/* ── Ambient: content field luminous surface ─────────────────────────────── */
+@keyframes sfContentFieldAppear {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}

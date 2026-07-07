@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   Calendar,
@@ -59,7 +60,9 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <SmartFlowIcon size={36} />
+          <div className="sf-orb-breathe">
+            <SmartFlowIcon size={36} />
+          </div>
           <div>
             <h1 className="text-lg leading-none">
               <span className="font-light text-sidebar-foreground">Smart</span>
@@ -70,22 +73,36 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-hide">
+      {/* Navigation — Context Rail: active pill slides between items via layoutId */}
+      <nav className="flex-1 p-4 space-y-0.5 overflow-y-auto scrollbar-hide">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "nav-link",
-                isActive && "nav-link-active"
+            <div key={item.path} className="relative">
+              {isActive && (
+                <motion.div
+                  layoutId="sidebar-active-pill"
+                  className="absolute inset-0 rounded-lg"
+                  style={{
+                    background: "hsl(var(--primary) / 0.08)",
+                    borderLeft: "2px solid hsl(var(--primary))",
+                  }}
+                  transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                />
               )}
-            >
-              <item.icon className="w-5 h-5" />
-              <span className="text-sm">{t(item.key)}</span>
-            </NavLink>
+              <NavLink
+                to={item.path}
+                className={cn(
+                  "nav-link relative z-10",
+                  isActive
+                    ? "text-primary font-medium"
+                    : "hover:bg-transparent",
+                )}
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="text-sm">{t(item.key)}</span>
+              </NavLink>
+            </div>
           );
         })}
       </nav>
