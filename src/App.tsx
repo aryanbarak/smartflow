@@ -28,6 +28,7 @@ import { MusicPlayerProvider } from "@/providers/MusicPlayerProvider";
 import { PlaylistPlayerProvider } from "@/contexts/PlaylistPlayerContext";
 import { AppLoader } from "@/components/AppLoader";
 import { LanguageProvider } from "@/components/LanguageProvider";
+import { FlowAIOrbPlayground } from "@/components/FlowAIOrb";
 
 function AccentColorInit() {
   const { accentColor } = useAppearance();
@@ -73,6 +74,9 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {import.meta.env.DEV && (
+              <Route path="/__dev/flow-ai-orb" element={<FlowAIOrbPlayground />} />
+            )}
             <Route path="/auth" element={<AuthRoute />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Dashboard />} />
