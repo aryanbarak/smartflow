@@ -74,7 +74,7 @@
   }
 
   .dark {
-    --background: 222 47% 6%;
+    --background: 248 40% 4%;
     --foreground: 210 40% 98%;
 
     --card: 222 47% 9%;
@@ -142,12 +142,22 @@
     @apply border-border;
   }
 
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    background: #07060E;
+  }
+
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply text-foreground font-sans antialiased;
+    background: #07060E;
+    overflow-x: hidden;
   }
 
   html {
     font-family: 'Sora', 'Inter', system-ui, sans-serif;
+    background: #07060E;
   }
 }
 

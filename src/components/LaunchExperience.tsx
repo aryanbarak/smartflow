@@ -5,60 +5,79 @@ import { useProfile } from "@/features/profile/useProfile";
 import { OrbSequence } from "@/components/animations/OrbSequence";
 import { WorkspaceBirth } from "@/components/animations/WorkspaceBirth";
 import "@/styles/animations.css";
-import { T } from "@/lib/animations/timelines";
-
-const SESSION_KEY = "smartflow:v1:launched";
+import { LAUNCH_PHASES, T } from "@/lib/animations/timelines";
 
 export function LaunchExperience() {
-  const { notifyLaunched } = useLaunch();
+  const {
+    shouldRunLaunchExperience,
+    notifyPhase,
+    notifyLaunched,
+    completeLaunchSession,
+  } = useLaunch();
   const { user } = useAuth();
   const { profile } = useProfile();
 
   const displayName =
     profile?.displayName?.trim() || user?.email?.split("@")[0] || null;
 
-  const [visible, setVisible] = useState(() => !sessionStorage.getItem(SESSION_KEY));
+  const [visible, setVisible] = useState(shouldRunLaunchExperience);
   const [exiting, setExiting] = useState(false);
 
-  // Respect prefers-reduced-motion — skip the full sequence immediately
   const prefersReducedMotion =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   useEffect(() => {
+    setVisible(shouldRunLaunchExperience);
+  }, [shouldRunLaunchExperience]);
+
+  useEffect(() => {
     if (!visible) return;
 
     if (prefersReducedMotion) {
+      notifyPhase(LAUNCH_PHASES.READY);
       notifyLaunched();
-      sessionStorage.setItem(SESSION_KEY, "1");
+      completeLaunchSession();
       setVisible(false);
       return;
     }
 
-    // T.NOTIFY_LAUNCHED (9800ms): real dashboard cards begin their entrance
-    const notifyTimer = setTimeout(notifyLaunched, T.NOTIFY_LAUNCHED);
+    const phaseTimers = [
+      setTimeout(() => notifyPhase(LAUNCH_PHASES.AWAKENING), T.PHOTON_START),
+      setTimeout(() => notifyPhase(LAUNCH_PHASES.THINKING), T.ORB_FORM),
+      setTimeout(() => notifyPhase(LAUNCH_PHASES.DECISION), T.DECISION_GLOW),
+      setTimeout(() => notifyPhase(LAUNCH_PHASES.MOVING), T.ASCEND_START),
+      setTimeout(() => notifyPhase(LAUNCH_PHASES.BIRTHING), T.STRUCTURE_START),
+      setTimeout(() => notifyPhase(LAUNCH_PHASES.READY), T.UNMOUNT),
+    ];
 
-    // T.EXIT_START (9800ms): overlay begins fading — real cards are mid-animation
+    const notifyTimer = setTimeout(notifyLaunched, T.NOTIFY_LAUNCHED);
     const exitTimer = setTimeout(() => {
       setExiting(true);
-      sessionStorage.setItem(SESSION_KEY, "1");
     }, T.EXIT_START);
-
-    // T.UNMOUNT (11200ms): DOM cleanup
-    const unmountTimer = setTimeout(() => setVisible(false), T.UNMOUNT);
+    const unmountTimer = setTimeout(() => {
+      completeLaunchSession();
+      setVisible(false);
+    }, T.UNMOUNT);
 
     return () => {
+      phaseTimers.forEach(clearTimeout);
       clearTimeout(notifyTimer);
       clearTimeout(exitTimer);
       clearTimeout(unmountTimer);
     };
-  }, [visible, notifyLaunched, prefersReducedMotion]);
+  }, [
+    completeLaunchSession,
+    visible,
+    notifyPhase,
+    notifyLaunched,
+    prefersReducedMotion,
+  ]);
 
   if (!visible) return null;
 
   return (
     <>
-      {/* DM Sans italic 300 for greeting — 9.2s of load time before it appears */}
       <link
         rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@1,9..40,300&display=swap"
@@ -77,10 +96,7 @@ export function LaunchExperience() {
           pointerEvents: exiting ? "none" : undefined,
         }}
       >
-        {/* Phases 1–6: Void → Photon → Thinking → Deep Thinking → Decision → Ascend */}
         <OrbSequence />
-
-        {/* Phases 7–10: Building Structure → Crystalizing → Life → Ready */}
         <WorkspaceBirth displayName={displayName} />
       </div>
     </>

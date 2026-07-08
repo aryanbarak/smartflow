@@ -1,66 +1,160 @@
-// Phases 7–10: Building the Structure → Crystalizing → Life Enters → Ready
+import { S, T } from "@/lib/animations/timelines";
 
 interface Props {
   displayName: string | null;
 }
 
-// Content area geometry (desktop 1440px: sidebar 256px + lg:px-8 32px left padding)
-const CX = 288;  // content left x
-const CW = 1120; // content width (1440 - 288 - 32px right pad)
+const CX = 288;
+const CW = 1120;
 const GAP = 12;
-const ROW_H1 = 160;
-const ROW_H2 = 140;
-const ROW_TOP1 = 64;
-const ROW_TOP2 = ROW_TOP1 + ROW_H1 + 16;
 
-// 3-column row 1, 2-column row 2
-const COL3 = (CW - GAP * 2) / 3; // ~365px
-const COL2 = (CW - GAP) / 2;     // ~554px
+const COL3 = (CW - GAP * 2) / 3;
+const COL2 = (CW - GAP) / 2;
+const RIGHT_W = 280;
+const LEFT_W = CW - RIGHT_W - 20;
 
-interface CardDef {
+const seconds = (ms: number) => `${(ms / 1000).toFixed(3)}s`;
+
+interface SurfaceDef {
   x: number;
   y: number;
   w: number;
   h: number;
   label: string;
-  structureDelay: number; // phase 7
-  crystalDelay:  number;  // phase 8
-  contentDelay:  number;  // phase 9
-  rows: number[];         // content skeleton row widths %
+  structureOffset: number;
+  crystalOffset: number;
+  contentOffset: number;
+  rows: number[];
 }
 
-const CARDS: CardDef[] = [
+const SURFACES: SurfaceDef[] = [
   {
-    x: CX,             y: ROW_TOP1, w: COL3, h: ROW_H1,
-    label: "Tasks",    structureDelay: 4.60, crystalDelay: 6.20, contentDelay: 7.80,
+    x: CX,
+    y: 34,
+    w: 270,
+    h: 22,
+    label: "Context",
+    structureOffset: 0,
+    crystalOffset: 360,
+    contentOffset: 520,
+    rows: [70],
+  },
+  {
+    x: CX,
+    y: 76,
+    w: COL3,
+    h: 148,
+    label: "Tasks",
+    structureOffset: 140,
+    crystalOffset: 520,
+    contentOffset: 650,
     rows: [55, 38, 28],
   },
   {
-    x: CX + COL3 + GAP, y: ROW_TOP1, w: COL3, h: ROW_H1,
-    label: "Calendar", structureDelay: 4.75, crystalDelay: 6.35, contentDelay: 7.95,
+    x: CX + COL3 + GAP,
+    y: 76,
+    w: COL3,
+    h: 148,
+    label: "Calendar",
+    structureOffset: 220,
+    crystalOffset: 600,
+    contentOffset: 720,
     rows: [62, 42],
   },
   {
-    x: CX + (COL3 + GAP) * 2, y: ROW_TOP1, w: COL3, h: ROW_H1,
-    label: "AI Briefing", structureDelay: 4.90, crystalDelay: 6.50, contentDelay: 8.10,
-    rows: [70, 48, 32],
+    x: CX + (COL3 + GAP) * 2,
+    y: 76,
+    w: COL3,
+    h: 148,
+    label: "Finance",
+    structureOffset: 300,
+    crystalOffset: 680,
+    contentOffset: 790,
+    rows: [58, 46],
   },
   {
-    x: CX,             y: ROW_TOP2, w: COL2, h: ROW_H2,
-    label: "Notes",    structureDelay: 5.05, crystalDelay: 6.65, contentDelay: 8.25,
-    rows: [60, 44],
+    x: CX + LEFT_W + 20,
+    y: 244,
+    w: RIGHT_W,
+    h: 245,
+    label: "Flow AI",
+    structureOffset: 460,
+    crystalOffset: 880,
+    contentOffset: 940,
+    rows: [52, 68, 44, 40],
   },
   {
-    x: CX + COL2 + GAP, y: ROW_TOP2, w: COL2, h: ROW_H2,
-    label: "Documents", structureDelay: 5.20, crystalDelay: 6.80, contentDelay: 8.40,
-    rows: [65, 46],
+    x: CX,
+    y: 244,
+    w: (LEFT_W - GAP * 2) / 3,
+    h: 136,
+    label: "Learning",
+    structureOffset: 540,
+    crystalOffset: 960,
+    contentOffset: 1000,
+    rows: [58, 36],
+  },
+  {
+    x: CX + (LEFT_W - GAP * 2) / 3 + GAP,
+    y: 244,
+    w: (LEFT_W - GAP * 2) / 3,
+    h: 136,
+    label: "Focus",
+    structureOffset: 620,
+    crystalOffset: 1040,
+    contentOffset: 1060,
+    rows: [66, 46, 32],
+  },
+  {
+    x: CX + ((LEFT_W - GAP * 2) / 3 + GAP) * 2,
+    y: 244,
+    w: (LEFT_W - GAP * 2) / 3,
+    h: 136,
+    label: "Insights",
+    structureOffset: 700,
+    crystalOffset: 1120,
+    contentOffset: 1120,
+    rows: [62, 40],
+  },
+  {
+    x: CX,
+    y: 400,
+    w: LEFT_W,
+    h: 150,
+    label: "Briefing",
+    structureOffset: 860,
+    crystalOffset: 1300,
+    contentOffset: 1240,
+    rows: [72, 56, 42],
+  },
+  {
+    x: CX,
+    y: 570,
+    w: LEFT_W,
+    h: 96,
+    label: "Recommendations",
+    structureOffset: 1020,
+    crystalOffset: 1480,
+    contentOffset: 1340,
+    rows: [64, 46],
+  },
+  {
+    x: CX + LEFT_W + 20,
+    y: 510,
+    w: RIGHT_W,
+    h: 128,
+    label: "Actions",
+    structureOffset: 1100,
+    crystalOffset: 1580,
+    contentOffset: 1420,
+    rows: [54, 44, 38],
   },
 ];
 
 function getGreeting(name: string | null): string {
   const h = new Date().getHours();
   const suffix = name ? `, ${name}` : "";
-  if (h >= 5  && h < 12) return `Good morning${suffix}.`;
+  if (h >= 5 && h < 12) return `Good morning${suffix}.`;
   if (h >= 12 && h < 17) return `Good afternoon${suffix}.`;
   if (h >= 17 && h < 21) return `Good evening${suffix}.`;
   return `Still here${suffix}.`;
@@ -69,8 +163,6 @@ function getGreeting(name: string | null): string {
 export function WorkspaceBirth({ displayName }: Readonly<Props>) {
   return (
     <div className="hidden lg:block" style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-
-      {/* ── Content-area luminous surface field (appears with trail at 4.2s) ── */}
       <div
         style={{
           position: "absolute",
@@ -79,113 +171,126 @@ export function WorkspaceBirth({ displayName }: Readonly<Props>) {
           right: 0,
           bottom: 0,
           background: [
-            "radial-gradient(ellipse 65% 45% at 52% 35%, rgba(107,95,232,0.08) 0%, transparent 70%)",
-            "radial-gradient(ellipse 38% 28% at 76% 68%, rgba(74,63,212,0.06) 0%, transparent 65%)",
+            "radial-gradient(ellipse 58% 32% at 50% 0%, rgba(196,184,255,0.12) 0%, transparent 70%)",
+            "linear-gradient(to bottom, rgba(123,111,232,0.08), rgba(74,63,212,0.035) 42%, transparent 82%)",
           ].join(", "),
-          animation: "sfContentFieldAppear 0.60s ease-out 4.20s both",
+          animation: `sfContentFieldAppear 0.65s ease-out ${S.STRUCTURE_START} both`,
           zIndex: 14,
         }}
       />
 
-      {CARDS.map((card) => (
-        <div key={card.label}>
-          {/* Phase 7: Structure outline — framework skeleton */}
-          <div
-            style={{
-              position: "absolute",
-              top: card.y,
-              left: card.x,
-              width: card.w,
-              height: card.h,
-              borderRadius: 10,
-              border: "1px solid rgba(107,95,232,0.14)",
-              background: "rgba(15,10,38,0.30)",
-              animation: `sfSurfaceReveal 0.50s ease-out ${card.structureDelay}s both`,
-              zIndex: 15,
-            }}
-          >
-            {/* Faint top-edge accent line on structure */}
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 1,
-                background:
-                  "linear-gradient(to right, transparent, rgba(107,95,232,0.25), transparent)",
-              }}
-            />
-          </div>
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: "50%",
+          width: 180,
+          height: "100%",
+          background:
+            "linear-gradient(to bottom, rgba(230,226,255,0.22), rgba(168,151,255,0.13) 28%, rgba(107,95,232,0.05) 58%, transparent 88%)",
+          animation: `sfVerticalLightField 1.10s ease-out ${S.STRUCTURE_START} both`,
+          zIndex: 15,
+        }}
+      />
 
-          {/* Phase 8: Crystallized card — fills in from light */}
-          <div
-            style={{
-              position: "absolute",
-              top: card.y,
-              left: card.x,
-              width: card.w,
-              height: card.h,
-              borderRadius: 10,
-              border: "1px solid rgba(107,95,232,0.22)",
-              background: "rgba(20,14,50,0.82)",
-              overflow: "hidden",
-              animation: `sfCardCrystalize 0.42s cubic-bezier(0.34,1.56,0.64,1) ${card.crystalDelay}s both`,
-              zIndex: 16,
-            }}
-          >
-            {/* Bright top edge — "born from light" highlight */}
+      {SURFACES.map((surface) => {
+        const structureDelay = seconds(T.STRUCTURE_START + surface.structureOffset);
+        const crystalDelay = seconds(T.CRYSTALIZE_START + surface.crystalOffset);
+        const contentDelay = T.LIFE_START + surface.contentOffset;
+
+        return (
+          <div key={surface.label}>
             <div
               style={{
                 position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 1.5,
-                background:
-                  "linear-gradient(to right, transparent, rgba(168,151,255,0.82), transparent)",
-              }}
-            />
-            {/* Shimmer sweep at birth */}
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                bottom: 0,
-                width: 72,
-                background:
-                  "linear-gradient(to right, transparent, rgba(168,151,255,0.12), transparent)",
-                animation: `sfShimmerOnce 0.75s ease-out ${card.crystalDelay + 0.1}s both`,
-              }}
-            />
-            {/* Phase 9: Content skeleton lines */}
-            <div
-              style={{
-                padding: "14px 14px 0",
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
+                top: surface.y,
+                left: surface.x,
+                width: surface.w,
+                height: surface.h,
+                borderRadius: surface.h < 40 ? 8 : 12,
+                border: "1px solid rgba(168,151,255,0.15)",
+                background: "rgba(15,10,38,0.26)",
+                animation: `sfSurfaceRevealFromTop 0.58s ease-out ${structureDelay} both`,
+                zIndex: 16,
               }}
             >
-              {card.rows.map((pct, j) => (
-                <div
-                  key={j}
-                  style={{
-                    width: `${pct}%`,
-                    height: j === 0 ? 6 : 4,
-                    borderRadius: 3,
-                    background: `rgba(168,151,255,${j === 0 ? "0.32" : j === 1 ? "0.18" : "0.11"})`,
-                    animation: `sfContentLineFade 0.30s ease-out ${card.contentDelay + j * 0.08}s both`,
-                    opacity: 0,
-                  }}
-                />
-              ))}
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: "12%",
+                  right: "12%",
+                  height: 1,
+                  background:
+                    "linear-gradient(to right, transparent, rgba(196,184,255,0.45), transparent)",
+                }}
+              />
+            </div>
+
+            <div
+              style={{
+                position: "absolute",
+                top: surface.y,
+                left: surface.x,
+                width: surface.w,
+                height: surface.h,
+                borderRadius: surface.h < 40 ? 8 : 12,
+                border: "1px solid rgba(168,151,255,0.24)",
+                background: "rgba(20,14,50,0.80)",
+                overflow: "hidden",
+                animation: `sfCardCrystalizeFromTop 0.48s cubic-bezier(0.22,1,0.36,1) ${crystalDelay} both`,
+                zIndex: 17,
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 1.5,
+                  background:
+                    "linear-gradient(to right, transparent, rgba(230,226,255,0.82), transparent)",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  height: 72,
+                  background:
+                    "linear-gradient(to bottom, transparent, rgba(230,226,255,0.12), transparent)",
+                  animation: `sfShimmerDown 0.80s ease-out ${seconds(T.CRYSTALIZE_START + surface.crystalOffset + 80)} both`,
+                }}
+              />
+              <div
+                style={{
+                  padding: surface.h < 40 ? "8px 12px 0" : "14px 14px 0",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                }}
+              >
+                {surface.rows.map((pct, j) => (
+                  <div
+                    key={j}
+                    style={{
+                      width: `${pct}%`,
+                      height: j === 0 ? 6 : 4,
+                      borderRadius: 3,
+                      background: `rgba(196,184,255,${j === 0 ? "0.32" : j === 1 ? "0.18" : "0.11"})`,
+                      animation: `sfContentLineFade 0.30s ease-out ${seconds(contentDelay + j * 80)} both`,
+                      opacity: 0,
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
-      {/* ── Phase 10: Time-aware greeting — appears at 9.2s ───────────────── */}
       <div
         style={{
           position: "fixed",
@@ -206,7 +311,7 @@ export function WorkspaceBirth({ displayName }: Readonly<Props>) {
             letterSpacing: "0.02em",
             color: "rgba(230,226,255,0.80)",
             whiteSpace: "nowrap",
-            animation: "sfGreetingReveal 1.50s ease-in-out 9.20s both",
+            animation: `sfGreetingReveal 1.15s ease-in-out ${S.GREETING} both`,
             opacity: 0,
           }}
         >
@@ -220,12 +325,12 @@ export function WorkspaceBirth({ displayName }: Readonly<Props>) {
             letterSpacing: "0.05em",
             color: "rgba(168,151,255,0.50)",
             whiteSpace: "nowrap",
-            animation: "sfSubtitleReveal 1.50s ease-in-out 9.40s both",
+            animation: `sfSubtitleReveal 1.15s ease-in-out ${seconds(T.GREETING + 160)} both`,
             opacity: 0,
             marginTop: 8,
           }}
         >
-          Here is your overview for today.
+          Here is your workspace for today.
         </div>
       </div>
     </div>

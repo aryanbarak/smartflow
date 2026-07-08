@@ -15,11 +15,12 @@ interface NoDelayProps {
 
 // FadeUp — enters from below with opacity; primary content reveal primitive
 export function FadeUp({ children, delay = 0, className }: Readonly<BaseProps>) {
-  const { launched } = useLaunch();
+  const { launched, isBirthingWorkspace } = useLaunch();
+  const shouldReveal = launched && isBirthingWorkspace;
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
-      animate={launched ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
+      animate={shouldReveal ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
       transition={{ ease: [0.25, 0.46, 0.45, 0.94], duration: 0.4, delay }}
       className={className}
     >
@@ -30,11 +31,12 @@ export function FadeUp({ children, delay = 0, className }: Readonly<BaseProps>) 
 
 // ScaleIn — scales up from 95% with opacity; good for hero/featured cards
 export function ScaleIn({ children, delay = 0, className }: Readonly<BaseProps>) {
-  const { launched } = useLaunch();
+  const { launched, isBirthingWorkspace } = useLaunch();
+  const shouldReveal = launched && isBirthingWorkspace;
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
-      animate={launched ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
+      animate={shouldReveal ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
       transition={{ ease: [0.25, 0.46, 0.45, 0.94], duration: 0.4, delay }}
       className={className}
     >
@@ -45,11 +47,12 @@ export function ScaleIn({ children, delay = 0, className }: Readonly<BaseProps>)
 
 // CardReveal — subtle y-shift with an overshoot ease; for individual cards
 export function CardReveal({ children, delay = 0, className }: Readonly<BaseProps>) {
-  const { launched } = useLaunch();
+  const { launched, isBirthingWorkspace } = useLaunch();
+  const shouldReveal = launched && isBirthingWorkspace;
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
-      animate={launched ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
+      animate={shouldReveal ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
       transition={{ ease: [0.22, 1, 0.36, 1], duration: 0.5, delay }}
       className={className}
     >
@@ -64,11 +67,12 @@ export function StaggerContainer({
   className,
   staggerDelay = 0.07,
 }: Readonly<BaseProps & { staggerDelay?: number }>) {
-  const { launched } = useLaunch();
+  const { launched, isBirthingWorkspace } = useLaunch();
+  const shouldReveal = launched && isBirthingWorkspace;
   return (
     <motion.div
       initial="hidden"
-      animate={launched ? "visible" : "hidden"}
+      animate={shouldReveal ? "visible" : "hidden"}
       variants={{
         hidden: {},
         visible: { transition: { staggerChildren: staggerDelay } },

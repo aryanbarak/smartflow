@@ -1,5 +1,9 @@
 import { useMemo, useState } from "react";
 import { FadeUp, ScaleIn, CardReveal } from "@/components/motion";
+import {
+  WorkspaceReveal,
+  WorkspaceRevealSection,
+} from "@/components/animations/WorkspaceReveal";
 import { useNavigate } from "react-router-dom";
 import {
   AreaChart,
@@ -286,13 +290,15 @@ export default function Dashboard() {
   useSetPageTitle("Dashboard", todayLabel);
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 pt-6 lg:pt-8 pb-8 space-y-6">
+    <WorkspaceReveal className="px-4 sm:px-6 lg:px-8 pt-6 lg:pt-8 pb-8 space-y-6">
       {/* Date label — living workspace context header */}
-      <FadeUp>
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {todayLabel}
-        </p>
-      </FadeUp>
+      <WorkspaceRevealSection order={0}>
+        <FadeUp>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            {todayLabel}
+          </p>
+        </FadeUp>
+      </WorkspaceRevealSection>
 
       {/* ── Two-column grid: left (stats+widgets+briefing) | right (Flow AI+actions+playlist) ──
            Mobile: single column via contents + flex order
@@ -301,7 +307,8 @@ export default function Dashboard() {
         {/* ── Left column ── */}
         <div className="contents lg:block lg:space-y-4">
           {/* Stats row — 3 equal columns on desktop, stacked on mobile */}
-          <FadeUp delay={0.04} className="order-1 lg:order-none">
+          <WorkspaceRevealSection order={1} className="order-1 lg:order-none">
+          <FadeUp delay={0.04}>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Open tasks */}
             <Card className="glass-card card-accent surface-elevated">
@@ -404,17 +411,21 @@ export default function Dashboard() {
             </Card>
           </div>
           </FadeUp>
+          </WorkspaceRevealSection>
 
-          <FadeUp delay={0.1} className="order-3 lg:order-none">
+          <WorkspaceRevealSection order={3} className="order-3 lg:order-none">
+          <FadeUp delay={0.1}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
             <SmartAcademyWidget />
             <TodaysFocusWidget />
             <AiInsightsWidget />
           </div>
           </FadeUp>
+          </WorkspaceRevealSection>
 
           {/* Daily Briefing */}
-          <CardReveal delay={0.15} className="order-4 lg:order-none">
+          <WorkspaceRevealSection order={4} className="order-4 lg:order-none">
+          <CardReveal delay={0.15}>
           <div className="glass-card rounded-2xl shadow-elevated overflow-hidden relative">
             <img
               src={briefingBg}
@@ -426,17 +437,21 @@ export default function Dashboard() {
             </div>
           </div>
           </CardReveal>
+          </WorkspaceRevealSection>
 
           {/* Recommended Topics */}
-          <FadeUp delay={0.18} className="order-5 lg:order-none">
+          <WorkspaceRevealSection order={5} className="order-5 lg:order-none">
+          <FadeUp delay={0.18}>
             <RecommendedTopicsWidget />
           </FadeUp>
+          </WorkspaceRevealSection>
         </div>
 
         {/* ── Right column (sidebar) ── */}
         <div className="contents lg:block lg:space-y-4">
           {/* Flow AI — featured assistant card */}
-          <ScaleIn delay={0.06} className="order-2 lg:order-none">
+          <WorkspaceRevealSection order={2} className="order-2 lg:order-none">
+          <ScaleIn delay={0.06}>
             <Card className="glass-card card-accent surface-elevated">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-3">
@@ -497,9 +512,11 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </ScaleIn>
+          </WorkspaceRevealSection>
 
           {/* Quick Actions */}
-          <FadeUp delay={0.12} className="order-6 lg:order-none">
+          <WorkspaceRevealSection order={6} className="order-6 lg:order-none">
+          <FadeUp delay={0.12}>
             <Card className="glass-card card-accent">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-3">
@@ -558,13 +575,16 @@ export default function Dashboard() {
               <AddHabitModal onClose={() => setShowAddHabit(false)} />
             )}
           </FadeUp>
+          </WorkspaceRevealSection>
 
           {/* Focus Playlist — live player widget */}
-          <FadeUp delay={0.16} className="order-7 lg:order-none">
+          <WorkspaceRevealSection order={7} className="order-7 lg:order-none">
+          <FadeUp delay={0.16}>
             <FocusPlaylistCard />
           </FadeUp>
+          </WorkspaceRevealSection>
         </div>
       </div>
-    </div>
+    </WorkspaceReveal>
   );
 }

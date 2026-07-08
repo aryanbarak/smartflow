@@ -9,10 +9,20 @@ import { useAlarms } from "@/features/calendar/useAlarms";
 import { aiMemoryService } from "@/features/ai-memory/aiMemoryService";
 import { PageTitleProvider } from "@/contexts/PageTitleContext";
 import { LaunchExperience } from "@/components/LaunchExperience";
-import { LaunchProvider } from "@/contexts/LaunchContext";
+import { LaunchProvider, useLaunch } from "@/contexts/LaunchContext";
 
 function AppLayoutInner() {
+  const { shouldShowAppShell } = useLaunch();
   useAlarms();
+
+  const appShellStyle = {
+    opacity: shouldShowAppShell ? 1 : 0,
+    visibility: shouldShowAppShell ? "visible" : "hidden",
+    pointerEvents: shouldShowAppShell ? "auto" : "none",
+    transition: shouldShowAppShell
+      ? "opacity 700ms cubic-bezier(0.22,1,0.36,1)"
+      : "none",
+  } as const;
 
   useEffect(() => {
     if ("Notification" in globalThis && Notification.permission === "default") {
@@ -31,28 +41,31 @@ function AppLayoutInner() {
   return (
     <div className="min-h-screen bg-background">
       <LaunchExperience />
-      <OfflineBadge />
 
-      {/* Desktop */}
-      <div className="hidden lg:flex">
-        <Sidebar />
-        <main className="flex-1 min-h-screen overflow-auto">
-          <Outlet />
-        </main>
-      </div>
+      <div style={appShellStyle} aria-hidden={!shouldShowAppShell}>
+        <OfflineBadge />
 
-      {/* Mobile */}
-      <div className="lg:hidden flex flex-col min-h-screen">
-        <div className="flex justify-end px-4 pt-3 pb-1">
-          <GlobalSearch />
+        {/* Desktop */}
+        <div className="hidden lg:flex">
+          <Sidebar />
+          <main className="flex-1 min-h-screen overflow-auto">
+            <Outlet />
+          </main>
         </div>
-        <main className="flex-1 pb-20 overflow-auto">
-          <Outlet />
-        </main>
-        <MobileNav />
-      </div>
 
-      <MiniPlayer />
+        {/* Mobile */}
+        <div className="lg:hidden flex flex-col min-h-screen">
+          <div className="flex justify-end px-4 pt-3 pb-1">
+            <GlobalSearch />
+          </div>
+          <main className="flex-1 pb-20 overflow-auto">
+            <Outlet />
+          </main>
+          <MobileNav />
+        </div>
+
+        <MiniPlayer />
+      </div>
     </div>
   );
 }

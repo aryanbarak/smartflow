@@ -29,6 +29,28 @@
   100% { width: 80px; height: 80px; }
 }
 
+@keyframes sfFlowOrbFormScale {
+  0%   { transform: translate(-50%, -50%) scale(0.08); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes sfFlowOrbBreatheLarge {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.07);
+    opacity: 1;
+  }
+}
+
+@keyframes sfFlowOrbDecisionHold {
+  0%   { transform: translate(-50%, -50%) scale(1.01); }
+  45%  { transform: translate(-50%, -50%) scale(0.96); }
+  100% { transform: translate(-50%, -50%) scale(1.04); }
+}
+
 /* ── Phase 3–5: Thinking breath — calm scale oscillation ────────────────── */
 @keyframes sfOrbBreatheLarge {
   0%, 100% {
@@ -38,11 +60,23 @@
       0 0 80px rgba(74,63,212,0.25);
   }
   50% {
-    transform: translate(-50%, -50%) scale(1.08);
+    transform: translate(-50%, -50%) scale(1.13);
     box-shadow:
       0 0 65px rgba(123,111,232,0.82),
       0 0 130px rgba(74,63,212,0.46),
       0 0 220px rgba(74,63,212,0.18);
+  }
+}
+
+@keyframes sfOrbDecisionHold {
+  0% {
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+  45% {
+    transform: translate(-50%, -50%) scale(0.94);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.07);
   }
 }
 
@@ -97,25 +131,47 @@
     transform: translate(-50%,-50%);
     box-shadow: 0 0 40px rgba(123,111,232,.63), 0 0 100px rgba(74,63,212,.33);
   }
-  30% {
-    top: 35%; left: 32%; width: 55px; height: 55px; opacity: 1;
+  42% {
+    top: 34%; left: 50%; width: 58px; height: 58px; opacity: 1;
     transform: translate(-50%,-50%);
-    box-shadow: 0 0 28px rgba(123,111,232,.50);
+    box-shadow: 0 0 34px rgba(123,111,232,.56), 0 0 88px rgba(74,63,212,.28);
   }
-  70% {
-    top: 12%; left: 8%; width: 32px; height: 32px; opacity: 1;
+  78% {
+    top: 74px; left: 50%; width: 34px; height: 34px; opacity: 1;
     transform: translate(-50%,-50%) scale(1.05);
-    box-shadow: 0 0 20px rgba(123,111,232,.44);
-  }
-  88% {
-    top: 54px; left: 54px; width: 24px; height: 24px; opacity: 1;
-    transform: translate(-50%,-50%);
-    box-shadow: 0 0 14px rgba(123,111,232,.44), 0 0 32px rgba(74,63,212,.24);
+    box-shadow: 0 0 24px rgba(196,184,255,.58), 0 0 70px rgba(123,111,232,.34);
   }
   100% {
-    top: 54px; left: 54px; width: 24px; height: 24px; opacity: 0;
+    top: 48px; left: 50%; width: 28px; height: 28px; opacity: 0;
     transform: translate(-50%,-50%);
     box-shadow: none;
+  }
+}
+
+@keyframes sfFlowOrbAscent {
+  0% {
+    top: 50%;
+    left: 50%;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  42% {
+    top: 34%;
+    left: 50%;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.72);
+  }
+  78% {
+    top: 74px;
+    left: 50%;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.43);
+  }
+  100% {
+    top: 48px;
+    left: 50%;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.35);
   }
 }
 
@@ -132,6 +188,18 @@
   0%   { opacity: 0; transform: scale(0.3); }
   40%  { opacity: 0.9; }
   100% { opacity: 0.75; transform: scale(1); }
+}
+
+@keyframes sfTopLightSpread {
+  0%   { opacity: 0; transform: translateX(-50%) scaleY(0.18) scaleX(0.52); transform-origin: top center; }
+  45%  { opacity: 0.80; }
+  100% { opacity: 0.62; transform: translateX(-50%) scaleY(1) scaleX(1); transform-origin: top center; }
+}
+
+@keyframes sfVerticalLightField {
+  0%   { opacity: 0; transform: translateX(-50%) scaleY(0.04); transform-origin: top center; filter: blur(10px); }
+  35%  { opacity: 0.70; }
+  100% { opacity: 0.42; transform: translateX(-50%) scaleY(1); transform-origin: top center; filter: blur(18px); }
 }
 
 /* ── Phase 6: Sidebar glow ambient ──────────────────────────────────────── */
@@ -151,6 +219,22 @@
   to   { opacity: 1; transform: scale(1); }
 }
 
+@keyframes sfTopOrbArrive {
+  from { opacity: 0; transform: translateX(-50%) scale(0.65); }
+  to   { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+@keyframes sfFlowTopOrbBreathe {
+  0%, 100% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.06);
+  }
+}
+
 @keyframes sfOrbBreatheNav {
   0%, 100% {
     box-shadow: 0 0 14px rgba(123,111,232,.44), 0 0 32px rgba(74,63,212,.24);
@@ -167,6 +251,12 @@
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+@keyframes sfSurfaceRevealFromTop {
+  0%   { opacity: 0; transform: translateY(-14px) scaleY(0.88); transform-origin: top center; filter: blur(6px); }
+  65%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) scaleY(1); transform-origin: top center; filter: blur(0); }
+}
+
 /* ── Phase 8: Card crystallization — born from light ────────────────────── */
 @keyframes sfCardCrystalize {
   0%   { opacity: 0; transform: scale(0.95); }
@@ -174,9 +264,20 @@
   100% { opacity: 1; transform: scale(1); }
 }
 
+@keyframes sfCardCrystalizeFromTop {
+  0%   { opacity: 0; transform: translateY(-10px) scale(0.97); filter: blur(5px); }
+  55%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
 @keyframes sfShimmerOnce {
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(300%); }
+}
+
+@keyframes sfShimmerDown {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(320%); }
 }
 
 /* ── Phase 9: Content lines fade in ─────────────────────────────────────── */
