@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { FlowAIOrbBeam } from "./FlowAIOrbBeam";
 import { FlowAIOrbCore } from "./FlowAIOrbCore";
 import { FlowAIOrbGlow } from "./FlowAIOrbGlow";
+import { FlowAIOrbIdentity } from "./FlowAIOrbIdentity";
 import { FlowAIOrbParticles } from "./FlowAIOrbParticles";
 import {
   FLOW_AI_ORB_COLORS,
@@ -15,9 +16,12 @@ import {
   type FlowAIOrbTheme,
 } from "./FlowAIOrbStates";
 
+export type FlowAIOrbVariant = "default" | "identity";
+
 export interface FlowAIOrbProps {
   size?: FlowAIOrbSize;
   state?: FlowAIOrbState;
+  variant?: FlowAIOrbVariant;
   beam?: boolean | "auto";
   particles?: boolean;
   glowIntensity?: number;
@@ -48,6 +52,7 @@ function clampGlowIntensity(value: number) {
 function FlowAIOrbComponent({
   size = "md",
   state = "presence",
+  variant = "default",
   beam = "auto",
   particles = true,
   glowIntensity = 1,
@@ -63,10 +68,12 @@ function FlowAIOrbComponent({
   const canonicalState = normalizeFlowAIOrbState(state);
   const config = getFlowAIOrbStateConfig(state);
   const disabled = canonicalState === "disabled";
+  const identityVariant = variant === "identity";
   const normalizedGlow = clampGlowIntensity(glowIntensity);
   const beamActive =
-    beam === "auto" ? canonicalState === "decision" || canonicalState === "creating" : beam;
-  const particlesEnabled = particles && !disabled;
+    !identityVariant &&
+    (beam === "auto" ? canonicalState === "decision" || canonicalState === "creating" : beam);
+  const particlesEnabled = !identityVariant && particles && !disabled;
 
   const style: FlowAIOrbStyle = {
     "--flow-orb-size": `${sizeSpec.pixelSize}px`,
@@ -108,25 +115,35 @@ function FlowAIOrbComponent({
       whileTap={interactive && !disabled && !shouldReduceMotion ? { scale: 0.98 } : undefined}
       transition={{ duration: shouldReduceMotion ? 0 : 0.35, ease: "easeOut" }}
     >
-      <FlowAIOrbBeam
-        active={beamActive && !disabled}
-        config={config}
-        reducedMotion={shouldReduceMotion}
-        sizeSpec={sizeSpec}
-      />
-      <FlowAIOrbGlow
-        config={config}
-        glowIntensity={normalizedGlow}
-        reducedMotion={shouldReduceMotion || disabled}
-        sizeSpec={sizeSpec}
-      />
-      <FlowAIOrbCore config={config} reducedMotion={shouldReduceMotion || disabled} sizeSpec={sizeSpec} />
-      <FlowAIOrbParticles
-        config={config}
-        enabled={particlesEnabled}
-        reducedMotion={shouldReduceMotion || disabled}
-        sizeSpec={sizeSpec}
-      />
+      {identityVariant ? (
+        <FlowAIOrbIdentity
+          glowIntensity={normalizedGlow}
+          reducedMotion={shouldReduceMotion || disabled}
+          sizeSpec={sizeSpec}
+        />
+      ) : (
+        <>
+          <FlowAIOrbBeam
+            active={beamActive && !disabled}
+            config={config}
+            reducedMotion={shouldReduceMotion}
+            sizeSpec={sizeSpec}
+          />
+          <FlowAIOrbGlow
+            config={config}
+            glowIntensity={normalizedGlow}
+            reducedMotion={shouldReduceMotion || disabled}
+            sizeSpec={sizeSpec}
+          />
+          <FlowAIOrbCore config={config} reducedMotion={shouldReduceMotion || disabled} sizeSpec={sizeSpec} />
+          <FlowAIOrbParticles
+            config={config}
+            enabled={particlesEnabled}
+            reducedMotion={shouldReduceMotion || disabled}
+            sizeSpec={sizeSpec}
+          />
+        </>
+      )}
     </motion.div>
   );
 }

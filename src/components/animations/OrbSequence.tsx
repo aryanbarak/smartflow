@@ -28,7 +28,7 @@ function mapLaunchPhaseToOrbState(phase: LaunchPhase): FlowAIOrbState {
 export function OrbSequence() {
   const { phase } = useLaunch();
   const orbState = mapLaunchPhaseToOrbState(phase);
-  const topOrbState: FlowAIOrbState =
+  const settledOrbState: FlowAIOrbState =
     phase === LAUNCH_PHASES.READY ? "ready" : phase === LAUNCH_PHASES.BIRTHING ? "creating" : orbState;
 
   return (
@@ -143,52 +143,51 @@ export function OrbSequence() {
         fill="none"
       >
         <defs>
-          <filter id="sfTopTrailGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <filter id="sfLogoTrailGlow" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="3" />
           </filter>
-          <filter id="sfTopSparkGlow" x="-200%" y="-200%" width="600%" height="600%">
+          <filter id="sfLogoSparkGlow" x="-200%" y="-200%" width="600%" height="600%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" />
           </filter>
         </defs>
         <path
-          d="M 50 50 C 50 38 50 25 50 7"
+          d="M 50 50 C 36 30 16 15 3 7"
           stroke="rgba(168,151,255,0.55)"
           strokeWidth="3.5"
           strokeLinecap="round"
-          filter="url(#sfTopTrailGlow)"
+          filter="url(#sfLogoTrailGlow)"
         />
         <path
-          d="M 50 50 C 50 38 50 25 50 7"
+          d="M 50 50 C 36 30 16 15 3 7"
           stroke="rgba(196,184,255,0.26)"
           strokeWidth="0.45"
           strokeLinecap="round"
           strokeDasharray="2 3"
         />
-        <circle cx="50" cy="39" r="0.8" fill="rgba(196,184,255,0.72)" filter="url(#sfTopSparkGlow)" />
-        <circle cx="50" cy="27" r="0.65" fill="rgba(196,184,255,0.55)" filter="url(#sfTopSparkGlow)" />
-        <circle cx="50" cy="15" r="0.5" fill="rgba(196,184,255,0.42)" filter="url(#sfTopSparkGlow)" />
+        <circle cx="39" cy="37" r="0.8" fill="rgba(196,184,255,0.72)" filter="url(#sfLogoSparkGlow)" />
+        <circle cx="25" cy="24" r="0.65" fill="rgba(196,184,255,0.55)" filter="url(#sfLogoSparkGlow)" />
+        <circle cx="11" cy="13" r="0.5" fill="rgba(196,184,255,0.42)" filter="url(#sfLogoSparkGlow)" />
       </svg>
 
       <div
         aria-hidden
         style={{
           position: "absolute",
-          top: 34,
-          left: "50%",
-          width: 28,
-          height: 28,
-          transform: "translateX(-50%)",
+          top: 24,
+          left: 24,
+          width: 36,
+          height: 36,
           animation:
-            `sfTopOrbArrive 0.28s cubic-bezier(0.34,1.56,0.64,1) ${S.NAV_ORB} both, sfFlowTopOrbBreathe 2.4s ease-in-out ${seconds(T.NAV_ORB + 220)} infinite`,
+            `sfLogoOrbArrive 0.28s cubic-bezier(0.34,1.56,0.64,1) ${S.NAV_ORB} both, sfFlowLogoOrbBreathe 2.4s ease-in-out ${seconds(T.NAV_ORB + 220)} infinite`,
           zIndex: 22,
         }}
       >
         <FlowAIOrb
-          size={28}
-          state={topOrbState}
+          size={36}
+          state={settledOrbState}
           beam={false}
           particles={false}
-          glowIntensity={0.9}
+          glowIntensity={0.78}
           theme="transparent"
         />
       </div>

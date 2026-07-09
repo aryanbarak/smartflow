@@ -9,6 +9,7 @@ import { LAUNCH_PHASES, T } from "@/lib/animations/timelines";
 
 export function LaunchExperience() {
   const {
+    phase,
     shouldRunLaunchExperience,
     notifyPhase,
     notifyLaunched,
@@ -76,6 +77,9 @@ export function LaunchExperience() {
 
   if (!visible) return null;
 
+  const isWorkspaceHandoff =
+    phase === LAUNCH_PHASES.BIRTHING || phase === LAUNCH_PHASES.READY;
+
   return (
     <>
       <link
@@ -87,12 +91,15 @@ export function LaunchExperience() {
           position: "fixed",
           inset: 0,
           zIndex: 9999,
-          background: "#07060E",
+          background: isWorkspaceHandoff ? "rgba(7, 6, 14, 0.42)" : "#07060E",
           overflow: "hidden",
           opacity: exiting ? 0 : 1,
-          transition: exiting
-            ? `opacity ${T.OVERLAY_FADE_MS}ms cubic-bezier(0.22,1,0.36,1)`
-            : "none",
+          transition: [
+            "background-color 900ms cubic-bezier(0.22,1,0.36,1)",
+            exiting
+              ? `opacity ${T.OVERLAY_FADE_MS}ms cubic-bezier(0.22,1,0.36,1)`
+              : "opacity 0ms linear",
+          ].join(", "),
           pointerEvents: exiting ? "none" : undefined,
         }}
       >

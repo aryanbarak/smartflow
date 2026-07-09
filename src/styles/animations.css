@@ -157,19 +157,19 @@
   }
   42% {
     top: 34%;
-    left: 50%;
+    left: 34%;
     opacity: 1;
     transform: translate(-50%, -50%) scale(0.72);
   }
   78% {
-    top: 74px;
-    left: 50%;
+    top: 58px;
+    left: 58px;
     opacity: 1;
     transform: translate(-50%, -50%) scale(0.43);
   }
   100% {
-    top: 48px;
-    left: 50%;
+    top: 42px;
+    left: 42px;
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.35);
   }
@@ -200,6 +200,36 @@
   0%   { opacity: 0; transform: translateX(-50%) scaleY(0.04); transform-origin: top center; filter: blur(10px); }
   35%  { opacity: 0.70; }
   100% { opacity: 0.42; transform: translateX(-50%) scaleY(1); transform-origin: top center; filter: blur(18px); }
+}
+
+@keyframes sfBirthBridgeField {
+  0%   { opacity: 0; filter: blur(18px); }
+  48%  { opacity: 0.86; filter: blur(8px); }
+  100% { opacity: 0.58; filter: blur(12px); }
+}
+
+@keyframes sfBirthVerticalField {
+  0%   { opacity: 0; transform: translateX(-50%) scaleY(0.08); transform-origin: top center; }
+  42%  { opacity: 0.78; }
+  100% { opacity: 0.48; transform: translateX(-50%) scaleY(1); transform-origin: top center; }
+}
+
+@keyframes sfCreationWashDown {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-30%) scaleY(0.18); transform-origin: top center; filter: blur(18px); }
+  38%  { opacity: 0.72; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(38%) scaleY(1.1); transform-origin: top center; filter: blur(28px); }
+}
+
+@keyframes sfAmbientSurfaceHint {
+  0%   { opacity: 0; transform: translateY(-16px) scaleY(0.68); transform-origin: top center; filter: blur(10px); }
+  45%  { opacity: 0.62; }
+  100% { opacity: 0.26; transform: translateY(0) scaleY(1); transform-origin: top center; filter: blur(3px); }
+}
+
+@keyframes sfSurfaceHintGlint {
+  0%   { opacity: 0; transform: translateY(-110%); }
+  36%  { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(160%); }
 }
 
 /* ── Phase 6: Sidebar glow ambient ──────────────────────────────────────── */
@@ -233,6 +263,26 @@
     opacity: 1;
     transform: translateX(-50%) scale(1.06);
   }
+}
+
+@keyframes sfLogoOrbArrive {
+  from { opacity: 0; transform: scale(0.65); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes sfFlowLogoOrbBreathe {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.045);
+  }
+}
+
+.sf-orb-breathe {
+  opacity: 0;
 }
 
 @keyframes sfOrbBreatheNav {

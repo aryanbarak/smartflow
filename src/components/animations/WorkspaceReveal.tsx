@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
 import { useLaunch } from "@/contexts/LaunchContext";
+import { LAUNCH_PHASES } from "@/lib/animations/timelines";
 
 interface WorkspaceRevealProps {
   children: ReactNode;
@@ -16,8 +17,8 @@ interface WorkspaceRevealSectionProps {
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
 function useWorkspaceRevealState() {
-  const { launched, isBirthingWorkspace } = useLaunch();
-  return launched && isBirthingWorkspace;
+  const { phase, launched } = useLaunch();
+  return launched || phase === LAUNCH_PHASES.BIRTHING || phase === LAUNCH_PHASES.READY;
 }
 
 export function WorkspaceReveal({
@@ -118,7 +119,7 @@ export function WorkspaceRevealSection({
       }}
       transition={{
         duration: reduceMotion ? 0 : 0.64,
-        delay: reduceMotion ? 0 : order * 0.13,
+        delay: reduceMotion ? 0 : order * 0.16,
         ease: easeOut,
       }}
       style={{ willChange: reduceMotion ? undefined : "opacity, transform, filter" }}
