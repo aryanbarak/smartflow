@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import {
   WorkspaceReveal,
   WorkspaceRevealSection,
@@ -38,6 +38,7 @@ import type {
   WorkspaceIconKey,
   WorkspaceNavigationTarget,
   WorkspaceRightRail,
+  WorkspaceSkill,
   WorkspaceWelcome,
 } from "@/features/workspace";
 
@@ -329,9 +330,52 @@ function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
   );
 }
 
+function HeroSkills({
+  className = "",
+  skills,
+}: Readonly<{ className?: string; skills: WorkspaceSkill[] }>) {
+  const navigate = useNavigate();
+
+  return (
+    <section className={className}>
+      <div className="space-y-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            How I can help today
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {skills.map((skill) => {
+            const SkillIcon = workspaceIconMap[skill.icon];
+            return (
+              <button
+                key={skill.title}
+                type="button"
+                onClick={() => navigateToWorkspaceTarget(navigate, skill.target)}
+                className="group flex min-h-[92px] items-start gap-3 rounded-xl border border-border/35 bg-background/25 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary/10 hover:shadow-[0_0_24px_rgba(139,92,246,0.12)]"
+              >
+                <div className="icon-tile h-9 w-9 rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/15">
+                  <SkillIcon className="h-4 w-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-5">{skill.title}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {skill.description}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function WelcomeWorkspace({
+  afterHero,
   welcome,
-}: Readonly<{ welcome: WorkspaceWelcome }>) {
+}: Readonly<{ afterHero?: ReactNode; welcome: WorkspaceWelcome }>) {
   const navigate = useNavigate();
 
   return (
@@ -362,6 +406,7 @@ function WelcomeWorkspace({
           </div>
         </section>
       </WorkspaceRevealSection>
+      {afterHero}
 
       <WorkspaceRevealSection order={1}>
         <section className="space-y-3">
@@ -430,7 +475,14 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-7 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-7">
           {workspace.isLowData ? (
-            <WelcomeWorkspace welcome={workspace.welcome} />
+            <WelcomeWorkspace
+              afterHero={
+                <WorkspaceRevealSection order={1} className="lg:hidden">
+                  <FlowAIAssistantRail rail={workspace.rightRail} />
+                </WorkspaceRevealSection>
+              }
+              welcome={workspace.welcome}
+            />
           ) : (
             <>
       <WorkspaceRevealSection order={0}>
@@ -455,36 +507,10 @@ export default function Dashboard() {
               {workspace.hero.summary}
             </p>
 
-            <div className="mt-5 space-y-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  How I can help today
-                </p>
-              </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                {workspace.hero.skills.map((skill) => {
-                  const SkillIcon = workspaceIconMap[skill.icon];
-                  return (
-                    <button
-                      key={skill.title}
-                      type="button"
-                      onClick={() => navigateToWorkspaceTarget(navigate, skill.target)}
-                      className="group flex min-h-[92px] items-start gap-3 rounded-xl border border-border/35 bg-background/25 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary/10 hover:shadow-[0_0_24px_rgba(139,92,246,0.12)]"
-                    >
-                      <div className="icon-tile h-9 w-9 rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/15">
-                        <SkillIcon className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold leading-5">{skill.title}</p>
-                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                          {skill.description}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <HeroSkills
+              className="mt-5 hidden lg:block"
+              skills={workspace.hero.skills}
+            />
 
             <div className="mt-4 flex flex-col gap-2 rounded-lg border border-border/25 bg-secondary/[0.07] px-3 py-2.5 text-left sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -512,6 +538,14 @@ export default function Dashboard() {
             </div>
           </div>
         </section>
+      </WorkspaceRevealSection>
+
+      <WorkspaceRevealSection order={1} className="lg:hidden">
+        <FlowAIAssistantRail rail={workspace.rightRail} />
+      </WorkspaceRevealSection>
+
+      <WorkspaceRevealSection order={2} className="lg:hidden">
+        <HeroSkills skills={workspace.hero.skills} />
       </WorkspaceRevealSection>
 
       <WorkspaceRevealSection order={1}>
@@ -710,7 +744,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        <WorkspaceRevealSection order={2} className="lg:sticky lg:top-6">
+        <WorkspaceRevealSection order={2} className="hidden lg:sticky lg:top-6 lg:block">
           <FlowAIAssistantRail rail={workspace.rightRail} />
         </WorkspaceRevealSection>
       </div>
