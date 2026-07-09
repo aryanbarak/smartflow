@@ -23,26 +23,47 @@ import { AddHabitModal } from "@/features/habits/components/AddHabitModal";
 import { AgentBriefingCard } from "@/components/AgentBriefingCard";
 import "@/components/AgentBriefingCard.css";
 import { FlowAIOrb } from "@/components/FlowAIOrb";
-import { SmartflowAsciiSphere } from "@/components/smartflow";
+import { SmartflowAsciiVisual } from "@/components/smartflow";
 import { SmartAcademyWidget } from "@/components/dashboard/SmartAcademyWidget";
 import { TodaysFocusWidget } from "@/components/dashboard/TodaysFocusWidget";
 import { AiInsightsWidget } from "@/components/dashboard/AiInsightsWidget";
 import { RecommendedTopicsWidget } from "@/components/dashboard/RecommendedTopicsWidget";
 import { useSetPageTitle } from "@/hooks/useSetPageTitle";
-import { useEvents } from "@/hooks/useEvents";
-import { useTasks } from "@/hooks/useTasks";
-import { useFinance } from "@/hooks/useFinance";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SkeletonBlock } from "@/components/common/Skeletons";
-import { isSameDay, toDateOnly } from "@/lib/date";
 import { useMusicPlayer, loadHistory } from "@/hooks/useMusicPlayer";
+import { useWorkspace } from "@/features/workspace";
+import type {
+  WorkspaceIconKey,
+  WorkspaceNavigationTarget,
+  WorkspaceRightRail,
+  WorkspaceWelcome,
+} from "@/features/workspace";
 
-function formatCurrency(amount: number) {
-  return amount.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+const workspaceIconMap = {
+  book: BookOpen,
+  briefcase: Briefcase,
+  calendar: Calendar,
+  check: CheckSquare,
+  file: FileText,
+  flame: Flame,
+  message: MessageSquare,
+  sparkles: Sparkles,
+  wallet: Wallet,
+} satisfies Record<WorkspaceIconKey, typeof BookOpen>;
+
+function navigateToWorkspaceTarget(
+  navigate: ReturnType<typeof useNavigate>,
+  target: WorkspaceNavigationTarget,
+) {
+  if (target.initialPrompt) {
+    navigate(target.route, {
+      state: { initialPrompt: target.initialPrompt },
+    });
+    return;
+  }
+  navigate(target.route);
 }
 
 function FocusPlaylistCard() {
@@ -149,26 +170,18 @@ function FocusPlaylistCard() {
   );
 }
 
-function FlowAIAssistantRail({ lowData = false }: Readonly<{ lowData?: boolean }>) {
+function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
   const navigate = useNavigate();
-  const prompts = [
-    { label: "Plan my day", prompt: "Help me plan my day" },
-    { label: "Continue learning", prompt: "Help me continue learning today" },
-    { label: "Review documents", prompt: "Help me review my recent documents" },
-    { label: "Analyze habits", prompt: "Analyze my habits and give me insights" },
-  ];
 
   return (
     <Card className="glass-card relative overflow-hidden">
-      <div
-        aria-hidden
+      <SmartflowAsciiVisual
+        variant="sphere"
         className="pointer-events-none absolute -right-24 -top-24 h-[300px] w-[300px] opacity-30"
-      >
-        <SmartflowAsciiSphere />
-      </div>
+      />
 
-      <CardContent className="relative z-10 space-y-4 p-4">
-        <div className="flex min-h-[104px] items-start gap-3">
+      <CardContent className="relative z-10 space-y-4 p-4 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto scrollbar-hide">
+        <div className="flex items-start gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-visible">
               <FlowAIOrb
                 size="md"
@@ -182,29 +195,19 @@ function FlowAIAssistantRail({ lowData = false }: Readonly<{ lowData?: boolean }
             </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold">Flow AI</p>
-              <p className="text-xs leading-5 text-muted-foreground">
-                {lowData
-                  ? "Add a few signals and I\u2019ll start preparing your day."
-                  : "I prepared today's workspace."}
-              </p>
+              <div className="mt-2 space-y-1.5">
+                <div className="flex items-center gap-2 text-xs font-medium text-emerald-300">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-45" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                  </span>
+                  Online
+                </div>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  {rail.statusMessage}
+                </p>
+              </div>
             </div>
-          </div>
-
-        <div className="space-y-2">
-            {prompts.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() =>
-                  navigate("/chat", {
-                    state: { initialPrompt: item.prompt },
-                  })
-                }
-                className="w-full rounded-lg border border-border/35 bg-background/20 px-3 py-2 text-left text-xs font-medium text-foreground transition-colors hover:border-primary/35 hover:bg-primary/10"
-              >
-                {item.label}
-              </button>
-            ))}
           </div>
 
         <Button
@@ -216,65 +219,120 @@ function FlowAIAssistantRail({ lowData = false }: Readonly<{ lowData?: boolean }
           <MessageSquare className="w-4 h-4" />
           Chat with Flow AI
         </Button>
+
+        <div className="border-t border-border/35 pt-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Continue learning
+          </p>
+          <div className="space-y-2">
+            {rail.recentLessons.map((lesson) => {
+              const LessonIcon = workspaceIconMap[lesson.icon];
+              return (
+                <button
+                  key={lesson.title}
+                  type="button"
+                  onClick={() => navigate("/learn-ai")}
+                  className="group w-full rounded-lg border border-border/25 bg-background/15 px-2.5 py-2 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="icon-tile h-7 w-7 rounded-md bg-primary/10">
+                      <LessonIcon className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-xs font-medium">{lesson.title}</p>
+                        <span className="text-[10px] text-muted-foreground">
+                          {lesson.progress}%
+                        </span>
+                      </div>
+                      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-secondary/50">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${lesson.progress}%`,
+                            background: "var(--gradient-primary)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="border-t border-border/35 pt-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Recommended today
+          </p>
+          <div className="grid grid-cols-1 gap-2">
+            {rail.recommendations.map((item) => {
+              const ItemIcon = workspaceIconMap[item.icon];
+              return (
+                <button
+                  key={item.title}
+                  type="button"
+                  onClick={() => navigateToWorkspaceTarget(navigate, item.target)}
+                  className="group rounded-lg border border-border/25 bg-background/15 px-2.5 py-2 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
+                >
+                  <div className="flex gap-2.5">
+                    <div className="icon-tile h-7 w-7 rounded-md bg-primary/10">
+                      <ItemIcon className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium leading-4">{item.title}</p>
+                      <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+                        {item.reason}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="border-t border-border/35 pt-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Recent conversation
+          </p>
+          {rail.isChatLoading ? (
+            <div className="rounded-lg border border-border/25 bg-background/15 p-3">
+              <SkeletonBlock className="h-3 w-32" />
+              <SkeletonBlock className="mt-2 h-2.5 w-16" />
+            </div>
+          ) : rail.recentConversation ? (
+            <button
+              type="button"
+              onClick={() => navigate("/chat")}
+              className="w-full rounded-lg border border-border/25 bg-background/15 p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
+            >
+              <p className="truncate text-xs font-medium" dir="auto">
+                {rail.recentConversation.title}
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {rail.recentConversation.relativeTime}
+              </p>
+            </button>
+          ) : (
+            <div className="rounded-lg border border-border/25 bg-background/15 p-3">
+              <p className="text-xs font-medium">No recent conversation yet.</p>
+              <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                Your latest Flow AI thread will appear here.
+              </p>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-function WelcomeWorkspace() {
+function WelcomeWorkspace({
+  welcome,
+}: Readonly<{ welcome: WorkspaceWelcome }>) {
   const navigate = useNavigate();
-  const setupActions = [
-    {
-      label: "Add your first task",
-      description: "Tell SmartFlow what needs attention.",
-      icon: CheckSquare,
-      onClick: () => navigate("/tasks"),
-    },
-    {
-      label: "Review calendar",
-      description: "Give Flow AI a sense of your available time.",
-      icon: Calendar,
-      onClick: () => navigate("/calendar"),
-    },
-    {
-      label: "Upload a document",
-      description: "Add context Flow AI can help you organize.",
-      icon: FileText,
-      onClick: () => navigate("/documents"),
-    },
-    {
-      label: "Continue Smart Academy",
-      description: "Start a learning signal for recommendations.",
-      icon: BookOpen,
-      onClick: () => navigate("/learn-ai"),
-    },
-    {
-      label: "Record your first expense",
-      description: "Create the first monthly finance signal.",
-      icon: Wallet,
-      onClick: () => navigate("/finance"),
-    },
-    {
-      label: "Chat with Flow AI",
-      description: "Tell Flow AI what you want SmartFlow to become.",
-      icon: MessageSquare,
-      onClick: () =>
-        navigate("/chat", {
-          state: {
-            initialPrompt:
-              "Help me set up SmartFlow. Ask me what I want this workspace to help me with.",
-          },
-        }),
-    },
-  ];
-
-  const learningSignals = [
-    "Tasks tell me what matters.",
-    "Calendar tells me available time.",
-    "Documents give context.",
-    "Finance gives monthly signals.",
-    "Learning activity guides recommendations.",
-  ];
 
   return (
     <>
@@ -314,20 +372,23 @@ function WelcomeWorkspace() {
             <h2 className="mt-1 text-lg font-semibold tracking-tight">Start with these</h2>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {setupActions.map((action) => (
-              <button
-                key={action.label}
-                type="button"
-                onClick={action.onClick}
-                className="group flex min-h-[104px] flex-col rounded-xl border border-border/35 bg-background/25 p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
-              >
-                <action.icon className="h-4 w-4 text-primary" />
-                <span className="mt-3 text-sm font-semibold">{action.label}</span>
-                <span className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {action.description}
-                </span>
-              </button>
-            ))}
+            {welcome.setupActions.map((action) => {
+              const ActionIcon = workspaceIconMap[action.icon];
+              return (
+                <button
+                  key={action.label}
+                  type="button"
+                  onClick={() => navigateToWorkspaceTarget(navigate, action.target)}
+                  className="group flex min-h-[104px] flex-col rounded-xl border border-border/35 bg-background/25 p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
+                >
+                  <ActionIcon className="h-4 w-4 text-primary" />
+                  <span className="mt-3 text-sm font-semibold">{action.label}</span>
+                  <span className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {action.description}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </section>
       </WorkspaceRevealSection>
@@ -342,7 +403,7 @@ function WelcomeWorkspace() {
           </div>
           <div className="rounded-xl border border-border/25 bg-background/15 p-4 backdrop-blur-sm">
             <ul className="grid gap-2 text-sm text-foreground/90 sm:grid-cols-2">
-              {learningSignals.map((item) => (
+              {welcome.learningSignals.map((item) => (
                 <li key={item} className="flex gap-2 rounded-lg border border-border/25 bg-secondary/[0.06] px-3 py-2">
                   <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" />
                   <span className="leading-5">{item}</span>
@@ -360,176 +421,16 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [showAddHabit, setShowAddHabit] = useState(false);
   const [showDailyStoryDetails, setShowDailyStoryDetails] = useState(false);
-  const { events, isLoading: isEventsLoading } = useEvents();
-  const { tasks, isLoading: isTasksLoading } = useTasks();
-  const { transactions, isLoading: isFinanceLoading } = useFinance();
+  const workspace = useWorkspace();
 
-  const today = useMemo(() => new Date(), []);
-  const todayLabel = today.toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-  const greeting = useMemo(() => {
-    const hour = today.getHours();
-    if (hour >= 5 && hour < 12) return "Good morning";
-    if (hour >= 12 && hour < 17) return "Good afternoon";
-    if (hour >= 17 && hour < 21) return "Good evening";
-    return "Still here";
-  }, [today]);
-
-  const todayEventCount = useMemo(() => {
-    const seen = new Set<string>();
-    return events
-      .filter((e) => isSameDay(new Date(e.dateTimeStart), today))
-      .filter((e) => {
-        const k = `${e.title}|${e.dateTimeStart}`;
-        if (seen.has(k)) return false;
-        seen.add(k);
-        return true;
-      }).length;
-  }, [events, today]);
-
-  const incompleteCount = useMemo(
-    () => tasks.filter((t) => !t.completed).length,
-    [tasks],
-  );
-
-  const todayKey = useMemo(() => toDateOnly(today), [today]);
-  const currentMonth = todayKey.slice(0, 7);
-  const netThisMonth = useMemo(() => {
-    const monthTx = transactions.filter((tx) =>
-      tx.date.startsWith(currentMonth),
-    );
-    const income = monthTx
-      .filter((tx) => tx.type === "income")
-      .reduce((s, tx) => s + tx.amount, 0);
-    const expense = monthTx
-      .filter((tx) => tx.type === "expense")
-      .reduce((s, tx) => s + tx.amount, 0);
-    return income - expense;
-  }, [transactions, currentMonth]);
-
-  const dailyNetData = useMemo(() => {
-    const monthTx = transactions
-      .filter((tx) => tx.date.startsWith(currentMonth))
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    const byDate = new Map<string, number>();
-    for (const tx of monthTx) {
-      const delta = tx.type === "income" ? tx.amount : -tx.amount;
-      byDate.set(tx.date, (byDate.get(tx.date) ?? 0) + delta);
-    }
-
-    let cumulative = 0;
-    return Array.from(byDate.entries()).map(([date, delta]) => {
-      cumulative += delta;
-      return { date: date.slice(8), value: cumulative };
-    });
-  }, [transactions, currentMonth]);
-
-  const eventsPerDay = useMemo(() => {
-    const result: { date: string; value: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const count = events.filter((e) =>
-        isSameDay(new Date(e.dateTimeStart), d),
-      ).length;
-      result.push({
-        date: d.toLocaleDateString(undefined, { weekday: "narrow" }),
-        value: count,
-      });
-    }
-    return result;
-  }, [events, today]);
-
-  const createdThisWeek = useMemo(() => {
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    return tasks.filter((t) => new Date(t.createdAt) >= weekAgo).length;
-  }, [tasks, today]);
-
-  const hasEventData = eventsPerDay.some((d) => d.value > 0);
-
-  const isStatsLoading =
-    (isEventsLoading && events.length === 0) ||
-    (isTasksLoading && tasks.length === 0) ||
-    (isFinanceLoading && transactions.length === 0);
-  const totalSignals = tasks.length + events.length + transactions.length;
-  const isLowDataWorkspace = !isStatsLoading && totalSignals < 5;
-
-  const dailyStoryBullets = useMemo(
-    () => [
-      `${incompleteCount} open task${incompleteCount === 1 ? "" : "s"} need attention today.`,
-      todayEventCount > 0
-        ? `${todayEventCount} calendar event${todayEventCount === 1 ? "" : "s"} may shape your available focus time.`
-        : "Your calendar looks open enough for deeper work.",
-      `This month is currently at ${formatCurrency(netThisMonth)} net.`,
-      createdThisWeek > 0
-        ? `${createdThisWeek} task${createdThisWeek === 1 ? "" : "s"} were created this week, so start with the active list.`
-        : "No new tasks were added this week, so review what is already in motion.",
-    ],
-    [createdThisWeek, incompleteCount, netThisMonth, todayEventCount],
-  );
-  const flowAISkills = [
-    {
-      title: "Plan My Day",
-      description: "Optimize today's schedule.",
-      icon: Calendar,
-      onClick: () =>
-        navigate("/chat", {
-          state: { initialPrompt: "Help me plan my day and choose what to do first." },
-        }),
-    },
-    {
-      title: "Study With Me",
-      description: "Focus and learning support.",
-      icon: BookOpen,
-      onClick: () => navigate("/learn-ai"),
-    },
-    {
-      title: "Analyze My Habits",
-      description: "Understand your routines.",
-      icon: Flame,
-      onClick: () =>
-        navigate("/chat", {
-          state: { initialPrompt: "Analyze my habits and give me insights on my routines." },
-        }),
-    },
-    {
-      title: "Review Finances",
-      description: "Review spending patterns.",
-      icon: Wallet,
-      onClick: () => navigate("/finance"),
-    },
-    {
-      title: "Weekly Briefing",
-      description: "AI-generated summaries.",
-      icon: FileText,
-      onClick: () => navigate("/briefing/weekly"),
-    },
-    {
-      title: "Career Assistant",
-      description: "Jobs, CV and interview help.",
-      icon: Briefcase,
-      onClick: () =>
-        navigate("/chat", {
-          state: {
-            initialPrompt: "Help me with my career: jobs, CV, applications, and interview preparation.",
-          },
-        }),
-    },
-  ];
-
-  useSetPageTitle("Dashboard", todayLabel);
+  useSetPageTitle("Dashboard", workspace.today.label);
 
   return (
     <WorkspaceReveal className="mx-auto max-w-[1180px] px-4 sm:px-6 lg:px-8 pt-5 lg:pt-6 pb-8 space-y-7 [&_.glass-card]:!bg-card/45 [&_.glass-card]:!border-primary/10 [&_.card-accent]:before:!opacity-25">
       <div className="grid grid-cols-1 gap-7 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-7">
-          {isLowDataWorkspace ? (
-            <WelcomeWorkspace />
+          {workspace.isLowData ? (
+            <WelcomeWorkspace welcome={workspace.welcome} />
           ) : (
             <>
       <WorkspaceRevealSection order={0}>
@@ -545,10 +446,10 @@ export default function Dashboard() {
 
           <div className="relative z-10 flex flex-col">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-primary/75">
-              {todayLabel}
+              {workspace.today.label}
             </p>
             <h1 className="mt-1.5 max-w-3xl text-2xl font-semibold tracking-tight text-foreground sm:text-[1.7rem]">
-              {greeting}. I prepared today&apos;s workspace.
+              {workspace.today.greeting}. I prepared today&apos;s workspace.
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
               Start with the next steps I surfaced, then review the reasoning behind them.
@@ -561,24 +462,27 @@ export default function Dashboard() {
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                {flowAISkills.map((skill) => (
-                  <button
-                    key={skill.title}
-                    type="button"
-                    onClick={skill.onClick}
-                    className="group flex min-h-[92px] items-start gap-3 rounded-xl border border-border/35 bg-background/25 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary/10 hover:shadow-[0_0_24px_rgba(139,92,246,0.12)]"
-                  >
-                    <div className="icon-tile h-9 w-9 rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/15">
-                      <skill.icon className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold leading-5">{skill.title}</p>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        {skill.description}
-                      </p>
-                    </div>
-                  </button>
-                ))}
+                {workspace.hero.skills.map((skill) => {
+                  const SkillIcon = workspaceIconMap[skill.icon];
+                  return (
+                    <button
+                      key={skill.title}
+                      type="button"
+                      onClick={() => navigateToWorkspaceTarget(navigate, skill.target)}
+                      className="group flex min-h-[92px] items-start gap-3 rounded-xl border border-border/35 bg-background/25 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary/10 hover:shadow-[0_0_24px_rgba(139,92,246,0.12)]"
+                    >
+                      <div className="icon-tile h-9 w-9 rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/15">
+                        <SkillIcon className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold leading-5">{skill.title}</p>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          {skill.description}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -586,7 +490,7 @@ export default function Dashboard() {
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Today&apos;s Signals
               </p>
-              {isStatsLoading ? (
+              {workspace.signals.isLoading ? (
                 <div className="flex flex-wrap gap-3">
                   <SkeletonBlock className="h-4 w-16" />
                   <SkeletonBlock className="h-4 w-16" />
@@ -595,13 +499,13 @@ export default function Dashboard() {
               ) : (
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span>
-                    <span className="text-foreground">{incompleteCount}</span> Tasks
+                    <span className="text-foreground">{workspace.signals.incompleteTasks}</span> Tasks
                   </span>
                   <span>
-                    <span className="text-foreground">{todayEventCount}</span> Events
+                    <span className="text-foreground">{workspace.signals.eventsToday}</span> Events
                   </span>
                   <span>
-                    <span className="text-foreground">€{formatCurrency(netThisMonth)}</span> Net
+                    <span className="text-foreground">€{workspace.signals.netThisMonthLabel}</span> Net
                   </span>
                 </div>
               )}
@@ -620,50 +524,23 @@ export default function Dashboard() {
           </div>
           <div className="rounded-2xl border border-primary/10 bg-primary/[0.025] p-2.5">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              <button
-                type="button"
-                onClick={() => navigate("/tasks")}
-                className="group flex min-h-[86px] flex-col rounded-xl border border-border/35 bg-background/25 p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
-              >
-                <CheckSquare className="h-4 w-4 text-primary" />
-                <span className="mt-2.5 text-sm font-semibold">Finish active tasks</span>
-                <span className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Because {incompleteCount} item{incompleteCount === 1 ? "" : "s"} still need attention.
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/calendar")}
-                className="group flex min-h-[86px] flex-col rounded-xl border border-border/35 bg-background/25 p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
-              >
-                <Calendar className="h-4 w-4 text-primary" />
-                <span className="mt-2.5 text-sm font-semibold">Review calendar</span>
-                <span className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Because today has {todayEventCount} scheduled event{todayEventCount === 1 ? "" : "s"}.
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/learn-ai")}
-                className="group flex min-h-[86px] flex-col rounded-xl border border-border/35 bg-background/25 p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
-              >
-                <BookOpen className="h-4 w-4 text-primary" />
-                <span className="mt-2.5 text-sm font-semibold">Continue Smart Academy</span>
-                <span className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Because a short focused session keeps learning in motion.
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/finance")}
-                className="group flex min-h-[86px] flex-col rounded-xl border border-border/35 bg-background/25 p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
-              >
-                <Wallet className="h-4 w-4 text-primary" />
-                <span className="mt-2.5 text-sm font-semibold">Review budget</span>
-                <span className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Because your monthly net is part of today&apos;s workspace signal.
-                </span>
-              </button>
+              {workspace.suggestedActions.map((action) => {
+                const ActionIcon = workspaceIconMap[action.icon];
+                return (
+                  <button
+                    key={action.title}
+                    type="button"
+                    onClick={() => navigateToWorkspaceTarget(navigate, action.target)}
+                    className="group flex min-h-[86px] flex-col rounded-xl border border-border/35 bg-background/25 p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
+                  >
+                    <ActionIcon className="h-4 w-4 text-primary" />
+                    <span className="mt-2.5 text-sm font-semibold">{action.title}</span>
+                    <span className="mt-1 text-xs leading-5 text-muted-foreground">
+                      {action.description}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -696,7 +573,7 @@ export default function Dashboard() {
             </div>
 
             <ul className="mt-3 grid gap-x-6 gap-y-1.5 text-sm text-foreground/90 sm:grid-cols-2">
-              {dailyStoryBullets.map((item) => (
+              {workspace.dailyStory.bullets.map((item) => (
                 <li key={item} className="flex gap-2 border-t border-border/30 py-2 first:border-t-0 sm:[&:nth-child(2)]:border-t-0">
                   <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" />
                   <span className="leading-5">{item}</span>
@@ -752,22 +629,15 @@ export default function Dashboard() {
             <h2 className="mt-1 text-lg font-semibold tracking-tight">Because I noticed...</h2>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <p className="flex-1 rounded-lg border border-border/35 bg-secondary/10 px-3 py-2 text-xs leading-5 text-muted-foreground">
-              <span className="font-medium text-foreground">Your task load is visible.</span>{" "}
-              {incompleteCount} open item{incompleteCount === 1 ? "" : "s"} make focus selection useful today.
-            </p>
-            <p className="flex-1 rounded-lg border border-border/35 bg-secondary/10 px-3 py-2 text-xs leading-5 text-muted-foreground">
-              <span className="font-medium text-foreground">Your calendar signal is clear.</span>{" "}
-              {todayEventCount === 0
-                ? "No events today leaves room for deeper work."
-                : `${todayEventCount} event${todayEventCount === 1 ? "" : "s"} may shape your available time.`}
-            </p>
-            <p className="flex-1 rounded-lg border border-border/35 bg-secondary/10 px-3 py-2 text-xs leading-5 text-muted-foreground">
-              <span className="font-medium text-foreground">New work appeared this week.</span>{" "}
-              {createdThisWeek === 0
-                ? "No new tasks were added, so continuing existing work is enough."
-                : `${createdThisWeek} task${createdThisWeek === 1 ? "" : "s"} were created recently.`}
-            </p>
+            {workspace.recommendationReasons.map((reason) => (
+              <p
+                key={reason.title}
+                className="flex-1 rounded-lg border border-border/35 bg-secondary/10 px-3 py-2 text-xs leading-5 text-muted-foreground"
+              >
+                <span className="font-medium text-foreground">{reason.title}</span>{" "}
+                {reason.body}
+              </p>
+            ))}
           </div>
           <RecommendedTopicsWidget />
         </section>
@@ -841,7 +711,7 @@ export default function Dashboard() {
         </div>
 
         <WorkspaceRevealSection order={2} className="lg:sticky lg:top-6">
-          <FlowAIAssistantRail lowData={isLowDataWorkspace} />
+          <FlowAIAssistantRail rail={workspace.rightRail} />
         </WorkspaceRevealSection>
       </div>
     </WorkspaceReveal>
