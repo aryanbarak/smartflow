@@ -21,13 +21,21 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/features/profile/useProfile";
 import { FlowAIOrb } from "@/components/FlowAIOrb";
 import { SmartflowAsciiVisual } from "@/components/smartflow";
+import { getSmartAcademyUrl } from "@/config/apps";
 import { useT } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 
-const navItems: { icon: React.ElementType; key: TranslationKey; path: string }[] = [
+const smartAcademyUrl = getSmartAcademyUrl();
+
+const navItems: {
+  externalUrl?: string | null;
+  icon: React.ElementType;
+  key: TranslationKey;
+  path: string;
+}[] = [
   { icon: LayoutDashboard, key: 'nav_dashboard', path: "/" },
   { icon: MessageSquare, key: 'nav_chat', path: "/chat" },
-  { icon: Bot, key: 'nav_tutor_app', path: "/tutor/app" },
+  { icon: Bot, key: 'nav_tutor_app', path: "/tutor/app", externalUrl: smartAcademyUrl },
   { icon: CheckSquare, key: 'nav_tasks', path: "/tasks" },
   { icon: Calendar, key: 'nav_calendar', path: "/calendar" },
   { icon: Flame, key: 'nav_habits', path: "/habits" },
@@ -167,18 +175,35 @@ export function Sidebar() {
                   transition={{ type: "spring", stiffness: 350, damping: 30 }}
                 />
               )}
-              <NavLink
-                to={item.path}
-                className={cn(
-                  "nav-link relative z-10",
-                  isActive
-                    ? "text-primary font-medium"
-                    : "hover:bg-transparent",
-                )}
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="text-sm">{t(item.key)}</span>
-              </NavLink>
+              {item.externalUrl ? (
+                <a
+                  href={item.externalUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cn(
+                    "nav-link relative z-10",
+                    isActive
+                      ? "text-primary font-medium"
+                      : "hover:bg-transparent",
+                  )}
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span className="text-sm">{t(item.key)}</span>
+                </a>
+              ) : (
+                <NavLink
+                  to={item.path}
+                  className={cn(
+                    "nav-link relative z-10",
+                    isActive
+                      ? "text-primary font-medium"
+                      : "hover:bg-transparent",
+                  )}
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span className="text-sm">{t(item.key)}</span>
+                </NavLink>
+              )}
             </div>
           );
         })}
