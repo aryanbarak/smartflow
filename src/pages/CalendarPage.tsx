@@ -28,6 +28,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateTime, toDateOnly } from "@/lib/date";
 import { cn } from "@/lib/utils";
+import { SmartflowAsciiVisual } from "@/components/smartflow";
 
 type EventFilter = "all" | "today" | "week";
 
@@ -1203,6 +1204,15 @@ export default function CalendarPage() {
                 )}
               </>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="glass-card hidden overflow-hidden lg:block">
+          <CardContent className="relative h-[260px] p-0">
+            <SmartflowAsciiVisual
+              variant="tetrahedron"
+              className="pointer-events-none absolute -right-14 top-1/2 h-[360px] w-[360px] -translate-y-1/2 opacity-45"
+            />
           </CardContent>
         </Card>
 

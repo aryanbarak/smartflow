@@ -10,6 +10,7 @@ import { aiMemoryService } from "@/features/ai-memory/aiMemoryService";
 import { PageTitleProvider } from "@/contexts/PageTitleContext";
 import { LaunchExperience } from "@/components/LaunchExperience";
 import { LaunchProvider, useLaunch } from "@/contexts/LaunchContext";
+import { SmartflowPointerFollower } from "@/components/smartflow";
 
 function AppLayoutInner() {
   const { shouldShowAppShell } = useLaunch();
@@ -43,6 +44,7 @@ function AppLayoutInner() {
       <LaunchExperience />
 
       <div style={appShellStyle} aria-hidden={!shouldShowAppShell}>
+        <SmartflowPointerFollower />
         <OfflineBadge />
 
         {/* Desktop */}

@@ -25,8 +25,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useProfile } from '@/features/profile/useProfile'
 import { useTasks } from '@/hooks/useTasks'
 import { SmartFlowIcon } from '@/components/SmartFlowLogo'
+import { SmartflowAsciiVisual } from '@/components/smartflow'
 import { useT } from '@/i18n'
-import briefingArt from '@/assets/dashboard-briefing-192.png'
 import type { TranslationKey } from '@/i18n'
 import { useChatSessions } from '@/hooks/useChatSessions'
 
@@ -378,13 +378,18 @@ export default function ChatPage() {
 
                 {!loading && messages.length === 0 && !sending && (
                   <div className="py-6">
-                    <div className="glass-card rounded-2xl p-5 w-full">
-                      <div className="flex items-center gap-4">
-                        <img
-                          src={briefingArt}
-                          alt=""
-                          className="w-20 sm:w-24 h-auto animate-pulse-soft select-none shrink-0"
-                        />
+                    <div className="glass-card relative overflow-hidden rounded-2xl p-5 w-full">
+                      <SmartflowAsciiVisual
+                        variant="wiremesh"
+                        className="absolute -right-8 -top-10 h-44 w-44 opacity-45 sm:h-52 sm:w-52"
+                      />
+                      <div className="relative z-10 flex items-center gap-4">
+                        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full border border-primary/10 bg-background/25">
+                          <SmartflowAsciiVisual
+                            variant="wiremesh"
+                            className="h-full w-full opacity-80"
+                          />
+                        </div>
                         <div className="flex-1 min-w-0">
                           <h2 className="text-lg sm:text-xl font-semibold">
                             {t('flow_greeting')}, {firstName} 👋

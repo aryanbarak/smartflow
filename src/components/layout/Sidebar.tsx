@@ -20,6 +20,7 @@ import { GlobalSearch } from "@/features/search/GlobalSearch";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/features/profile/useProfile";
 import { FlowAIOrb } from "@/components/FlowAIOrb";
+import { SmartflowAsciiVisual } from "@/components/smartflow";
 import { useT } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 
@@ -117,16 +118,26 @@ export function Sidebar() {
       {/* Logo */}
       <div className="relative z-10 p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-visible">
-            <FlowAIOrb
-              size={64}
-              state="presence"
-              variant="identity"
-              beam={false}
-              particles={false}
-              glowIntensity={0.62}
-              theme="transparent"
-              ariaLabel="Flow AI"
+          <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-primary/15 bg-primary/10 shadow-[0_0_34px_hsl(var(--primary)/0.28)]">
+            <div className="absolute inset-[-10px] opacity-55">
+              <FlowAIOrb
+                size={84}
+                state="presence"
+                variant="identity"
+                beam={false}
+                particles={false}
+                glowIntensity={0.72}
+                theme="transparent"
+                ariaLabel="Flow AI"
+              />
+            </div>
+            <SmartflowAsciiVisual
+              variant="wiremesh"
+              className="absolute inset-[-8px] opacity-95 mix-blend-screen"
+            />
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-[radial-gradient(circle_at_48%_46%,hsl(0_0%_100%/0.26),transparent_16%),radial-gradient(circle_at_center,hsl(var(--primary)/0.16),transparent_62%)]"
             />
           </div>
           <div>
