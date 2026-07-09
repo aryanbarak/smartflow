@@ -5,6 +5,7 @@ import type {
   WorkspaceRecentLesson,
   WorkspaceRecommendation,
   WorkspaceSetupAction,
+  WorkspaceSignalDomain,
   WorkspaceSkill,
 } from "./workspaceTypes";
 
@@ -43,6 +44,25 @@ function getGreeting(today: Date) {
   if (hour >= 12 && hour < 17) return "Good afternoon";
   if (hour >= 17 && hour < 21) return "Good evening";
   return "Still here";
+}
+
+function scoreForDomain(
+  input: WorkspaceEngineInput,
+  domain: WorkspaceSignalDomain,
+) {
+  return input.signals.find((signal) => signal.domain === domain)?.score ?? 0;
+}
+
+function sortBySignalPriority<T extends { signalDomain?: WorkspaceSignalDomain }>(
+  items: T[],
+  input: WorkspaceEngineInput,
+) {
+  return [...items].sort((a, b) => {
+    const aScore = a.signalDomain ? scoreForDomain(input, a.signalDomain) : 0;
+    const bScore = b.signalDomain ? scoreForDomain(input, b.signalDomain) : 0;
+    const scoreDiff = bScore - aScore;
+    return scoreDiff;
+  });
 }
 
 const flowAISkills: WorkspaceSkill[] = [
@@ -246,24 +266,28 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
       description: `Because ${incompleteTasks} item${incompleteTasks === 1 ? "" : "s"} still need attention.`,
       icon: "check",
       target: { route: "/tasks" },
+      signalDomain: "tasks",
     },
     {
       title: "Review calendar",
       description: `Because today has ${eventsToday} scheduled event${eventsToday === 1 ? "" : "s"}.`,
       icon: "calendar",
       target: { route: "/calendar" },
+      signalDomain: "calendar",
     },
     {
       title: "Continue Smart Academy",
       description: "Because a short focused session keeps learning in motion.",
       icon: "book",
       target: { route: "/learn-ai" },
+      signalDomain: "learning",
     },
     {
       title: "Review budget",
       description: "Because your monthly net is part of today's workspace signal.",
       icon: "wallet",
       target: { route: "/finance" },
+      signalDomain: "finance",
     },
   ];
 
@@ -299,14 +323,15 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
     hero: {
       skills: flowAISkills,
     },
-    suggestedActions,
+    suggestedActions: sortBySignalPriority(suggestedActions, input),
     dailyStory: {
       bullets: dailyStoryBullets,
     },
-    recommendationReasons: [
+    recommendationReasons: sortBySignalPriority([
       {
         title: "Your task load is visible.",
         body: `${incompleteTasks} open item${incompleteTasks === 1 ? "" : "s"} make focus selection useful today.`,
+        signalDomain: "tasks",
       },
       {
         title: "Your calendar signal is clear.",
@@ -314,6 +339,7 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
           eventsToday === 0
             ? "No events today leaves room for deeper work."
             : `${eventsToday} event${eventsToday === 1 ? "" : "s"} may shape your available time.`,
+        signalDomain: "calendar",
       },
       {
         title: "New work appeared this week.",
@@ -321,8 +347,10 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
           tasksCreatedThisWeek === 0
             ? "No new tasks were added, so continuing existing work is enough."
             : `${tasksCreatedThisWeek} task${tasksCreatedThisWeek === 1 ? "" : "s"} were created recently.`,
+        signalDomain: "tasks",
       },
-    ],
+    ], input),
+    signalFeed: input.signals,
     welcome: {
       setupActions: welcomeSetupActions,
       learningSignals: welcomeLearningSignals,

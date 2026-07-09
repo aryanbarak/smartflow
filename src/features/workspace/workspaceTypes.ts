@@ -28,6 +28,7 @@ export interface WorkspaceAction {
   description: string;
   icon: WorkspaceIconKey;
   target: WorkspaceNavigationTarget;
+  signalDomain?: WorkspaceSignalDomain;
 }
 
 export interface WorkspaceSkill extends WorkspaceAction {}
@@ -71,6 +72,28 @@ export interface WorkspaceLearnAiSignal {
   mostActiveMode: { mode: string; count: number } | null;
 }
 
+export type WorkspaceSignalDomain =
+  | "tasks"
+  | "calendar"
+  | "finance"
+  | "habits"
+  | "documents"
+  | "learning";
+
+export type WorkspaceSignalSeverity = "low" | "medium" | "high";
+
+export interface WorkspaceSignal {
+  id: string;
+  domain: WorkspaceSignalDomain;
+  label: string;
+  score: number;
+  severity: WorkspaceSignalSeverity;
+  reason: string;
+  count: number;
+  createdAt?: string;
+  generatedAt: string;
+}
+
 export interface WorkspaceDataLoadingState {
   tasks: boolean;
   events: boolean;
@@ -81,7 +104,7 @@ export interface WorkspaceDataLoadingState {
   chat: boolean;
 }
 
-export interface WorkspaceEngineInput {
+export interface WorkspaceSignalEngineInput {
   now?: Date;
   tasks: WorkspaceTaskSignal[];
   events: WorkspaceEventSignal[];
@@ -89,8 +112,12 @@ export interface WorkspaceEngineInput {
   habits: unknown[];
   documents: unknown[];
   learnAiActivity: WorkspaceLearnAiSignal | null;
-  chatSessions: WorkspaceChatSignal[];
   loading: WorkspaceDataLoadingState;
+}
+
+export interface WorkspaceEngineInput extends WorkspaceSignalEngineInput {
+  chatSessions: WorkspaceChatSignal[];
+  signals: WorkspaceSignal[];
 }
 
 export interface WorkspaceToday {
@@ -116,6 +143,7 @@ export interface WorkspaceDailyStory {
 export interface WorkspaceReason {
   title: string;
   body: string;
+  signalDomain?: WorkspaceSignalDomain;
 }
 
 export interface WorkspaceRecentLesson {
@@ -159,6 +187,7 @@ export interface Workspace {
   suggestedActions: WorkspaceAction[];
   dailyStory: WorkspaceDailyStory;
   recommendationReasons: WorkspaceReason[];
+  signalFeed: WorkspaceSignal[];
   welcome: WorkspaceWelcome;
   rightRail: WorkspaceRightRail;
 }

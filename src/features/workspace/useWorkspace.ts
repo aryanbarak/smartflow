@@ -6,6 +6,7 @@ import { useChatSessions } from "@/hooks/useChatSessions";
 import { useLearnAiActivity } from "@/hooks/useLearnAiActivity";
 import { useHabits } from "@/features/habits/useHabits";
 import { useDocuments } from "@/features/documents/useDocuments";
+import { signalEngine } from "./signalEngine";
 import { workspaceEngine } from "./workspaceEngine";
 import type {
   Workspace,
@@ -49,15 +50,22 @@ export function useWorkspace(): Workspace {
       updatedAt: session.updated_at,
     }));
 
-    return workspaceEngine({
+    const engineInput = {
       tasks,
       events,
       transactions,
       habits: habitsQuery.data ?? [],
       documents: documentsState.documents,
       learnAiActivity,
-      chatSessions,
       loading,
+    };
+
+    const signals = signalEngine(engineInput);
+
+    return workspaceEngine({
+      ...engineInput,
+      chatSessions,
+      signals,
     });
   }, [
     documentsState.documents,
