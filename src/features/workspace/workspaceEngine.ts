@@ -53,11 +53,25 @@ function scoreForDomain(
   return input.signals.find((signal) => signal.domain === domain)?.score ?? 0;
 }
 
+function priorityRankForDomain(
+  input: WorkspaceEngineInput,
+  domain?: WorkspaceSignalDomain,
+) {
+  if (!domain) return Number.MAX_SAFE_INTEGER;
+  if (domain === input.priority.primaryDomain) return 0;
+  const secondaryIndex = input.priority.secondaryDomains.indexOf(domain);
+  return secondaryIndex === -1 ? Number.MAX_SAFE_INTEGER : secondaryIndex + 1;
+}
+
 function sortBySignalPriority<T extends { signalDomain?: WorkspaceSignalDomain }>(
   items: T[],
   input: WorkspaceEngineInput,
 ) {
   return [...items].sort((a, b) => {
+    const rankDiff =
+      priorityRankForDomain(input, a.signalDomain) -
+      priorityRankForDomain(input, b.signalDomain);
+    if (rankDiff !== 0) return rankDiff;
     const aScore = a.signalDomain ? scoreForDomain(input, a.signalDomain) : 0;
     const bScore = b.signalDomain ? scoreForDomain(input, b.signalDomain) : 0;
     const scoreDiff = bScore - aScore;
@@ -321,6 +335,8 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
       tasksCreatedThisWeek,
     },
     hero: {
+      title: `${getGreeting(today)}. ${input.priority.missionTitle}`,
+      summary: input.priority.missionSummary,
       skills: flowAISkills,
     },
     suggestedActions: sortBySignalPriority(suggestedActions, input),

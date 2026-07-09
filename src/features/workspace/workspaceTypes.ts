@@ -81,6 +81,7 @@ export type WorkspaceSignalDomain =
   | "learning";
 
 export type WorkspaceSignalSeverity = "low" | "medium" | "high";
+export type WorkspacePriorityConfidence = "low" | "medium" | "high";
 
 export interface WorkspaceSignal {
   id: string;
@@ -92,6 +93,16 @@ export interface WorkspaceSignal {
   count: number;
   createdAt?: string;
   generatedAt: string;
+}
+
+export interface WorkspacePriorityModel {
+  primaryDomain: WorkspaceSignalDomain;
+  secondaryDomains: WorkspaceSignalDomain[];
+  missionTitle: string;
+  missionSummary: string;
+  confidence: WorkspacePriorityConfidence;
+  reasons: string[];
+  orderedSignalIds: string[];
 }
 
 export interface WorkspaceDataLoadingState {
@@ -118,6 +129,7 @@ export interface WorkspaceSignalEngineInput {
 export interface WorkspaceEngineInput extends WorkspaceSignalEngineInput {
   chatSessions: WorkspaceChatSignal[];
   signals: WorkspaceSignal[];
+  priority: WorkspacePriorityModel;
 }
 
 export interface WorkspaceToday {
@@ -182,6 +194,8 @@ export interface Workspace {
   isLowData: boolean;
   signals: WorkspaceSignals;
   hero: {
+    title: string;
+    summary: string;
     skills: WorkspaceSkill[];
   };
   suggestedActions: WorkspaceAction[];

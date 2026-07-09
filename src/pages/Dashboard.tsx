@@ -449,10 +449,10 @@ export default function Dashboard() {
               {workspace.today.label}
             </p>
             <h1 className="mt-1.5 max-w-3xl text-2xl font-semibold tracking-tight text-foreground sm:text-[1.7rem]">
-              {workspace.today.greeting}. I prepared today&apos;s workspace.
+              {workspace.hero.title}
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-              Start with the next steps I surfaced, then review the reasoning behind them.
+              {workspace.hero.summary}
             </p>
 
             <div className="mt-5 space-y-3">

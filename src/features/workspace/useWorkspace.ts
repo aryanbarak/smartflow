@@ -6,6 +6,7 @@ import { useChatSessions } from "@/hooks/useChatSessions";
 import { useLearnAiActivity } from "@/hooks/useLearnAiActivity";
 import { useHabits } from "@/features/habits/useHabits";
 import { useDocuments } from "@/features/documents/useDocuments";
+import { priorityEngine } from "./priorityEngine";
 import { signalEngine } from "./signalEngine";
 import { workspaceEngine } from "./workspaceEngine";
 import type {
@@ -61,11 +62,13 @@ export function useWorkspace(): Workspace {
     };
 
     const signals = signalEngine(engineInput);
+    const priority = priorityEngine(signals);
 
     return workspaceEngine({
       ...engineInput,
       chatSessions,
       signals,
+      priority,
     });
   }, [
     documentsState.documents,

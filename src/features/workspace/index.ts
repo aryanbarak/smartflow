@@ -1,3 +1,4 @@
+export { priorityEngine } from "./priorityEngine";
 export { signalEngine } from "./signalEngine";
 export { workspaceEngine } from "./workspaceEngine";
 export { useWorkspace } from "./useWorkspace";
@@ -6,6 +7,8 @@ export type {
   WorkspaceAction,
   WorkspaceIconKey,
   WorkspaceNavigationTarget,
+  WorkspacePriorityConfidence,
+  WorkspacePriorityModel,
   WorkspaceRecommendation,
   WorkspaceRightRail,
   WorkspaceSignal,
