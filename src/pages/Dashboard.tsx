@@ -173,6 +173,11 @@ function FocusPlaylistCard() {
 
 function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
   const navigate = useNavigate();
+  const visibleLessons = rail.recentLessons.slice(0, 6);
+  const visibleRecommendations = rail.recommendations.slice(0, 6);
+  const visibleConversations = rail.recentConversation
+    ? [rail.recentConversation].slice(0, 3)
+    : [];
 
   return (
     <Card className="glass-card relative overflow-hidden">
@@ -181,7 +186,7 @@ function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
         className="pointer-events-none absolute -right-24 -top-24 h-[300px] w-[300px] opacity-30"
       />
 
-      <CardContent className="relative z-10 space-y-4 p-4 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto scrollbar-hide">
+      <CardContent className="relative z-10 space-y-4 p-4">
         <div className="flex items-start gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-visible">
               <FlowAIOrb
@@ -226,7 +231,7 @@ function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
             Continue learning
           </p>
           <div className="space-y-2">
-            {rail.recentLessons.map((lesson) => {
+            {visibleLessons.map((lesson) => {
               const LessonIcon = workspaceIconMap[lesson.icon];
               return (
                 <button
@@ -260,6 +265,13 @@ function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() => navigate("/learn-ai")}
+              className="w-full rounded-lg px-2.5 py-1.5 text-left text-[11px] font-medium text-primary transition-colors hover:bg-primary/10 hover:text-primary/85"
+            >
+              View all
+            </button>
           </div>
         </div>
 
@@ -268,7 +280,7 @@ function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
             Recommended today
           </p>
           <div className="grid grid-cols-1 gap-2">
-            {rail.recommendations.map((item) => {
+            {visibleRecommendations.map((item) => {
               const ItemIcon = workspaceIconMap[item.icon];
               return (
                 <button
@@ -291,6 +303,12 @@ function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
                 </button>
               );
             })}
+            <button
+              type="button"
+              className="rounded-lg px-2.5 py-1.5 text-left text-[11px] font-medium text-primary transition-colors hover:bg-primary/10 hover:text-primary/85"
+            >
+              View all
+            </button>
           </div>
         </div>
 
@@ -303,19 +321,31 @@ function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
               <SkeletonBlock className="h-3 w-32" />
               <SkeletonBlock className="mt-2 h-2.5 w-16" />
             </div>
-          ) : rail.recentConversation ? (
-            <button
-              type="button"
-              onClick={() => navigate("/chat")}
-              className="w-full rounded-lg border border-border/25 bg-background/15 p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
-            >
-              <p className="truncate text-xs font-medium" dir="auto">
-                {rail.recentConversation.title}
-              </p>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                {rail.recentConversation.relativeTime}
-              </p>
-            </button>
+          ) : visibleConversations.length > 0 ? (
+            <div className="space-y-2">
+              {visibleConversations.map((conversation) => (
+                <button
+                  key={`${conversation.title}-${conversation.relativeTime}`}
+                  type="button"
+                  onClick={() => navigate("/chat")}
+                  className="w-full rounded-lg border border-border/25 bg-background/15 p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
+                >
+                  <p className="truncate text-xs font-medium" dir="auto">
+                    {conversation.title}
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    {conversation.relativeTime}
+                  </p>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => navigate("/chat")}
+                className="w-full rounded-lg px-2.5 py-1.5 text-left text-[11px] font-medium text-primary transition-colors hover:bg-primary/10 hover:text-primary/85"
+              >
+                View all
+              </button>
+            </div>
           ) : (
             <div className="rounded-lg border border-border/25 bg-background/15 p-3">
               <p className="text-xs font-medium">No recent conversation yet.</p>
