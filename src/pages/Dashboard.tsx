@@ -34,10 +34,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SkeletonBlock } from "@/components/common/Skeletons";
 import { useMusicPlayer, loadHistory } from "@/hooks/useMusicPlayer";
 import { useWorkspace } from "@/features/workspace";
+import { trackWorkspaceInteraction } from "@/features/workspace";
 import type {
   WorkspaceIconKey,
+  WorkspaceInteractionSource,
+  WorkspaceInteractionType,
   WorkspaceNavigationTarget,
   WorkspaceRightRail,
+  WorkspaceSignalDomain,
   WorkspaceSkill,
   WorkspaceWelcome,
 } from "@/features/workspace";
@@ -65,6 +69,65 @@ function navigateToWorkspaceTarget(
     return;
   }
   navigate(target.route);
+}
+
+function domainForWorkspaceRoute(route: string): WorkspaceSignalDomain {
+  if (route === "/tasks") return "tasks";
+  if (route === "/calendar") return "calendar";
+  if (route === "/finance") return "finance";
+  if (route === "/documents") return "documents";
+  if (route === "/learn-ai") return "learning";
+  if (route === "/briefing/weekly") return "documents";
+  if (route === "/journal") return "documents";
+  return "learning";
+}
+
+function trackWorkspaceUiClick({
+  type,
+  domain,
+  targetId,
+  targetTitle,
+  source,
+  metadata,
+}: {
+  type: WorkspaceInteractionType;
+  domain: WorkspaceSignalDomain;
+  targetId?: string;
+  targetTitle: string;
+  source: WorkspaceInteractionSource;
+  metadata?: Record<string, string | number | boolean | null>;
+}) {
+  trackWorkspaceInteraction({
+    type,
+    domain,
+    targetId,
+    targetTitle,
+    source,
+    metadata,
+  });
+}
+
+function trackAndNavigateToWorkspaceTarget(
+  navigate: ReturnType<typeof useNavigate>,
+  target: WorkspaceNavigationTarget,
+  options: {
+    type: WorkspaceInteractionType;
+    source: WorkspaceInteractionSource;
+    targetTitle: string;
+    targetId?: string;
+    domain?: WorkspaceSignalDomain;
+    metadata?: Record<string, string | number | boolean | null>;
+  },
+) {
+  trackWorkspaceUiClick({
+    type: options.type,
+    domain: options.domain ?? domainForWorkspaceRoute(target.route),
+    targetId: options.targetId ?? target.route,
+    targetTitle: options.targetTitle,
+    source: options.source,
+    metadata: options.metadata,
+  });
+  navigateToWorkspaceTarget(navigate, target);
 }
 
 function FocusPlaylistCard() {
@@ -220,7 +283,16 @@ function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
           size="sm"
           className="w-full gap-2 text-white border-0"
           style={{ background: "var(--gradient-primary)" }}
-          onClick={() => navigate("/chat")}
+          onClick={() => {
+            trackWorkspaceUiClick({
+              type: "chat_opened",
+              domain: "learning",
+              targetId: "flow-ai-chat",
+              targetTitle: "Chat with Flow AI",
+              source: "flow_ai",
+            });
+            navigate("/chat");
+          }}
         >
           <MessageSquare className="w-4 h-4" />
           Chat with Flow AI
@@ -237,7 +309,17 @@ function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
                 <button
                   key={lesson.title}
                   type="button"
-                  onClick={() => navigate("/learn-ai")}
+                  onClick={() => {
+                    trackWorkspaceUiClick({
+                      type: "learning_continued",
+                      domain: "learning",
+                      targetId: lesson.title,
+                      targetTitle: lesson.title,
+                      source: "right_rail_learning",
+                      metadata: { progress: lesson.progress },
+                    });
+                    navigate("/learn-ai");
+                  }}
                   className="group w-full rounded-lg border border-border/25 bg-background/15 px-2.5 py-2 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
                 >
                   <div className="flex items-center gap-2.5">
@@ -267,7 +349,16 @@ function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
             })}
             <button
               type="button"
-              onClick={() => navigate("/learn-ai")}
+              onClick={() => {
+                trackWorkspaceUiClick({
+                  type: "view_all_clicked",
+                  domain: "learning",
+                  targetId: "right-rail-learning-view-all",
+                  targetTitle: "Continue learning",
+                  source: "right_rail_learning",
+                });
+                navigate("/learn-ai");
+              }}
               className="w-full rounded-lg px-2.5 py-1.5 text-left text-[11px] font-medium text-primary transition-colors hover:bg-primary/10 hover:text-primary/85"
             >
               View all
@@ -286,7 +377,15 @@ function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
                 <button
                   key={item.title}
                   type="button"
-                  onClick={() => navigateToWorkspaceTarget(navigate, item.target)}
+                  onClick={() =>
+                    trackAndNavigateToWorkspaceTarget(navigate, item.target, {
+                      type: "recommendation_opened",
+                      source: "right_rail_recommendations",
+                      targetId: item.title,
+                      targetTitle: item.title,
+                      domain: item.signalDomain,
+                    })
+                  }
                   className="group rounded-lg border border-border/25 bg-background/15 px-2.5 py-2 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
                 >
                   <div className="flex gap-2.5">
@@ -305,6 +404,15 @@ function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
             })}
             <button
               type="button"
+              onClick={() =>
+                trackWorkspaceUiClick({
+                  type: "view_all_clicked",
+                  domain: "learning",
+                  targetId: "right-rail-recommendations-view-all",
+                  targetTitle: "Recommended today",
+                  source: "right_rail_recommendations",
+                })
+              }
               className="rounded-lg px-2.5 py-1.5 text-left text-[11px] font-medium text-primary transition-colors hover:bg-primary/10 hover:text-primary/85"
             >
               View all
@@ -327,7 +435,17 @@ function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
                 <button
                   key={`${conversation.title}-${conversation.relativeTime}`}
                   type="button"
-                  onClick={() => navigate("/chat")}
+                  onClick={() => {
+                    trackWorkspaceUiClick({
+                      type: "conversation_opened",
+                      domain: "learning",
+                      targetId: conversation.title,
+                      targetTitle: conversation.title,
+                      source: "recent_conversation",
+                      metadata: { relativeTime: conversation.relativeTime },
+                    });
+                    navigate("/chat");
+                  }}
                   className="w-full rounded-lg border border-border/25 bg-background/15 p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
                 >
                   <p className="truncate text-xs font-medium" dir="auto">
@@ -340,7 +458,16 @@ function FlowAIAssistantRail({ rail }: Readonly<{ rail: WorkspaceRightRail }>) {
               ))}
               <button
                 type="button"
-                onClick={() => navigate("/chat")}
+                onClick={() => {
+                  trackWorkspaceUiClick({
+                    type: "view_all_clicked",
+                    domain: "learning",
+                    targetId: "recent-conversation-view-all",
+                    targetTitle: "Recent conversation",
+                    source: "recent_conversation",
+                  });
+                  navigate("/chat");
+                }}
                 className="w-full rounded-lg px-2.5 py-1.5 text-left text-[11px] font-medium text-primary transition-colors hover:bg-primary/10 hover:text-primary/85"
               >
                 View all
@@ -381,7 +508,15 @@ function HeroSkills({
               <button
                 key={skill.title}
                 type="button"
-                onClick={() => navigateToWorkspaceTarget(navigate, skill.target)}
+                onClick={() =>
+                  trackAndNavigateToWorkspaceTarget(navigate, skill.target, {
+                    type: "skill_opened",
+                    source: "hero",
+                    targetId: skill.title,
+                    targetTitle: skill.title,
+                    domain: skill.signalDomain,
+                  })
+                }
                 className="group flex min-h-[92px] items-start gap-3 rounded-xl border border-border/35 bg-background/25 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary/10 hover:shadow-[0_0_24px_rgba(139,92,246,0.12)]"
               >
                 <div className="icon-tile h-9 w-9 rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/15">
@@ -453,7 +588,14 @@ function WelcomeWorkspace({
                 <button
                   key={action.label}
                   type="button"
-                  onClick={() => navigateToWorkspaceTarget(navigate, action.target)}
+                  onClick={() =>
+                    trackAndNavigateToWorkspaceTarget(navigate, action.target, {
+                      type: "action_clicked",
+                      source: "suggested_actions",
+                      targetId: action.label,
+                      targetTitle: action.label,
+                    })
+                  }
                   className="group flex min-h-[104px] flex-col rounded-xl border border-border/35 bg-background/25 p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
                 >
                   <ActionIcon className="h-4 w-4 text-primary" />
@@ -594,7 +736,15 @@ export default function Dashboard() {
                   <button
                     key={action.title}
                     type="button"
-                    onClick={() => navigateToWorkspaceTarget(navigate, action.target)}
+                    onClick={() =>
+                      trackAndNavigateToWorkspaceTarget(navigate, action.target, {
+                        type: "action_clicked",
+                        source: "suggested_actions",
+                        targetId: action.title,
+                        targetTitle: action.title,
+                        domain: action.signalDomain,
+                      })
+                    }
                     className="group flex min-h-[86px] flex-col rounded-xl border border-border/35 bg-background/25 p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/10"
                   >
                     <ActionIcon className="h-4 w-4 text-primary" />
@@ -723,7 +873,16 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
                 <button
                   type="button"
-                  onClick={() => navigate("/tasks")}
+                  onClick={() => {
+                    trackWorkspaceUiClick({
+                      type: "action_clicked",
+                      domain: "tasks",
+                      targetId: "manual-new-task",
+                      targetTitle: "New Task",
+                      source: "manual_actions",
+                    });
+                    navigate("/tasks");
+                  }}
                   className="flex items-center gap-2 rounded-lg border border-border/45 bg-secondary/15 px-3 py-2.5 text-left text-foreground transition-colors hover:bg-secondary/35 hover:border-primary/30"
                 >
                   <div className="icon-tile w-6 h-6 rounded-md bg-violet-500/15">
@@ -733,7 +892,16 @@ export default function Dashboard() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate("/journal")}
+                  onClick={() => {
+                    trackWorkspaceUiClick({
+                      type: "action_clicked",
+                      domain: "documents",
+                      targetId: "manual-journal",
+                      targetTitle: "Journal",
+                      source: "manual_actions",
+                    });
+                    navigate("/journal");
+                  }}
                   className="flex items-center gap-2 rounded-lg border border-border/45 bg-secondary/15 px-3 py-2.5 text-left text-foreground transition-colors hover:bg-secondary/35 hover:border-primary/30"
                 >
                   <div className="icon-tile w-6 h-6 rounded-md bg-blue-500/15">
@@ -743,7 +911,16 @@ export default function Dashboard() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowAddHabit(true)}
+                  onClick={() => {
+                    trackWorkspaceUiClick({
+                      type: "action_clicked",
+                      domain: "habits",
+                      targetId: "manual-add-habit",
+                      targetTitle: "Add Habit",
+                      source: "manual_actions",
+                    });
+                    setShowAddHabit(true);
+                  }}
                   className="flex items-center gap-2 rounded-lg border border-border/45 bg-secondary/15 px-3 py-2.5 text-left text-foreground transition-colors hover:bg-secondary/35 hover:border-primary/30"
                 >
                   <div className="icon-tile w-6 h-6 rounded-md bg-orange-500/15">
@@ -753,7 +930,16 @@ export default function Dashboard() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate("/finance")}
+                  onClick={() => {
+                    trackWorkspaceUiClick({
+                      type: "action_clicked",
+                      domain: "finance",
+                      targetId: "manual-record-expense",
+                      targetTitle: "Record Expense",
+                      source: "manual_actions",
+                    });
+                    navigate("/finance");
+                  }}
                   className="flex items-center gap-2 rounded-lg border border-border/45 bg-secondary/15 px-3 py-2.5 text-left text-foreground transition-colors hover:bg-secondary/35 hover:border-primary/30"
                 >
                   <div className="icon-tile w-6 h-6 rounded-md bg-emerald-500/15">

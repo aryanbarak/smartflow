@@ -1,3 +1,8 @@
+import type {
+  WorkspaceInteractionEvent,
+  WorkspaceInteractionType,
+} from "./workspaceInteractionTypes";
+
 export type WorkspaceIconKey =
   | "book"
   | "briefcase"
@@ -83,8 +88,19 @@ export type WorkspaceSignalDomain =
 export type WorkspaceSignalSeverity = "low" | "medium" | "high";
 export type WorkspacePriorityConfidence = "low" | "medium" | "high";
 export type WorkspacePersonalizationConfidence = "low" | "medium" | "high";
+export type WorkspaceMemoryConfidence = "low" | "medium" | "high";
+export type WorkspaceUsageWindow = "morning" | "afternoon" | "evening" | "night";
+export type WorkspaceSuggestedActionMemoryStatus =
+  | "shown"
+  | "clicked"
+  | "completed"
+  | "dismissed";
 
 export type WorkspaceDomainAffinity = Record<WorkspaceSignalDomain, number>;
+export type WorkspaceUsageWindowMemory = Record<
+  WorkspaceUsageWindow,
+  Partial<Record<WorkspaceSignalDomain, number>>
+>;
 
 export interface WorkspaceSignal {
   id: string;
@@ -117,6 +133,88 @@ export interface WorkspacePersonalizationModel {
   generatedAt: string;
 }
 
+export interface WorkspaceDomainUsageMemory {
+  openCount: number;
+  lastOpenedAt?: string;
+  recentOpenTimestamps: string[];
+}
+
+export interface WorkspaceLastOpenedItemMemory {
+  id?: string;
+  title?: string;
+  progress?: number;
+  openedAt: string;
+}
+
+export interface WorkspaceLastOpenedItemsMemory {
+  task?: WorkspaceLastOpenedItemMemory;
+  document?: WorkspaceLastOpenedItemMemory;
+  lesson?: WorkspaceLastOpenedItemMemory;
+  conversation?: WorkspaceLastOpenedItemMemory;
+}
+
+export interface WorkspaceSuggestedActionMemory {
+  id: string;
+  domain: WorkspaceSignalDomain;
+  title: string;
+  presentedAt: string;
+  status: WorkspaceSuggestedActionMemoryStatus;
+}
+
+export interface WorkspaceConversationMemory {
+  id: string;
+  title: string;
+  updatedAt: string;
+}
+
+export interface WorkspaceLearningContextMemory {
+  mode?: string;
+  totalQuestions: number;
+  progress?: number;
+  updatedAt?: string;
+}
+
+export interface WorkspaceHistoryEntry {
+  generatedAt: string;
+  primaryDomain: WorkspaceSignalDomain;
+  secondaryDomains: WorkspaceSignalDomain[];
+  confidence: WorkspacePriorityConfidence;
+}
+
+export interface WorkspaceMemory {
+  version: 1;
+  createdAt: string;
+  updatedAt: string;
+  lastWorkspaceOpenedAt?: string;
+  lastPrimaryDomain?: WorkspaceSignalDomain;
+  recentDomains: WorkspaceSignalDomain[];
+  domainUsage: Record<WorkspaceSignalDomain, WorkspaceDomainUsageMemory>;
+  lastOpenedItems: WorkspaceLastOpenedItemsMemory;
+  preferredUsageWindows: WorkspaceUsageWindowMemory;
+  recentSuggestedActions: WorkspaceSuggestedActionMemory[];
+  dismissedSuggestedActions: WorkspaceSuggestedActionMemory[];
+  completedSuggestedActions: WorkspaceSuggestedActionMemory[];
+  recentInteractions: WorkspaceInteractionEvent[];
+  interactionCountsByType: Partial<Record<WorkspaceInteractionType, number>>;
+  interactionCountsByDomain: Partial<Record<WorkspaceSignalDomain, number>>;
+  lastInteractionAt?: string;
+  lastConversation?: WorkspaceConversationMemory;
+  lastLearningContext?: WorkspaceLearningContextMemory;
+  workspaceHistory: WorkspaceHistoryEntry[];
+}
+
+export interface WorkspaceMemoryInsights {
+  recentDomains: WorkspaceSignalDomain[];
+  familiarDomains: WorkspaceSignalDomain[];
+  preferredTimeDomains: WorkspaceSignalDomain[];
+  lastPrimaryDomain?: WorkspaceSignalDomain;
+  repeatedActionPatterns: WorkspaceSignalDomain[];
+  interactionDomains: WorkspaceSignalDomain[];
+  learningContinuity?: WorkspaceLearningContextMemory;
+  confidence: WorkspaceMemoryConfidence;
+  evidence: string[];
+}
+
 export interface WorkspaceDataLoadingState {
   tasks: boolean;
   events: boolean;
@@ -136,6 +234,18 @@ export interface WorkspaceSignalEngineInput {
   documents: unknown[];
   learnAiActivity: WorkspaceLearnAiSignal | null;
   loading: WorkspaceDataLoadingState;
+}
+
+export interface WorkspaceMemoryEngineInput extends WorkspaceSignalEngineInput {
+  signals: WorkspaceSignal[];
+  existingMemory: WorkspaceMemory;
+  chatSessions: WorkspaceChatSignal[];
+}
+
+export interface WorkspaceMemoryEngineResult {
+  updatedMemory: WorkspaceMemory;
+  memoryInsights: WorkspaceMemoryInsights;
+  hasChanges: boolean;
 }
 
 export interface WorkspaceEngineInput extends WorkspaceSignalEngineInput {

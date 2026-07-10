@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useEvents } from "@/hooks/useEvents";
 import { useTasks } from "@/hooks/useTasks";
 import { useFinance } from "@/hooks/useFinance";
@@ -6,9 +6,11 @@ import { useChatSessions } from "@/hooks/useChatSessions";
 import { useLearnAiActivity } from "@/hooks/useLearnAiActivity";
 import { useHabits } from "@/features/habits/useHabits";
 import { useDocuments } from "@/features/documents/useDocuments";
+import { memoryEngine } from "./memoryEngine";
 import { priorityEngine } from "./priorityEngine";
 import { personalizationEngine } from "./personalizationEngine";
 import { signalEngine } from "./signalEngine";
+import { loadWorkspaceMemory, saveWorkspaceMemory } from "./workspaceMemoryStorage";
 import { workspaceEngine } from "./workspaceEngine";
 import type {
   Workspace,
@@ -18,6 +20,11 @@ import type {
 } from "./workspaceTypes";
 
 export function useWorkspace(): Workspace {
+  const workspaceMemoryRef = useRef<ReturnType<typeof loadWorkspaceMemory> | null>(null);
+  if (!workspaceMemoryRef.current) {
+    workspaceMemoryRef.current = loadWorkspaceMemory();
+  }
+
   const { events, isLoading: isEventsLoading } = useEvents();
   const { tasks, isLoading: isTasksLoading } = useTasks();
   const { transactions, isLoading: isFinanceLoading } = useFinance();
@@ -26,7 +33,7 @@ export function useWorkspace(): Workspace {
   const documentsState = useDocuments();
   const learnAiActivityQuery = useLearnAiActivity();
 
-  return useMemo(() => {
+  const workspaceState = useMemo(() => {
     const loading: WorkspaceDataLoadingState = {
       tasks: isTasksLoading,
       events: isEventsLoading,
@@ -63,16 +70,29 @@ export function useWorkspace(): Workspace {
     };
 
     const signals = signalEngine(engineInput);
-    const personalization = personalizationEngine(engineInput, signals);
+    const memoryResult = memoryEngine({
+      ...engineInput,
+      signals,
+      existingMemory: workspaceMemoryRef.current ?? loadWorkspaceMemory(),
+      chatSessions,
+    });
+    const personalization = personalizationEngine(
+      engineInput,
+      signals,
+      memoryResult.memoryInsights,
+    );
     const priority = priorityEngine(signals, personalization);
 
-    return workspaceEngine({
-      ...engineInput,
-      chatSessions,
-      signals,
-      personalization,
-      priority,
-    });
+    return {
+      workspace: workspaceEngine({
+        ...engineInput,
+        chatSessions,
+        signals,
+        personalization,
+        priority,
+      }),
+      memoryResult,
+    };
   }, [
     documentsState.documents,
     documentsState.isLoading,
@@ -89,4 +109,13 @@ export function useWorkspace(): Workspace {
     tasks,
     transactions,
   ]);
+
+  useEffect(() => {
+    if (!workspaceState.memoryResult.hasChanges) return;
+    if (saveWorkspaceMemory(workspaceState.memoryResult.updatedMemory)) {
+      workspaceMemoryRef.current = workspaceState.memoryResult.updatedMemory;
+    }
+  }, [workspaceState.memoryResult]);
+
+  return workspaceState.workspace;
 }

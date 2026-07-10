@@ -1,5 +1,6 @@
 import type {
   WorkspaceDomainAffinity,
+  WorkspaceMemoryInsights,
   WorkspacePersonalizationConfidence,
   WorkspacePersonalizationModel,
   WorkspaceSignal,
@@ -68,9 +69,16 @@ function sortedDomainsByScore(scores: WorkspaceDomainAffinity) {
   return [...workspaceDomains].sort((a, b) => scores[b] - scores[a]);
 }
 
+function memoryInfluenceForConfidence(confidence: WorkspaceMemoryInsights["confidence"]) {
+  if (confidence === "high") return 0.18;
+  if (confidence === "medium") return 0.1;
+  return 0.04;
+}
+
 export function personalizationEngine(
   input: WorkspaceSignalEngineInput,
   signals: WorkspaceSignal[],
+  memoryInsights?: WorkspaceMemoryInsights,
 ): WorkspacePersonalizationModel {
   const now = input.now ?? new Date();
   const generatedAt = now.toISOString();
@@ -175,6 +183,50 @@ export function personalizationEngine(
       addAffinity(signal.domain, 8);
     } else if (signal.severity === "medium") {
       addAffinity(signal.domain, 4);
+    }
+  }
+
+  const isOnboarding = signals.some((signal) => signal.id === "learning:onboarding");
+  if (memoryInsights && !isOnboarding) {
+    const memoryWeight = memoryInfluenceForConfidence(memoryInsights.confidence);
+    const addMemoryAffinity = (
+      domains: WorkspaceSignalDomain[],
+      score: number,
+      evidenceLine: string,
+    ) => {
+      if (domains.length === 0) return;
+      for (const domain of domains) {
+        addAffinity(domain, score * memoryWeight);
+      }
+      evidence.push(evidenceLine);
+    };
+
+    addMemoryAffinity(
+      memoryInsights.recentDomains.slice(0, 3),
+      18,
+      "Recent memory added weak preference evidence.",
+    );
+    addMemoryAffinity(
+      memoryInsights.familiarDomains.slice(0, 3),
+      14,
+      "Repeated memory added weak familiarity evidence.",
+    );
+    addMemoryAffinity(
+      memoryInsights.preferredTimeDomains.slice(0, 2),
+      10,
+      "Time-of-day memory added weak preference evidence.",
+    );
+    addMemoryAffinity(
+      memoryInsights.interactionDomains.slice(0, 3),
+      12,
+      "Recent interactions added weak behavior evidence.",
+    );
+    if (memoryInsights.learningContinuity) {
+      addAffinity(
+        "learning",
+        12 * memoryWeight,
+        "Learning memory added weak continuity evidence.",
+      );
     }
   }
 
