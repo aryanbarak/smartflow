@@ -35,6 +35,38 @@ Every feature follows this exact structure:
 3. `src/features/<feature>/use<Feature>.ts`
 4. `src/pages/<Feature>Page.tsx`
 
+## Living Workspace Architecture
+
+The Dashboard is driven by the workspace feature architecture, not page-local
+decision logic. Current pipeline:
+
+```text
+useWorkspace()
+-> signalEngine()
+-> memoryEngine()
+-> personalizationEngine()
+-> priorityEngine()
+-> workspaceEngine()
+-> Dashboard
+```
+
+Layer responsibilities:
+
+- `useWorkspace`: collects existing frontend data and orchestrates the workspace pipeline.
+- `signalEngine`: converts current user data into normalized workspace signals.
+- `memoryEngine`: maintains bounded, versioned client-side continuity metadata.
+- `personalizationEngine`: applies weak preference evidence from recent and repeated activity.
+- `priorityEngine`: selects the primary and secondary workspace priorities while protecting urgent signals.
+- `workspaceEngine`: composes the final typed Workspace model consumed by Dashboard.
+
+Workspace memory:
+
+- localStorage key: `smartflow.workspace.memory.v1`
+- Memory Engine V1 is client-local, deterministic, and non-semantic.
+- No LLM, vector database, RAG, or backend memory is active yet.
+- Urgent current signals always outrank personalization and memory.
+- Low-data onboarding remains protected.
+
 ## AI Architecture
 
 ```

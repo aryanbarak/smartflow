@@ -1,518 +1,234 @@
-# smartFlow — PROJECT STATUS
+# SmartFlow - Project Status
 
-Keep this file under 2 pages; update after every session.
-
----
-
-## Recent Decisions
-
-| Date | Decision | Reason |
-| --- | --- | --- |
-| 2026-06-24 | Music: YouTube-only, no R2 audio storage | Spotify ToS blocks embed; R2 overkill for few files |
-| 2026-06-24 | Music: localStorage playlists → Supabase | Cloud sync across devices |
-| 2026-06-24 | Music: single iframe in MiniPlayer | Prevents duplicate player on /music page |
-| 2026-06-24 | Settings: "barakzahi" shows instead of full name | auth.user.email used instead of user_metadata.full_name — minor bug |
-| 2026-06-24 | Local audio upload = session-only | Browser security model prevents persistent local file access |
-| 2026-06-16 | Retired old `/briefing` endpoint + Weekly Life Briefing widget | Superseded by unified AgentBriefingCard with Today/This Week toggle |
-| 2026-06-15 | `agent_briefings.mode` column (daily/weekly, default daily) | Mode-filtered reads keep daily and weekly briefings separate |
-| 2026-06-15 | Memory writes deferred to Phase C (chat) | Briefing has no user input — wrong place to extract durable facts |
-| 2026-06-15 | `user_settings.language` as source of truth for agent language | UI previously wrote only to localStorage; agent always read DB |
-| 2026-06-12 | Azure Neural TTS via Cloudflare Worker (not direct) | CORS + key security; Supabase JWT auth gates cost |
-| 2026-06-12 | Text chunking 1500 chars (Azure) / 180 chars (Web Speech) | Web Speech API cuts off beyond ~200 chars |
-| 2026-06-12 | Persian locale fa-AF (Dari) not fa-IR | User preference; flag 🇦🇫 |
-| 2026-06-04 | TextEditorTool → forwardRef + loadFromLibrary | Props + key remount had unfixable timing race |
-| 2026-06-04 | Move ToolCard to module scope | Defined inside DocumentsPage → remounted editor on every re-render |
-| 2026-06-04 | StarterKit.configure({ link: false, underline: false }) | TipTap v3 includes Link+Underline in StarterKit |
-| 2026-06-04 | Ctrl+S → export .docx | Browser was intercepting Ctrl+S and opening Save Page dialog |
-| 2026-06-04 | Rate limit by user_id from JWT (IP fallback) | Shared NAT would block multiple users |
-| 2026-05-30 | Audit-first before new features | Found 19 unused files, 1,625 lines of dead code |
+Last updated: 2026-07-10
 
 ---
 
-## Known Bugs
+## 1. Executive Summary
 
-| # | Bug | Severity | Status |
-| --- | --- | --- | --- |
-| 1 | learn_ai_messages grows unbounded | Low | Open |
-| 2 | Family JSONB arrays grow unbounded | Low | Open |
-| 3 | No optimistic rollback on write failure | Medium | **Fixed** (all 4 hooks) |
-| 4 | Single Gemini model — no fallback | Medium | **Fixed** (callGeminiWithFallback) |
-| 5 | Short signed URL lifetime for documents | Low | Open |
-| 6 | No error tracking (Sentry) | Low | Open |
-| 7 | Persian TTS requires Azure (no Web Speech fa-AF on Windows) | Medium | Azure configured |
+SmartFlow has completed the Living Workspace Architecture milestone. The Dashboard is no longer treated as a static widget grid; it is now driven by a deterministic frontend workspace pipeline that collects existing activity data, derives signals, preserves lightweight client-side memory, personalizes ordering, selects priorities, and returns a typed Workspace object for presentation.
+
+Flow AI is now represented as a persistent product presence through the sidebar identity Orb and an active right-rail assistant surface. The workspace experience supports both established users and low-data first-run users through the Living Workspace and Welcome Workspace states.
+
+The current implementation remains frontend-only for workspace intelligence. No backend, Supabase schema, AI service, route, or business-logic expansion was required for this milestone.
 
 ---
 
-## Next / Backlog
+## 2. Current Project Phase
 
-### Chat / Agent
+Current phase: Living Workspace V1 complete; preparing for Workspace Interaction Tracking and AI-assisted planning.
 
-1. **C3b: file upload in chat** — reuse Learn AI's existing file-handling approach rather than building a parallel one
-2. **Agent Tools / function calling** — web search so the agent can answer real-world/real-time questions (sports schedules, weather, news); deferred — agent currently has Gemini knowledge but no internet access
-3. **Decide later**: merge Learn AI into the agent as a mode vs keep separate — still separate by deliberate decision
+Engineering focus has shifted from visual dashboard redesign to architecture readiness:
 
-### Infrastructure
-
-1. **Prune learn_ai_messages** — DB trigger or scheduled function (Bug #1; FREE-tier 500 MB risk)
-2. **Azure TTS key security** — move from Plaintext → Secret in Cloudflare
-3. **Supabase explicit GRANTs** — run `20260530000000_explicit_grants.sql` before 2026-10-30
-4. **Multi-provider AI Gateway** — true Gemini/Claude/OpenAI routing; isolate model call in single function now so the swap is easy later
-
-### Polish / Known gaps
-
-1. **i18n audit** — many UI strings hardcoded English when language is `fa` or `de`; full RTL polish for Farsi
-2. **a11y** — `DialogContent` missing `DialogTitle` / `aria-describedby` console warnings
-3. **Ergänzungsprüfung** — add OOP, DB, Network, Software-Eng question sets
-
-### Future (only when memory grows large)
-
-- RAG / semantic retrieval with `pgvector` + embeddings for `user_context`
-- Long-conversation summarisation/compaction
+- Deterministic workspace generation is in place.
+- Client-side memory is versioned and bounded.
+- Personalization is weak, explainable, and rule-based.
+- Urgent current signals remain dominant.
+- The UI can now evolve without placing business logic back into `Dashboard.tsx`.
 
 ---
 
-## Blocked Tasks
+## 3. Completed Milestones
 
-| Task | Blocked by | Notes |
-| --- | --- | --- |
-| Persian TTS (fa-AF) | Azure key + region must be set in Cloudflare | AZURE_TTS_KEY ✅, AZURE_TTS_REGION ✅ |
-| Continue.dev local AI | Ollama crash on Windows/Intel Arc | Use Claude.ai instead |
-
----
-
-## Completed This Session (2026-06-24) — Music + Settings
-
-### Music Page ✅
-
-- ✅ 4 new Supabase tables: playlists, playlist_tracks, play_history, liked_tracks
-- ✅ musicService.ts + useMusic.ts (11 TanStack Query hooks)
-- ✅ Cloud sync for playlists (migrated from localStorage)
-- ✅ Single player architecture:
-    MiniPlayer owns only YouTube iframe (never unmounts)
-    MusicPlayerProvider owns only HTMLAudioElement
-    MusicPage has zero player instances — purely UI
-- ✅ MiniPlayer hidden on /music route (sidebar Now Playing is primary UI)
-- ✅ Play history tracking from Supabase (last 50 per user)
-- ✅ Quick Mode presets (Deep Focus/Study/Relax/Sleep/Workout/Family)
-- ✅ KPI cards with real DB data
-- ✅ Fake "Recommended for You" removed
-- ⏳ PlaylistsTab full UI migration — next session
-    (musicService + hooks ready, MusicPage/PlaylistsTab rewrite pending)
-- ⏳ "Add track to playlist" button inside playlist detail — needs fix
-
-### Settings Page ✅
-
-- ✅ Hero profile card (real data: name, email, storage, member since, last briefing)
-- ✅ KPI row: Tasks / Documents / Photos / AI Memory (all real counts)
-- ✅ 6 tabs: Profile, Security, Appearance, Notifications, Data, AI Memory
-- ✅ AI Memory tab shows real user_context facts with delete
-- ✅ Infrastructure section: Supabase/Cloudflare/Gemini status
-- ✅ Full-width layout (was max-w-2xl before)
-
-### Known Issues After This Session
-
-- ⚠️ GitHub push 401 — PAT needs renewal: [GitHub tokens](https://github.com/settings/tokens)
-- ⚠️ Worker deploy needed: wrangler deploy (finance/habits/documents/journal AI endpoints)
-- ⚠️ Settings hero shows "barakzahi" instead of "Aryan Barakzai" — Fix: use auth.user.user_metadata.full_name with fallback to email
-- ⚠️ Music PlaylistsTab — "Add track" button missing in playlist detail
-- ⚠️ Supabase explicit GRANTs deadline: 2026-10-30
+- Flow AI Orb visual identity and sidebar identity variant.
+- Launch Experience and Workspace Birth synchronization.
+- App shell gating to prevent dashboard visibility before launch reveal.
+- Workspace Reveal orchestration.
+- Living Workspace V1 dashboard hierarchy.
+- Welcome Workspace for new or low-data users.
+- Flow AI right rail as persistent assistant surface.
+- Right rail scrolling UX moved to page-owned scrolling.
+- Smart Academy external linking via configurable app URL.
+- Workspace architecture refactor into feature-level engines.
+- Signal Engine V1.
+- Memory Engine V1.
+- Personalization Engine V1.
+- Priority Engine V1.
+- Workspace Engine V1.
 
 ---
 
-## Completed This Session (2026-06-22/24) — Documents, Photos, Family, Journal, Music
+## 4. Living Workspace Architecture
 
-### Music Page Redesign (2026-06-24) ✅
+The Living Workspace is now generated through a dedicated architecture under:
 
-- ✅ 4 new Supabase tables: playlists, playlist_tracks, play_history, liked_tracks (migration `20260623130000`)
-- ✅ musicService.ts — full Supabase CRUD (playlists, tracks, history, likes)
-- ✅ useMusic.ts — 11 TanStack Query hooks (queries + mutations with invalidation)
-- ✅ Cloud sync for playlists (migrated from localStorage on first load)
-- ✅ Single player architecture: MiniPlayer owns the ONLY YouTube iframe (global, hidden sr-only)
-- ✅ MiniPlayer bottom bar hidden on /music (page has its own NowPlayingCard sidebar)
-- ✅ YouTube postMessage API for pause/play sync + video-ended detection
-- ✅ MusicPlayerProvider refactored: scoped onPlay/onPause to local tracks only, stopHtmlAudio helper
-- ✅ Play history tracking from Supabase (last 50, auto-prune)
-- ✅ Liked tracks with heart toggle (Supabase-backed)
-- ✅ Quick Mode presets (Deep Focus/Study/Relax/Sleep/Workout/Family) → trigger YouTube search
-- ✅ 4 KPI cards with real DB data (Listening Time/Focus Sessions/Study Audio/Playlists)
-- ✅ Focus Session card integrated with Pomodoro store (shows linked task)
-- ✅ Recently Played + Top Playlists side-by-side cards
-- ✅ Study Audio section (empty state → links to Documents)
-- ✅ YouTube URL input with visible video iframe + close button
-- ✅ Removed fake Recommended cards (PRESETS)
-- ✅ PlaylistsTab rewritten for Supabase (usePlaylistTracks, useCreatePlaylist, etc.)
-- ✅ Full i18n: ~48 new keys in en/de/fa (mf_* prefix)
-- ⏳ PlaylistsTab track reorder/move — deferred to next session
+`src/features/workspace/`
 
-### Habits Page Redesign ✅
+Current pipeline:
 
-- ✅ KPI cards (Streak/Active/Completion Rate/Goal Progress), Today's Habits horizontal cards
-- ✅ Active/Paused tabs, Today's Progress ring sidebar, AI Suggestions (Gemini)
-- ✅ Habit types (Ongoing/Goal), target value/unit, achieved_at (migration `20260621120000`)
-- ✅ HabitDetailPage: 30-day heatmap, stats, goal progress, edit form
-- ✅ Weekly heatmap on HabitCard, Framer Motion on MoodPicker
-- ✅ Fixed completionRate denominator (daysSinceCreation capped at 30)
-- ✅ Fixed useToggleHabit stale data (`exact: false` invalidation)
+```text
+useWorkspace()
+-> signalEngine()
+-> memoryEngine()
+-> personalizationEngine()
+-> priorityEngine()
+-> workspaceEngine()
+-> Dashboard
+```
 
-### Journal Page Redesign ✅
+Completed engines:
 
-- ✅ KPI cards (Streak/Entries/Mood/AI Insight), Today's Reflection card
-- ✅ Reflection prompt pills, Mood Trend sparkline (Recharts), Memory Timeline
-- ✅ Date-based journal entries: clicking calendar date loads that date's entry
-- ✅ Fixed JournalEditor date-switch bug (`loadedDate` ref + `dirty` flag to prevent stale auto-saves)
-- ✅ Calendar color-coded with mood emojis per day, legend, entry dots
-- ✅ Header shows selected date + "Back to today" button for past dates
-- ✅ Habits/tasks summary fetches data for selected date (not hardcoded today)
+- Workspace Engine: converts typed workspace inputs into the final Workspace object consumed by the Dashboard.
+- Signal Engine: derives deterministic task, calendar, finance, learning, and onboarding signals from existing frontend data.
+- Memory Engine: stores bounded, versioned, client-side workspace memory in localStorage.
+- Personalization Engine: applies weak domain affinity based on recent activity, repeated activity, and memory insights.
+- Priority Engine: selects the primary workspace domain, secondary domains, mission copy, confidence, and ordered signal IDs.
 
-### Finance Page Redesign ✅
+Completed UI milestones:
 
-- ✅ 4 KPI cards (Income/Expenses/Balance/Top Spend), two-column layout with sidebar
-- ✅ Financial Health ring score (5-criteria formula, max 100)
-- ✅ AI Finance Insights card (POST /finance/suggestions worker endpoint)
-- ✅ Transaction list restyled (glass-card rows, category circles, hover actions)
-- ✅ Charts card (FinanceCharts component), Budget Goals/Limits/Savings widgets
-- ✅ Full i18n: ~90 new keys in en/de/fa for all Finance strings
-- ✅ Layout fix: KPI cards inside left column, AI Insights moved to sidebar
+- Living Workspace Hero.
+- Flow AI Right Rail.
+- Welcome Workspace.
+- Sidebar Orb Identity.
+- Continue Learning.
+- Ecosystem navigation.
+- Smart Academy external linking.
 
-### Family Page Redesign ✅
-
-- ✅ 4 KPI cards (Children/Events/Homework/Tasks), two-column layout with sidebar
-- ✅ Children list with avatar, age, 3-dot menu; Today's Family Overview (weekly timeline fallback)
-- ✅ 6-tab detail card: Overview, Schedule, School, Notes, Events, Shopping (with icons)
-- ✅ School tab: homework CRUD (child_homework table), exams CRUD (child_exams table)
-- ✅ New services: childHomeworkService, childExamsService, pocketMoneyService, rewardPointsService
-- ✅ AI Family Assistant sidebar: natural-language computed insights, "Generate Weekly Plan" → /chat
-- ✅ Child header shows Age · Grade · School (no "adult" role display)
-- ✅ Shopping list preview in sidebar, Quick Actions card
-- ✅ Full i18n: ~70 new keys in en/de/fa
-
-### Documents Page Redesign ✅
-
-- ✅ 5-tab structure: Library, AI Workspace, PDF Tools, Audio, Text Editor
-- ✅ Library tab: 6 KPI cards, search bar with type filter pills + sort, recent docs card grid, all docs list
-- ✅ Right sidebar: Storage donut chart (Recharts), Smart Tags, Recent Activity, Quick Actions
-- ✅ Upload moved to modal dialog (header + Quick Actions buttons open it)
-- ✅ AI Workspace tab: document selector + info card + content preview (text files show first 800 chars)
-- ✅ 5 AI actions: Generate Summary, Extract Tasks (→ add to tasks), Translate (DE/EN/FA), Auto-Tag, Ask AI
-- ✅ AI calls routed through Worker `/documents/analyze` endpoint (not api.barakzai.cloud — CORS fix)
-- ✅ Worker endpoint: Gemini with inlineData support for PDF base64 attachments
-- ✅ documentAiService rewritten: removed pdfjs-dist dependency, uses Worker + Supabase auth
-- ✅ New service methods: updateTags, updateAiSummary, updateExtractedTasksCount, updateLastOpened
-- ✅ New DB columns: tags, ai_summary, ai_summary_points, extracted_tasks_count, last_opened_at
-- ✅ Full i18n: ~80 new keys in en/de/fa
-
-### Photos Page Redesign ✅
-
-- ✅ 4 KPI cards (Total Photos/Family Members/Albums/This Month)
-- ✅ 5-tab navigation: All Photos, Timeline, Favorites, Albums, People
-- ✅ All Photos: grouped by date, masonry grid with hover overlay (heart + delete)
-- ✅ Timeline: grouped by month, horizontal thumbnail strips
-- ✅ Favorites tab: is_favorite toggle with heart button on photo cards
-- ✅ People tab: tag-based (person:X), person cards with avatar + photo count + preview thumbnails
-- ✅ Right sidebar: On This Day (amber accent), AI Highlights (computed stats), People grid, Albums, Quick Actions
-- ✅ "Generate Memory Story" → /chat with photo context via sessionStorage
-- ✅ PhotoCard: heart button overlay (always visible when favorited, hover for unfavorited)
-- ✅ New DB columns: is_favorite, memory_date (migration `20260623120000`)
-- ✅ New service methods: toggleFavorite, updateMemoryDate
-- ✅ Full i18n: ~50 new keys in en/de/fa
-
-### New Migrations (June 21-23)
-
-- `20260621120000_habit_goals.sql` — habit_type, target_value, target_unit, achieved_at
-- `20260623120000_photos_favorite_memory.sql` — photos.is_favorite, photos.memory_date
-
-### New Worker Endpoints (June 22-23)
-
-- `POST /habits/suggestions` — Gemini-analyzed habit patterns
-- `POST /finance/suggestions` — Gemini-analyzed spending patterns
-- `POST /documents/analyze` — Gemini document analysis with PDF base64 inlineData support
-
-### Cross-Cutting Fixes (June 22-23) ✅
-
-- ✅ All pages now use consistent `px-4 sm:px-6 lg:px-8 pb-6` padding (removed `max-w-6xl` from Documents)
-- ✅ documentAiService: fixed URL (was missing `/analyze`), added auth token, fixed response field (`answer`)
-- ✅ documentAiService: removed pdfjs-dist, switched to Worker-routed Gemini calls (CORS fix)
-- ✅ All error toasts now show actual error messages instead of generic strings
+The Dashboard now acts primarily as a presentation layer. Workspace decision-making belongs to the workspace feature folder, not the page component.
 
 ---
 
-## Completed This Session (2026-06-17/21) — Full UI Redesign
+## 5. Current Workspace Pipeline
 
-### Dashboard Redesign ✅
+`useWorkspace()` collects existing frontend data through current hooks:
 
-- ✅ Removed DesktopHeader (title/date/search bar); moved GlobalSearch into Sidebar above user profile
-- ✅ Replaced inline Today/Tasks/Finance widgets with 3 new honest-data widgets: SmartAcademyWidget (real Learn AI activity), TodaysFocusWidget (interactive task checkboxes), AiInsightsWidget (frontend-computed spending/habit/task insights — no AI call)
-- ✅ Reordered layout: stats → three-widget grid → Daily Briefing → Recommended Topics
-- ✅ Daily Briefing: shortened prompt (1 paragraph + 2 bullets, all 3 languages), side-by-side image layout, removed redundant "Today/Yesterday" badge
-- ✅ Built Weekly Briefing page (`/briefing/weekly`) — manual generation only, cron is intentionally dormant
-- ✅ Built and fully reverted "AI News" RSS feature (decision: didn't want it)
-- ✅ Recommended Topics widget: 4 static FIAE/IHK topics with "Start" buttons linking to Flow AI Chat
+- tasks
+- events
+- finance transactions
+- habits
+- documents
+- Learn AI activity
+- chat sessions
 
-### Flow AI Chat — Session System ✅
+`signalEngine()` creates deterministic signals such as:
 
-- ✅ New `chat_sessions` table + `session_id` column on `agent_chat_messages` (migration `20260620120000`; old pre-session messages intentionally orphaned)
-- ✅ Worker `/chat` endpoint scopes history fetch + writes to `session_id`; bumps `chat_sessions.updated_at` after each message
-- ✅ Frontend: "New Chat" button, session list sidebar (clickable, highlighted active), per-session message loading
-- ✅ Quick Actions grid (6 cards: Study/Plan/Habits/Finance/Weekly/Career) — sends prompts directly via handleSend
-- ✅ Redesigned empty state: Hero card with real stats (conversation count, task count)
-- ✅ Chat bubbles restyled: Bot avatar on assistant messages, glass-card bubble styling
-- ✅ Markdown rendering in assistant responses (ReactMarkdown with bullet preprocessing)
+- many open tasks
+- events today
+- focus opportunity
+- monthly finance activity
+- active learning history
+- low-data onboarding
 
-### Flow AI Chat — Deferred
+`memoryEngine()` reads and updates lightweight client memory:
 
-- Recent Documents widget (no existing hook/service)
-- Conversation action buttons (Copy/Regenerate/Like/Dislike — needs backend support)
-- File upload / voice / code buttons in input (C3b still in backlog)
+- recent domains
+- domain usage counts
+- preferred usage windows
+- previous primary domain
+- lightweight latest conversation metadata
+- lightweight learning continuity
+- bounded workspace history
 
-### Tasks Page Redesign ✅
+`personalizationEngine()` uses current activity plus memory insights as weak preference evidence. It may reorder medium and low-priority surfaces but cannot override urgent current signals or low-data onboarding.
 
-- ✅ 4 KPI stat cards (Total/Open/Due This Week/Completion Rate) with icon-tiles
-- ✅ "Upcoming" filter tab (2-7 days out); filter tabs restyled as pill buttons
-- ✅ Today's Focus horizontal card with SVG progress ring + interactive checkboxes
-- ✅ AI Suggestions: real Gemini-generated insights via `POST /tasks/suggestions` worker endpoint (`fetchTaskSnapshot`, strict no-hallucination prompt)
-- ✅ "Ask about your tasks" compact chat box: creates chat session, injects real task context (due today/tomorrow/this week/overdue) into Gemini prompt — answers grounded in actual data
-- ✅ Productivity Stats with time-range selector (This Week / This Month / All Time): real week-over-week trends backed by new `tasks.completed_at` column (migration `20260620140000`)
-- ✅ Task list rows restyled: glass-card, notes shown, accent-driven badges
+`priorityEngine()` determines:
 
-### Tasks Page — Deferred
+- primary domain
+- secondary domains
+- mission title
+- mission summary
+- confidence
+- ordered signal IDs
 
-- Priority field (High/Medium/Low) — requires DB schema change
-- Star/favorite toggle — requires DB schema change
-- Board View (Kanban) — significant new feature
-
-### Calendar Page Redesign ✅
-
-- ✅ 4 KPI stat cards (Events Today/This Week/Categories/Upcoming)
-- ✅ Category color legend + category selector added to CalendarFormDialog (`type` column was unused — now set to personal/work/family/health on create/edit)
-- ✅ Month grid dots color-coded by event category (was single blue dot for all)
-- ✅ Today's Agenda sidebar: combines calendar events + tasks due today, honest progress ring (tasks-only — events have no completion concept), interactive checkboxes
-- ✅ Upcoming Events sidebar: next 7 days, chronological, category badges, "View all" link
-- ✅ AI Suggestions: real Gemini-generated schedule insights via `POST /calendar/suggestions` worker endpoint (`fetchCalendarSnapshot`), clickable suggestions open Add Event dialog pre-filled with suggested date
-- ✅ Explicitly skipped: "Focus Time" tracking + "Productivity Score" — no data/infrastructure, avoided fabricating metrics
-
-### Cross-Cutting Fixes ✅
-
-- ✅ Fixed Sidebar profile block scrolling away on long pages (`sticky top-0` on `<aside>`)
-- ✅ Cleaned up accidentally committed `.wrangler/` cache files, added to `.gitignore`
-- ✅ Daily Briefing title enlarged (13px→16px, weight 500→600)
-
-### New Migrations This Session
-
-- `20260620120000_chat_sessions.sql` — `chat_sessions` table + `agent_chat_messages.session_id`
-- `20260620140000_tasks_completed_at.sql` — `tasks.completed_at` column (no backfill, NULL for existing)
-- `20260619120000_ai_news_items.sql` + `20260619140000_drop_ai_news_items.sql` — created then dropped (feature reverted)
-
-### New Worker Endpoints This Session
-
-- `POST /tasks/suggestions` — Gemini-analyzed task patterns, structured JSON
-- `POST /calendar/suggestions` — Gemini-analyzed schedule patterns, structured JSON with optional `suggestedDate`
-- `POST /chat` updated — now requires `session_id`, scoped history, bumps session `updated_at`
+`workspaceEngine()` returns the final typed Workspace object used by the Dashboard UI.
 
 ---
 
-## Completed Previously (2026-06-17/19) — Dashboard Redesign
+## 6. Current Capabilities
 
-Branch: `redesign/ui-cleanup`
+The current system can:
 
-### UI Cleanup ✅
+- Generate a decision-first Living Workspace from existing frontend data.
+- Detect low-data users and show an honest Welcome Workspace.
+- Preserve lightweight client-side workspace context across browser sessions.
+- Personalize safe ordering of hero skills, suggested actions, secondary domains, and recommendations.
+- Keep high-severity current signals above memory and personalization.
+- Keep Flow AI present through the sidebar identity Orb and right rail.
+- Open Smart Academy as an external configurable application when configured.
+- Fall back safely when workspace memory is unavailable, corrupt, or unsupported.
 
-- ✅ Removed Links page, Flashcards page (routes, sidebar, services, i18n)
-- ✅ Removed Tutor from sidebar (route/page kept — linked from Smart Academy)
-- ✅ Renamed Tutor App → Smart Academy, Agent Chat → Flow AI (sidebar, mobile nav, i18n all 3 languages)
-- ✅ Merged standalone TTS into Documents Audio tab (replaced broken ElevenLabs `AudioGeneratorTool` with working Azure `TtsTool`); deleted `TTSPage.tsx`, `AudioGeneratorTool.tsx`, `/tts` route, nav entries
-- ✅ Relocated Learn AI into Smart Academy's breadcrumb row (removed from sidebar/mobile nav; `/learn-ai` route kept)
-- ✅ Sidebar reordered: Dashboard → Flow AI → Smart Academy → Tasks → Calendar → Habits → Journal → Finance → Family → Documents → Photos → Music → Settings (mobile bottom bar updated to match)
+Current workspace memory storage:
 
-### Design System Improvements ✅
-
-- ✅ **`.glass-card` made theme-aware** — was hardcoded `background: #0F1621` and cyan border; now uses `hsl(var(--glass-bg))` background + `hsl(var(--primary) / 0.12)` border; works in both dark and light modes
-- ✅ **New utilities** (`@layer components`): `.gradient-primary-text` (gradient text clip), `.surface-elevated` (gradient card + deeper shadow), `.icon-tile` (rounded tinted icon background, `bg-primary/10` default, overridable)
-- ✅ **New tokens** (`:root` + `.dark`): `--glass-bg`, `--gradient-accent`, `--shadow-elevated`; `shadow-elevated` added to Tailwind config
-- ✅ **`--gradient-primary`** now starts with `hsl(var(--primary))` — accent color changes flow through to card-accent strip and gradient text
-- ✅ `AgentBriefingCard.css` intentionally untouched (dark-mode-only hardcoded colors, to migrate later)
-
-### Dashboard Redesign ✅
-
-- ✅ **Two-column responsive layout**: left column = 3 equal stat cards (grid-cols-3) + Daily Briefing + Today/Tasks/Finance widgets; right narrow sidebar (~280px) = Flow AI card (top-aligned with stats), Quick Actions, Focus Playlist. Mobile reflows to single column (briefing first via `contents` + `order-*`)
-- ✅ **Extracted inline widgets** to `src/components/dashboard/`: `TodayWidget` (`useEvents`), `TasksWidget` (`useTasks`), `FinanceWidget` (`useFinance`) — each self-contained with own hook calls, loading/error/empty states, icon-tile headers, compact spacing
-- ✅ **Stat cards**: accent icon-tiles + real Recharts `AreaChart` sparklines (same pattern as MoodWidget): Net this month = daily running net, Events today = 7-day events/day; Open tasks shows real "X created this week" secondary stat (no fake sparkline — `completed_at` column doesn't exist)
-- ✅ **Flow AI card**: orb illustration (`src/assets/dashboard-briefing-192.png`, ~16KB) + "How can I help you today?" heading + 4 suggested-prompt buttons (Daily planning / Job search help / Study with me / Analyze my habits) + gradient CTA. Prompts pass `initialPrompt` via router location state
-- ✅ **ChatPage auto-send**: `handleSend` refactored to accept optional `overrideText` argument; on mount after history loads, reads `location.state?.initialPrompt`, auto-sends once (guarded by ref), clears location state to prevent re-send on back navigation
-- ✅ **Quick Actions wired**: New Task → `/tasks`, Journal (renamed from "New Note", BookOpen icon) → `/journal`, Add Habit → opens reusable `AddHabitModal` inline, Record Expense → `/finance`. Square aspect-ratio buttons with colorful icon-tiles (violet/blue/orange/emerald) — deliberate exception to accent-only rule, only these 4
-- ✅ **Focus Playlist widget**: wired to global music system (`useMusicPlayer()` + `loadHistory()[0]` from localStorage); shows current/last-played track with YouTube thumbnail + play/pause toggle; empty state links to `/music`. No fake timestamps
-- ✅ Removed greeting header (getGreeting + firstName + date subtitle)
-- ✅ Added `glass-card` to both briefing wrappers (mobile + desktop) with `p-2` inset for better visual presence
-
-### Dashboard — Backlog / Still Open
-
-- AgentBriefingCard header toggle (Today / This Week) cramps on narrow mobile — needs `flex-wrap` inside `AgentBriefingCard.css` (deferred to avoid touching that component)
-- `AgentBriefingCard.css` still outside design-system tokens (dark-mode-only hardcoded colors) — migrate later
-- Other pages still need the same visual redesign (Dashboard is now the reference template)
-- `dashboard-calendar.png` (~1.5MB) in `src/assets/`, unused + unoptimized — for a future page
+- Storage key: `smartflow.workspace.memory.v1`
+- Version: `1`
+- Storage type: localStorage
+- Scope: single browser/device
+- Sensitive content policy: metadata only
 
 ---
 
-## Completed This Session (2026-06-16)
+## 7. Remaining Major Systems
 
-### AI Personal Agent — Phase C: Chat + Automatic Memory ✅
+The following systems are not complete and remain future work:
 
-- ✅ **C1: `agent_chat_messages` table** — columns `(id, user_id, role, content, created_at)`; RLS policies for select/insert/delete own rows; AFTER INSERT trigger `prune_agent_chat_messages` keeps only the most recent 100 messages per user (mirrors the `learn_ai_messages` TTL pattern); migration `20260616000000_agent_chat_messages_cap.sql`
-- ✅ **C2: chat core in agent worker** — exported `supabaseGet`; added `supabasePost` and `fetchUserLanguage` in `context-builder.ts`; added `callGeminiChat` (multi-turn Gemini, maps `assistant→model` role, `system_instruction`, `thinkingBudget: 0`); added `handleChat` orchestrator (auth → language + memory in parallel → last 20 messages history desc+reverse → chat system prompt → Gemini → persist both turns atomically); routed `POST /chat` by pathname; briefing path untouched
-- ✅ **C3a: Chat page frontend** — new `/chat` route + sidebar + mobile nav entry + i18n keys (en/de/fa); loads full prior history from `agent_chat_messages` (RLS-protected) on mount, persists across refresh; reuses `VITE_AGENT_WORKER_URL`, Supabase session, and existing i18n; per-message bidi via `dir="auto"` so RTL/LTR is detected per message content independent of system language; assistant bubbles render markdown via `react-markdown` (same approach as `AgentBriefingCard`); text-only (file upload deferred to C3b)
-- ✅ **C4: automatic memory-writing in chat** — added `preferred_name` to `EXTRACTABLE_KEYS`; new `buildChatExtractionPrompt(userMessage, existingMemory)` extracts durable facts the user states about themselves (not from the assistant reply) using same selective/eager logic as briefing extractor; `extractAndSaveMemoryFromChat` runs in background via `ctx.waitUntil` after the reply is returned (user gets `{ reply }` immediately); upserts to `user_context` with `source='agent'`, `on_conflict=user_id,key`; `ENABLE_AUTO_MEMORY_WRITE = true`; briefing extraction path uses same flag, untouched
-- ✅ **DB constraint fix** — `user_context_source_check` updated in production to allow `'agent'`; documented in migration `20260616120000_user_context_allow_agent_source.sql`
+- Workspace Interaction Tracking.
+- Semantic Memory.
+- LLM Integration.
+- Vector Memory.
+- RAG.
+- Planner.
+- Action Execution.
+- Cross-device Memory.
+- Autonomous Flow AI.
 
----
-
-## Completed This Session (2026-06-15/16)
-
-### AI Personal Agent — Phase A: Memory-aware briefings ✅
-
-- ✅ Worker reads all `user_context` entries (sources: manual / auto / agent / ai) and injects them into the Gemini prompt before finance/calendar data; manual entries flagged highest priority
-- ✅ Habit data added to briefing context
-- ✅ Fixed `maxOutputTokens` truncation — Gemini 2.5 Flash thinking tokens count against the budget; fix: `thinkingConfig: { thinkingBudget: 0 }` + `maxOutputTokens: 1024`; briefings now finish with `finishReason: STOP`
-- ✅ Auto memory-write scaffolded (`extractAndSaveMemory`) but disabled behind `ENABLE_AUTO_MEMORY_WRITE = false` — briefing flow has no user input, so it's the wrong place to extract durable facts (deferred to Phase C chat)
-
-### AI Personal Agent — Phase B: Advisory prompt + language + daily/weekly ✅
-
-- ✅ **Advisory prompt**: rewrote all three system prompts (en/de/fa) from descriptive to advisory — warm personal opener + 1–2 sentence connective analysis + 2–3 `•` bullet recommendations tied to user's real goals from memory
-- ✅ **Markdown rendering**: `AgentBriefingCard` now uses `react-markdown`; `•` bullets pre-processed to `"-"` for proper `<li>` rendering; language badge footer removed
-- ✅ **Output language**: briefing written in user's `user_settings.language` (en/de/fa); language instruction at start AND end of user prompt; explicit mandate at top of each system prompt
-- ✅ **Language persistence fix**: root cause — UI only wrote language to localStorage, never to DB; fixed: `SettingsPage` upserts `{ user_id, language }` to `user_settings` on change; `LanguageProvider` loads from DB on mount + `SIGNED_IN` event; UI and agent now share one source of truth
-- ✅ **Daily/Weekly merge**: added `mode` column to `agent_briefings` (migration `20260615000000`); `/generate` accepts `mode=daily|weekly`; weekly mode fetches tasks, habits, journal + uses week-scope Gemini prompts with 1500 token budget; journal context (last 7 days, mood + notes) added for both modes
-- ✅ **Today / This Week toggle**: `AgentBriefingCard` has a two-button pill toggle; switches fetch query (filtered by mode) and the `/generate` call; each mode's briefings stay separate
-- ✅ **Retired old Weekly Life Briefing**: removed `handleBriefing` from `smartflow-ai-worker` + its route in `wrangler.toml` (redeployed); deleted `briefingService.ts`, `useBriefing.ts`, `BriefingPage.tsx`; removed Dashboard widget, `/briefing` route, sidebar entry, and all `briefing_*` + `nav_briefing` i18n keys (en/de/fa); one unified system remains
-
-### AI Personal Agent — Worker security ✅
-
-- ✅ `/generate` requires a valid Supabase JWT (`Authorization: Bearer`), verified via `/auth/v1/user`; `user_id` derived from the token (removed the query-param `user_id` attack surface)
-- ✅ Cron scheduled handler continues to run server-side with `service_role` key — no JWT needed
-- ✅ Verified with negative tests (401 without token, 401 with manipulated `user_id`) and positive test from the live app
-
-> ⚠️ **Reminder:** `VITE_*` env vars are baked at Vite build time. Must be set in **both** local `.env` **and** Cloudflare Pages → Settings → Environment variables (Production + Preview).
+These systems should build on the existing deterministic architecture rather than replacing it.
 
 ---
 
-## Completed This Session (2026-06-14)
+## 8. Technical Debt
 
-### Phase 1 AI Agent — Daily Briefing card ✅ live on production
-
-- ✅ Cloudflare Worker (`dailyflow-agent-worker`) — Gemini 2.5 Flash, cron 06:00 UTC + on-demand POST `/generate`
-- ✅ `agent_briefings` table + RLS + `language` column on `user_settings` (migration `20260613000000`)
-- ✅ `AgentBriefingCard` on Dashboard: fetches latest briefing, refresh button, language badge, shimmer loading
-- ✅ `context-builder.ts`: replaced raw SQL helper with direct Supabase `/rest/v1/` REST calls
-- ✅ `PageTitleContext` + `useSetPageTitle` hook — Dashboard title + date aligned with sidebar logo in one header bar
-- ✅ CORS: production origins (`barakzai.cloud`) + private-LAN regex (192.168.x.x, 10.x, 172.16-31.x, localhost) echoed back; no wildcard; `Vary: Origin`
-
-**Bugs fixed this session:**
-
-1. Wrong import path `@/lib/supabase` → `@/integrations/supabase/client`
-2. CORS blocked local LAN origin `http://192.168.2.106:8080` — fixed with private-IP regex allowlist
-3. `.single()` → `.maybeSingle()` to avoid 406 when `agent_briefings` table is empty for the user
-4. `maxOutputTokens: 200` truncated briefing mid-sentence — raised to `1024`; added `finishReason` + full-text logging
-5. `VITE_AGENT_WORKER_URL` missing from Cloudflare Pages production build — must be added to Pages → Settings → Environment variables
-
-> ⚠️ **Note:** `VITE_*` env vars are baked at build time by Vite. Setting them only in local `.env` has no effect on the production build. They must also be added in **Cloudflare Pages → Settings → Environment variables** (Production + Preview).
+- Workspace memory is localStorage-only and does not sync across devices.
+- Right rail recommendation and learning-memory examples still include placeholder/static data where live sources are not available.
+- Workspace interaction events are not yet tracked, so action memory has typed support but limited real event input.
+- Some personalization for habits and documents depends on available date-like fields in existing frontend data.
+- The production build still reports large Vite chunks; code splitting should be revisited.
+- Some older feature areas still contain hardcoded UI strings and incomplete i18n/RTL polish.
+- Error tracking is still not centralized.
+- Some historical data growth risks remain open, including unbounded Learn AI/chat-related storage areas.
 
 ---
 
-## Completed This Session (2026-06-12/13)
+## 9. Next Sprint
 
-### TTS — Text-to-Speech System (new feature)
+Recommended next sprint: Workspace Interaction Tracking V1.
 
-- ✅ `/tts` page (`TTSPage.tsx`): language selector de🇩🇪/fa🇦🇫, textarea, rate/pitch sliders, progress bar, engine badge
-- ✅ `useAzureTTS` hook: gets Supabase JWT → tries Azure → falls back to Web Speech per chunk
-- ✅ Text chunking: 1500 chars/chunk Azure, 180 chars Web Speech (split at sentence boundaries)
-- ✅ Nav: `Volume2` icon + `nav_tts` added to Sidebar, MobileNav, i18n (en/de/fa)
-- ✅ Persian flag 🇦🇫, locale `fa-AF`, voice `fa-AF-FatimahNeural`; Persian install guide in UI
+Primary goals:
 
-### TutorErgaenzungspruefungPage (new page)
+- Track real user interactions with suggested actions.
+- Record shown, clicked, completed, and dismissed action events where the UI genuinely exposes those events.
+- Feed real interaction events into Memory Engine V1.
+- Keep action tracking lightweight and privacy-safe.
+- Preserve the current Dashboard layout.
+- Avoid AI/LLM behavior until deterministic event tracking is reliable.
 
-- ✅ Full page: Überblick, Themen, Vorbereitung, Beispielfragen, 🔊 Sprachausgabe (5 tabs)
-- ✅ Überblick: 6 info cards (definition, Zulassung, Dauer, Bewertung, Rechtsgrundlage, Tipp) + AP2 Prüfungsbereiche table
-- ✅ Themen: 5 topic blocks (Algorithmen, OOP, DB, Netzwerke, SW-Entwicklung) with Prüfungsfallen boxes
-- ✅ Vorbereitung: 6 tip cards + 10-Tage-Plan table
-- ✅ Beispielfragen: 25 MEP Algorithmen Q&A from PDF + OOP, DB, Netzwerke questions — accordion + TTS per item
-- ✅ MEP questions also shown as accordion at bottom of Themen tab
-- ✅ `pickGermanVoice()`: priority order Katja → Conrad → Google Deutsch → Anna → any de-DE
-- ✅ Voice selector dropdown in Beispielfragen toolbar
-- ✅ Sprachausgabe tab: migrated to `useAzureTTS`, language selector de/fa, no char limit, progress bar
-- ✅ Nav: accessible from TutorAppPage and TutorWisoPage breadcrumb
+Secondary goals:
 
-### AI Worker — Azure TTS endpoint
-
-- ✅ `POST /tts-azure`: `handleTtsAzure()` — voices `de-DE-KatjaNeural` / `fa-AF-FatimahNeural`
-- ✅ Auth: requires Supabase JWT; 503 if env vars missing; SSML with XML escaping
-- ✅ Router refactored: if-chain → `ROUTES` dispatch table (fixes S3776 complexity)
-- ✅ `/tts-azure` route added to `wrangler.toml`; auto-deployed via CI/CD
-
-### Optimistic Rollback (Bug #3 fixed)
-
-- ✅ `useTasks`: snapshot before mutate, revert + toast on failure; temp ID replaced by server ID on add
-- ✅ `useFinance`: same pattern for transactions
-- ✅ `useFamily`: same pattern for family members
-- ✅ `useEvents`: same pattern for calendar events
-
-### Mobile Layout Fixes
-
-- ✅ `FinancePage`: controls split to 2 rows on mobile (Tabs+month / GroupBy); icons shrink; date label hidden
-- ✅ `FamilyPage`: children list → horizontal scroll on mobile; TabsList uses `grid-cols-4` on small screens
-
-### SonarJS Diagnostics Fixed (this session)
-
-- ✅ S3776 Cognitive Complexity: `play()` → extracted `speakChunk()` at module level; router → ROUTES table
-- ✅ S7721 Inner function: `getEngineLabel` moved to module scope
-- ✅ S4325 Unnecessary assertion: `token!` → `if (token !== null)` narrowing
-- ✅ S7735 Negated conditions: `!x` → `x === 0`; ternary directions flipped
-- ✅ S3735 / S3358 / S7748 / S6759 / S7741 / S7764: void, nested ternary, zero fraction, readonly props, typeof window, window→globalThis
+- Replace remaining right-rail placeholders with available live frontend data where possible.
+- Add focused tests around action memory updates.
+- Document memory reset/debug behavior for local development.
 
 ---
 
-## Completed Previously (2026-06-10)
+## 10. Long-Term Roadmap
 
-### AI Worker — /analyze upgrade
+Near term:
 
-- ✅ File attachment support: PDF, PNG, JPEG, WebP, TXT via `fileData { base64, mimeType, name }`
-- ✅ `requireAuth` added (JWT check); rate limit raised to 30/hour per user
-- ✅ `callGeminiWithFallback`: gemini-2.5-flash → 2.0-flash → Workers AI llama-3.1-8b
-- ✅ Cloudflare AI Gateway routing when `CF_ACCOUNT_ID` + `CF_GATEWAY_NAME` set
-- ✅ CI/CD: `.github/workflows/deploy-worker.yml` — auto-deploy on push to main
+- Workspace Interaction Tracking.
+- Stronger live data mapping for Continue Learning and Recent Conversation.
+- Better deterministic recommendation ranking.
+- More test coverage for workspace engines.
 
-### Learn AI — File attachment UI
+Mid term:
 
-- ✅ Paperclip button: PDF, PNG, JPEG, WebP, TXT, max 10 MB; base64 before send
-- ✅ File preview badge with name, size, × remove; Ctrl+Enter to send
+- Semantic Memory design.
+- Cross-device memory backed by Supabase.
+- Planner model that can propose multi-step daily plans.
+- Safe action execution boundaries.
+- Flow AI page-transition architecture originating from the sidebar Orb.
 
----
+Long term:
 
-## Completed Previously (2026-06-04)
-
-### Documents Feature
-
-- ✅ HTML files in Library; Edit loads content via forwardRef + useImperativeHandle
-- ✅ TipTap v3 duplicate extension fixed; View, Download, Upload all fixed
-
-### Text Editor UI
-
-- ✅ Title in toolbar; rows scrollable on mobile; full-width; Ctrl+S → .docx
-
-### AI Worker
-
-- ✅ Rate limiting by JWT sub (IP fallback); deployed via wrangler
-
-### TypeScript
-
-- ✅ All `as any` casts removed (familyService, familyHubService, errorMessages, tasksService)
-
----
-
-## Local AI Status
-
-| Model | Size | GPU | Speed |
-| --- | --- | --- | --- |
-| qwen2.5-coder:7b | 4.7 GB | ✅ Vulkan | ~14 t/s |
-| qwen2.5-coder:14b | 9.0 GB | ✅ Vulkan | ~8 t/s |
-| llama3.1:8b | 4.9 GB | ✅ Vulkan | ~12 t/s |
-| nomic-embed-text | 0.3 GB | ✅ Vulkan | embeddings |
-
-Location: E:\ollamaModels — OLLAMA_VULKAN=1
+- LLM-assisted reasoning layered on top of deterministic signals.
+- Vector memory and RAG for documents, learning, and workspace history.
+- Autonomous Flow AI that can plan, explain, and execute user-approved actions.
+- Full multi-device continuity for memory, preferences, and workspace context.

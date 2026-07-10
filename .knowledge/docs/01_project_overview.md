@@ -5,6 +5,16 @@ Personal productivity web app (React SPA) for one user (barakzahi@web.de).
 Unified workspace for tasks, calendar, finances, family scheduling,
 documents, music, photos, and AI-powered learning.
 
+## Current Phase
+SmartFlow has completed Living Workspace Architecture V1. The Dashboard is now
+driven by a deterministic workspace pipeline instead of page-local dashboard
+decision logic.
+
+SmartFlow is transitioning from a static productivity dashboard into a Personal
+AI Operating System. The current engineering focus is behavior-aware
+personalization and real interaction learning, while keeping the workspace
+frontend-only, deterministic, and privacy-safe until later AI layers are added.
+
 ## Live URLs
 - App: https://barakzai.cloud
 - AI Worker: https://api.barakzai.cloud/analyze

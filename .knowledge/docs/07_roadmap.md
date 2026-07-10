@@ -1,8 +1,9 @@
-# smartFlow — Roadmap
+# smartFlow - Roadmap
 
 ## Completed Features
+
 - Authentication (Supabase email + password)
-- Dashboard (aggregated overview + Mood widget)
+- Dashboard / Living Workspace
 - Tasks (CRUD + recurrence + overdue filter)
 - Calendar (Supabase + localStorage fallback + recurrence)
 - Finance (CRUD + CSV export/import + charts + PDF export)
@@ -14,54 +15,91 @@
 - PWA (installable + service worker + offline badge)
 - Habit Tracker (streak + progress bar + notifications)
 - Daily Journal (mood + auto-save + calendar navigation)
-- Flashcards (SM-2 spaced repetition — Again/Hard/Good/Easy)
+- Flashcards (SM-2 spaced repetition - Again/Hard/Good/Easy)
 - Mood Tracker (dashboard widget + 14-day recharts chart)
-- Global Search (Ctrl+K — tasks + events + links + journal)
+- Global Search (Ctrl+K - tasks + events + links + journal)
 - Shopping List (FamilyPage tab, grouped by category)
 - Recurring Tasks & Events
-- Links page (tags + search + favicon + favorites)
-- Settings page (5 tabs: Profile, Security, Appearance, Notifications, Data)
-- i18n (en/de/fa — English default, RTL for Farsi)
-- Local AI Setup (Ollama + GPU via OLLAMA_VULKAN=1 + 4 models on E:\ollamaModels)
-- Prompt Library (.prompts/ — 24 files, 7 categories: system, review, refactor, templates, debugging, deployment, testing)
-- Knowledge Base (Phase 2 — ChromaDB + nomic-embed-text, 32 vectors, kb-build/load/query shortcuts)
-- Project Audit & Cleanup (AUDIT_REPORT.md — 19 files removed, 1,625 lines deleted, dead code eliminated)
-- Document Intelligence — PDF Merge (pdf-lib, client-side, drag-to-reorder)
-- AI Summary — PDF text extraction (PDF.js) + Gemini summary + key points + word count
-- Text Translator — DeepL API via Cloudflare Worker (de/en/fa, 1M free characters/month)
-- Auto text extraction on document upload (cached in DB, no re-extraction needed)
+- Settings page
+- i18n (en/de/fa - English default, RTL for Farsi)
+- Local AI Setup (Ollama + GPU via OLLAMA_VULKAN=1 + models on E:\ollamaModels)
+- Prompt Library (.prompts/)
+- Knowledge Base (ChromaDB + nomic-embed-text, kb-build/load/query shortcuts)
+- Project Audit & Cleanup
+- Document Intelligence - PDF Merge
+- AI Summary - PDF text extraction + Gemini summary
+- Text Translator - DeepL API via Cloudflare Worker
+- Auto text extraction on document upload
 
-## In Progress
+## Completed Living Workspace Milestone
 
-- Continue.dev integration (blocked — Ollama crashes on Windows/Intel Arc; using Claude.ai + kb-load instead)
+- Living Workspace Foundation
+- Welcome Workspace
+- Workspace Engine V1
+- Signal Engine V1
+- Priority Engine V1
+- Workspace Personalization V1
+- Memory Engine V1
+- Flow AI Right Rail
+- Sidebar Orb Identity
+- Continue Learning / Learning Memory UI
+- Smart Academy ecosystem navigation
+- Responsive/mobile layout improvements
+- Right rail nested scroll removal
 
-## Planned — High Priority
-- Rate limiting on AI Worker (Cloudflare KV counter)
-- Optimistic rollback on Supabase write failure
+Current workspace pipeline:
 
-## Planned — Medium Priority
-- Extend i18n to Dashboard, Tasks, Calendar, Finance, Documents, Music, Photos, Links, Learn AI
-- Mobile-optimize Finance and Family pages
-- Prune learn_ai_messages (DB trigger or scheduled function)
-- Regenerate Supabase types (supabase gen types) to remove `as any` casts
-- Phase 3: AI Gateway + provider routing (Gemini → Ollama fallback)
+```text
+useWorkspace()
+-> signalEngine()
+-> memoryEngine()
+-> personalizationEngine()
+-> priorityEngine()
+-> workspaceEngine()
+-> Dashboard
+```
 
-## Planned — Medium Priority (added)
+## Next Sprint
 
-- Git-initialize smartflow-ai-worker + add CI/CD deploy workflow
+Workspace Interaction Tracking V1
 
-## Planned — Low Priority
+Goal: capture real user interactions and feed genuine behavioral evidence into
+Memory Engine V1.
 
-- Sentry / error tracking
-- Vitest test coverage for service layer
+Target interaction events:
 
-## Known Bugs
-1. learn_ai_messages grows unbounded — no pruning (Low)
-2. Family JSONB arrays (events/schedule/notes) grow unbounded (Low)
-3. No optimistic rollback on Supabase write failure — UI desyncs until reload (Medium)
-4. Single Gemini model — no fallback if rate-limited (Medium)
-5. No rate limiting on /analyze endpoint (Medium)
-6. Short signed URL lifetime for documents (~20s on free tier config) (Low)
-7. No error tracking (Sentry or similar) (Low)
-8. smartflow-ai-worker: no git repo, no CI/CD (Low)
-9. Supabase generated types not updated for new tables — new services use `as any` (Low)
+- suggested action clicks
+- AI skill opens
+- continue learning clicks
+- dismiss events only when genuinely available
+- completion events only when genuinely available
+
+This sprint should remain deterministic and privacy-safe. It must not introduce
+LLM reasoning, fake interaction events, or backend memory unless explicitly
+scoped later.
+
+## Planned / Not Implemented
+
+- semantic memory
+- vector database
+- RAG
+- LLM reasoning layer
+- cross-device memory sync
+- planner
+- action execution
+- autonomous Flow AI
+- live AI-generated recommendations
+- real multi-session conversation memory
+
+## In Progress / Blocked
+
+- Continue.dev integration remains blocked by Ollama crashes on Windows/Intel Arc; current workflow uses Claude.ai or ChatGPT with `kb-load`.
+
+## Technical Debt / Known Gaps
+
+- learn_ai_messages grows unbounded and still needs pruning.
+- Family JSONB arrays can grow unbounded.
+- Error tracking is not centralized.
+- Supabase generated types should be regenerated after schema changes.
+- Some older UI strings still need i18n/RTL polish.
+- Some right-rail learning/recommendation content is static until live data or AI layers replace it.
