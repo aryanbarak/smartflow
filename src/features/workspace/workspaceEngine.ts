@@ -69,6 +69,26 @@ function affinityForDomain(
   return domain ? input.personalization.domainAffinity[domain] ?? 0 : 0;
 }
 
+function interactionFeedbackForDomain(
+  input: WorkspaceEngineInput,
+  domain?: WorkspaceSignalDomain,
+) {
+  if (!domain) return 0;
+  const base = input.interactionFeedback.domainEngagement[domain] ?? 0;
+  const dismissalPenalty = input.interactionFeedback.avoidedDomains.includes(domain)
+    ? 8
+    : 0;
+  return base - dismissalPenalty;
+}
+
+function interactionFeedbackForItem(input: WorkspaceEngineInput, title?: string) {
+  if (!title) return 0;
+  const match = input.interactionFeedback.actionEngagement.find(
+    (action) => action.targetId === title || action.targetId === title.toLowerCase(),
+  );
+  return match?.score ?? 0;
+}
+
 function priorityRankForDomain(
   input: WorkspaceEngineInput,
   domain?: WorkspaceSignalDomain,
@@ -79,7 +99,7 @@ function priorityRankForDomain(
   return secondaryIndex === -1 ? Number.MAX_SAFE_INTEGER : secondaryIndex + 1;
 }
 
-function sortBySignalPriority<T extends { signalDomain?: WorkspaceSignalDomain }>(
+function sortBySignalPriority<T extends { title?: string; signalDomain?: WorkspaceSignalDomain }>(
   items: T[],
   input: WorkspaceEngineInput,
 ) {
@@ -99,7 +119,11 @@ function sortBySignalPriority<T extends { signalDomain?: WorkspaceSignalDomain }
 
     return (
       affinityForDomain(input, b.signalDomain) -
-      affinityForDomain(input, a.signalDomain)
+      affinityForDomain(input, a.signalDomain) ||
+      interactionFeedbackForDomain(input, b.signalDomain) -
+        interactionFeedbackForDomain(input, a.signalDomain) ||
+      interactionFeedbackForItem(input, b.title) -
+        interactionFeedbackForItem(input, a.title)
     );
   });
 }

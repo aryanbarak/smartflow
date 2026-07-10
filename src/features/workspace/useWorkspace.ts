@@ -6,6 +6,7 @@ import { useChatSessions } from "@/hooks/useChatSessions";
 import { useLearnAiActivity } from "@/hooks/useLearnAiActivity";
 import { useHabits } from "@/features/habits/useHabits";
 import { useDocuments } from "@/features/documents/useDocuments";
+import { interactionFeedbackEngine } from "./interactionFeedbackEngine";
 import { memoryEngine } from "./memoryEngine";
 import { priorityEngine } from "./priorityEngine";
 import { personalizationEngine } from "./personalizationEngine";
@@ -76,12 +77,17 @@ export function useWorkspace(): Workspace {
       existingMemory: workspaceMemoryRef.current ?? loadWorkspaceMemory(),
       chatSessions,
     });
+    const interactionFeedback = interactionFeedbackEngine(
+      memoryResult.updatedMemory,
+      engineInput.now,
+    );
     const personalization = personalizationEngine(
       engineInput,
       signals,
       memoryResult.memoryInsights,
+      interactionFeedback,
     );
-    const priority = priorityEngine(signals, personalization);
+    const priority = priorityEngine(signals, personalization, interactionFeedback);
 
     return {
       workspace: workspaceEngine({
@@ -90,6 +96,7 @@ export function useWorkspace(): Workspace {
         signals,
         personalization,
         priority,
+        interactionFeedback,
       }),
       memoryResult,
     };

@@ -1,5 +1,6 @@
 import type {
   WorkspacePriorityConfidence,
+  WorkspaceInteractionFeedback,
   WorkspacePriorityModel,
   WorkspacePersonalizationModel,
   WorkspaceSignal,
@@ -29,24 +30,30 @@ function severityWeight(signal: WorkspaceSignal) {
 function personalizedSignalScore(
   signal: WorkspaceSignal,
   personalization: WorkspacePersonalizationModel,
+  interactionFeedback?: WorkspaceInteractionFeedback,
 ) {
+  const feedbackBoost =
+    signal.severity === "high"
+      ? 0
+      : (interactionFeedback?.domainEngagement[signal.domain] ?? 0) * 0.12;
   const personalizationBoost =
     signal.severity === "high"
       ? 0
       : (personalization.domainAffinity[signal.domain] ?? 0) * 0.25;
-  return signal.score + personalizationBoost;
+  return signal.score + personalizationBoost + feedbackBoost;
 }
 
 function sortSignals(
   signals: WorkspaceSignal[],
   personalization: WorkspacePersonalizationModel,
+  interactionFeedback?: WorkspaceInteractionFeedback,
 ) {
   return [...signals].sort((a, b) => {
     const severityDiff = severityWeight(b) - severityWeight(a);
     if (severityDiff !== 0) return severityDiff;
     return (
-      personalizedSignalScore(b, personalization) -
-      personalizedSignalScore(a, personalization)
+      personalizedSignalScore(b, personalization, interactionFeedback) -
+      personalizedSignalScore(a, personalization, interactionFeedback)
     );
   });
 }
@@ -55,14 +62,34 @@ function completeSecondaryDomains(
   domains: WorkspaceSignalDomain[],
   primaryDomain: WorkspaceSignalDomain,
   personalization: WorkspacePersonalizationModel,
+  interactionFeedback?: WorkspaceInteractionFeedback,
+  highSignalDomains = new Set<WorkspaceSignalDomain>(),
 ) {
   const orderedDomains = [...domains];
   for (const domain of personalization.preferredDomains) {
     if (!orderedDomains.includes(domain)) orderedDomains.push(domain);
   }
+  for (const domain of interactionFeedback?.recentInteractionDomains ?? []) {
+    if (!orderedDomains.includes(domain)) orderedDomains.push(domain);
+  }
 
   return orderedDomains
     .filter((domain) => domain !== primaryDomain)
+    .sort((a, b) => {
+      const highDiff = Number(highSignalDomains.has(b)) - Number(highSignalDomains.has(a));
+      if (highDiff !== 0) return highDiff;
+      if (highSignalDomains.has(a) && highSignalDomains.has(b)) {
+        return orderedDomains.indexOf(a) - orderedDomains.indexOf(b);
+      }
+      const feedbackDiff =
+        (interactionFeedback?.domainEngagement[b] ?? 0) -
+        (interactionFeedback?.domainEngagement[a] ?? 0);
+      if (feedbackDiff !== 0) return feedbackDiff;
+      return (
+        (personalization.domainAffinity[b] ?? 0) -
+        (personalization.domainAffinity[a] ?? 0)
+      );
+    })
     .slice(0, 3);
 }
 
@@ -128,8 +155,9 @@ function createMission(
 export function priorityEngine(
   signals: WorkspaceSignal[],
   personalization: WorkspacePersonalizationModel,
+  interactionFeedback?: WorkspaceInteractionFeedback,
 ): WorkspacePriorityModel {
-  const orderedSignals = sortSignals(signals, personalization);
+  const orderedSignals = sortSignals(signals, personalization, interactionFeedback);
   const onboardingSignal = orderedSignals.find(
     (signal) => signal.id === "learning:onboarding",
   );
@@ -153,7 +181,17 @@ export function priorityEngine(
   const secondaryDomains =
     onboardingSignal
       ? domains.filter((domain) => domain !== primarySignal.domain).slice(0, 3)
-      : completeSecondaryDomains(domains, primarySignal.domain, personalization);
+      : completeSecondaryDomains(
+          domains,
+          primarySignal.domain,
+          personalization,
+          interactionFeedback,
+          new Set(
+            signalOrder
+              .filter((signal) => signal.severity === "high")
+              .map((signal) => signal.domain),
+          ),
+        );
   const allSignalsLow =
     orderedSignals.length === 0 ||
     orderedSignals.every((signal) => signal.severity === "low");

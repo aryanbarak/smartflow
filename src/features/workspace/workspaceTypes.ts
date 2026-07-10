@@ -1,5 +1,6 @@
 import type {
   WorkspaceInteractionEvent,
+  WorkspaceInteractionSource,
   WorkspaceInteractionType,
 } from "./workspaceInteractionTypes";
 
@@ -133,6 +134,35 @@ export interface WorkspacePersonalizationModel {
   generatedAt: string;
 }
 
+export interface WorkspaceActionEngagement {
+  targetId: string;
+  domain: WorkspaceSignalDomain;
+  clicks: number;
+  completions: number;
+  dismissals: number;
+  lastInteractionAt?: string;
+  score: number;
+}
+
+export interface WorkspaceRepeatedInteractionPattern {
+  domain: WorkspaceSignalDomain;
+  type: WorkspaceInteractionType;
+  count: number;
+  score: number;
+}
+
+export interface WorkspaceInteractionFeedback {
+  domainEngagement: WorkspaceDomainAffinity;
+  actionEngagement: WorkspaceActionEngagement[];
+  repeatedInteractionPatterns: WorkspaceRepeatedInteractionPattern[];
+  avoidedDomains: WorkspaceSignalDomain[];
+  recentInteractionDomains: WorkspaceSignalDomain[];
+  preferredSources: Partial<Record<WorkspaceInteractionSource, number>>;
+  confidence: WorkspacePersonalizationConfidence;
+  evidence: string[];
+  generatedAt: string;
+}
+
 export interface WorkspaceDomainUsageMemory {
   openCount: number;
   lastOpenedAt?: string;
@@ -253,6 +283,7 @@ export interface WorkspaceEngineInput extends WorkspaceSignalEngineInput {
   signals: WorkspaceSignal[];
   personalization: WorkspacePersonalizationModel;
   priority: WorkspacePriorityModel;
+  interactionFeedback: WorkspaceInteractionFeedback;
 }
 
 export interface WorkspaceToday {

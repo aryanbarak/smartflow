@@ -1,5 +1,6 @@
 import type {
   WorkspaceDomainAffinity,
+  WorkspaceInteractionFeedback,
   WorkspaceMemoryInsights,
   WorkspacePersonalizationConfidence,
   WorkspacePersonalizationModel,
@@ -79,6 +80,7 @@ export function personalizationEngine(
   input: WorkspaceSignalEngineInput,
   signals: WorkspaceSignal[],
   memoryInsights?: WorkspaceMemoryInsights,
+  interactionFeedback?: WorkspaceInteractionFeedback,
 ): WorkspacePersonalizationModel {
   const now = input.now ?? new Date();
   const generatedAt = now.toISOString();
@@ -227,6 +229,33 @@ export function personalizationEngine(
         12 * memoryWeight,
         "Learning memory added weak continuity evidence.",
       );
+    }
+  }
+
+  if (interactionFeedback && !isOnboarding) {
+    const feedbackWeight =
+      interactionFeedback.confidence === "high"
+        ? 0.18
+        : interactionFeedback.confidence === "medium"
+          ? 0.1
+          : 0.04;
+
+    for (const domain of interactionFeedback.recentInteractionDomains.slice(0, 3)) {
+      addAffinity(
+        domain,
+        interactionFeedback.domainEngagement[domain] * feedbackWeight,
+      );
+    }
+
+    for (const domain of interactionFeedback.avoidedDomains.slice(0, 2)) {
+      affinity[domain] = clampScore(affinity[domain] - 6 * feedbackWeight);
+    }
+
+    if (interactionFeedback.repeatedInteractionPatterns.length > 0) {
+      evidence.push("Interaction feedback added weak repeated behavior evidence.");
+    }
+    if (interactionFeedback.avoidedDomains.length > 0) {
+      evidence.push("Explicit dismissals reduced weak interaction preference.");
     }
   }
 
