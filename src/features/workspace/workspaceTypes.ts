@@ -82,6 +82,9 @@ export type WorkspaceSignalDomain =
 
 export type WorkspaceSignalSeverity = "low" | "medium" | "high";
 export type WorkspacePriorityConfidence = "low" | "medium" | "high";
+export type WorkspacePersonalizationConfidence = "low" | "medium" | "high";
+
+export type WorkspaceDomainAffinity = Record<WorkspaceSignalDomain, number>;
 
 export interface WorkspaceSignal {
   id: string;
@@ -103,6 +106,15 @@ export interface WorkspacePriorityModel {
   confidence: WorkspacePriorityConfidence;
   reasons: string[];
   orderedSignalIds: string[];
+}
+
+export interface WorkspacePersonalizationModel {
+  domainAffinity: WorkspaceDomainAffinity;
+  recentDomains: WorkspaceSignalDomain[];
+  preferredDomains: WorkspaceSignalDomain[];
+  confidence: WorkspacePersonalizationConfidence;
+  evidence: string[];
+  generatedAt: string;
 }
 
 export interface WorkspaceDataLoadingState {
@@ -129,6 +141,7 @@ export interface WorkspaceSignalEngineInput {
 export interface WorkspaceEngineInput extends WorkspaceSignalEngineInput {
   chatSessions: WorkspaceChatSignal[];
   signals: WorkspaceSignal[];
+  personalization: WorkspacePersonalizationModel;
   priority: WorkspacePriorityModel;
 }
 
@@ -169,6 +182,7 @@ export interface WorkspaceRecommendation {
   reason: string;
   icon: WorkspaceIconKey;
   target: WorkspaceNavigationTarget;
+  signalDomain?: WorkspaceSignalDomain;
 }
 
 export interface WorkspaceRecentConversation {
@@ -202,6 +216,7 @@ export interface Workspace {
   dailyStory: WorkspaceDailyStory;
   recommendationReasons: WorkspaceReason[];
   signalFeed: WorkspaceSignal[];
+  personalization: WorkspacePersonalizationModel;
   welcome: WorkspaceWelcome;
   rightRail: WorkspaceRightRail;
 }

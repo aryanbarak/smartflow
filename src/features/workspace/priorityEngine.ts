@@ -1,6 +1,7 @@
 import type {
   WorkspacePriorityConfidence,
   WorkspacePriorityModel,
+  WorkspacePersonalizationModel,
   WorkspaceSignal,
   WorkspaceSignalDomain,
 } from "./workspaceTypes";
@@ -17,6 +18,52 @@ function uniqueDomains(signals: WorkspaceSignal[]) {
     if (!domains.includes(signal.domain)) domains.push(signal.domain);
   }
   return domains;
+}
+
+function severityWeight(signal: WorkspaceSignal) {
+  if (signal.severity === "high") return 3;
+  if (signal.severity === "medium") return 2;
+  return 1;
+}
+
+function personalizedSignalScore(
+  signal: WorkspaceSignal,
+  personalization: WorkspacePersonalizationModel,
+) {
+  const personalizationBoost =
+    signal.severity === "high"
+      ? 0
+      : (personalization.domainAffinity[signal.domain] ?? 0) * 0.25;
+  return signal.score + personalizationBoost;
+}
+
+function sortSignals(
+  signals: WorkspaceSignal[],
+  personalization: WorkspacePersonalizationModel,
+) {
+  return [...signals].sort((a, b) => {
+    const severityDiff = severityWeight(b) - severityWeight(a);
+    if (severityDiff !== 0) return severityDiff;
+    return (
+      personalizedSignalScore(b, personalization) -
+      personalizedSignalScore(a, personalization)
+    );
+  });
+}
+
+function completeSecondaryDomains(
+  domains: WorkspaceSignalDomain[],
+  primaryDomain: WorkspaceSignalDomain,
+  personalization: WorkspacePersonalizationModel,
+) {
+  const orderedDomains = [...domains];
+  for (const domain of personalization.preferredDomains) {
+    if (!orderedDomains.includes(domain)) orderedDomains.push(domain);
+  }
+
+  return orderedDomains
+    .filter((domain) => domain !== primaryDomain)
+    .slice(0, 3);
 }
 
 function createMission(
@@ -78,8 +125,11 @@ function createMission(
   };
 }
 
-export function priorityEngine(signals: WorkspaceSignal[]): WorkspacePriorityModel {
-  const orderedSignals = [...signals].sort((a, b) => b.score - a.score);
+export function priorityEngine(
+  signals: WorkspaceSignal[],
+  personalization: WorkspacePersonalizationModel,
+): WorkspacePriorityModel {
+  const orderedSignals = sortSignals(signals, personalization);
   const onboardingSignal = orderedSignals.find(
     (signal) => signal.id === "learning:onboarding",
   );
@@ -100,9 +150,10 @@ export function priorityEngine(signals: WorkspaceSignal[]): WorkspacePriorityMod
     ? [onboardingSignal, ...orderedSignals.filter((signal) => signal.id !== onboardingSignal.id)]
     : orderedSignals;
   const domains = uniqueDomains(signalOrder);
-  const secondaryDomains = domains
-    .filter((domain) => domain !== primarySignal.domain)
-    .slice(0, 3);
+  const secondaryDomains =
+    onboardingSignal
+      ? domains.filter((domain) => domain !== primarySignal.domain).slice(0, 3)
+      : completeSecondaryDomains(domains, primarySignal.domain, personalization);
   const allSignalsLow =
     orderedSignals.length === 0 ||
     orderedSignals.every((signal) => signal.severity === "low");

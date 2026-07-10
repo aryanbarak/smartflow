@@ -1,0 +1,207 @@
+import type {
+  WorkspaceDomainAffinity,
+  WorkspacePersonalizationConfidence,
+  WorkspacePersonalizationModel,
+  WorkspaceSignal,
+  WorkspaceSignalDomain,
+  WorkspaceSignalEngineInput,
+} from "./workspaceTypes";
+
+const workspaceDomains: WorkspaceSignalDomain[] = [
+  "tasks",
+  "calendar",
+  "learning",
+  "habits",
+  "finance",
+  "documents",
+];
+
+function createEmptyAffinity(): WorkspaceDomainAffinity {
+  return {
+    tasks: 0,
+    calendar: 0,
+    learning: 0,
+    habits: 0,
+    finance: 0,
+    documents: 0,
+  };
+}
+
+function clampScore(score: number) {
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function getUnknownDate(value: unknown): Date | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const dateValue =
+    record.updatedAt ??
+    record.updated_at ??
+    record.createdAt ??
+    record.created_at ??
+    record.date ??
+    record.dateTimeStart;
+
+  if (typeof dateValue !== "string") return null;
+  const date = new Date(dateValue);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function daysBetween(a: Date, b: Date) {
+  return Math.abs(a.getTime() - b.getTime()) / 86_400_000;
+}
+
+function countRecentUnknown(items: unknown[], now: Date, windowDays = 14) {
+  return items.filter((item) => {
+    const date = getUnknownDate(item);
+    return date ? daysBetween(now, date) <= windowDays : false;
+  }).length;
+}
+
+function confidenceForEvidence(totalSignals: number): WorkspacePersonalizationConfidence {
+  if (totalSignals >= 20) return "high";
+  if (totalSignals >= 8) return "medium";
+  return "low";
+}
+
+function sortedDomainsByScore(scores: WorkspaceDomainAffinity) {
+  return [...workspaceDomains].sort((a, b) => scores[b] - scores[a]);
+}
+
+export function personalizationEngine(
+  input: WorkspaceSignalEngineInput,
+  signals: WorkspaceSignal[],
+): WorkspacePersonalizationModel {
+  const now = input.now ?? new Date();
+  const generatedAt = now.toISOString();
+  const affinity = createEmptyAffinity();
+  const evidence: string[] = [];
+  const recentCounts = createEmptyAffinity();
+
+  const addAffinity = (
+    domain: WorkspaceSignalDomain,
+    score: number,
+    evidenceLine?: string,
+  ) => {
+    affinity[domain] = clampScore(affinity[domain] + score);
+    if (evidenceLine) evidence.push(evidenceLine);
+  };
+
+  const openTasks = input.tasks.filter((task) => !task.completed);
+  const olderOpenTasks = openTasks.filter(
+    (task) => daysBetween(now, new Date(task.createdAt)) >= 7,
+  );
+  const recentTasks = input.tasks.filter(
+    (task) => daysBetween(now, new Date(task.createdAt)) <= 14,
+  ).length;
+  recentCounts.tasks = recentTasks;
+  addAffinity("tasks", input.tasks.length * 2);
+  if (recentTasks > 0) {
+    addAffinity("tasks", Math.min(18, recentTasks * 3), "Recent task activity increased task affinity.");
+  }
+  if (olderOpenTasks.length >= 2) {
+    addAffinity(
+      "tasks",
+      Math.min(24, olderOpenTasks.length * 4),
+      "Repeated older open tasks increased task affinity.",
+    );
+  }
+
+  const recentEvents = input.events.filter(
+    (event) => daysBetween(now, new Date(event.dateTimeStart)) <= 14,
+  ).length;
+  recentCounts.calendar = recentEvents;
+  addAffinity("calendar", input.events.length * 2);
+  if (recentEvents > 0) {
+    addAffinity("calendar", Math.min(18, recentEvents * 3), "Recent calendar activity increased calendar affinity.");
+  }
+
+  const recentTransactions = input.transactions.filter(
+    (transaction) => daysBetween(now, new Date(transaction.date)) <= 30,
+  ).length;
+  recentCounts.finance = recentTransactions;
+  addAffinity("finance", input.transactions.length * 2);
+  if (recentTransactions >= 3) {
+    addAffinity(
+      "finance",
+      Math.min(28, recentTransactions * 4),
+      "Frequent finance activity increased finance affinity.",
+    );
+  }
+
+  const recentHabits = countRecentUnknown(input.habits, now, 14);
+  recentCounts.habits = recentHabits;
+  addAffinity("habits", input.habits.length * 2);
+  if (recentHabits > 0) {
+    addAffinity("habits", Math.min(18, recentHabits * 3), "Recent habit activity increased habit affinity.");
+  }
+
+  const recentDocuments = countRecentUnknown(input.documents, now, 30);
+  recentCounts.documents = recentDocuments;
+  addAffinity("documents", input.documents.length * 2);
+  if (recentDocuments > 0) {
+    addAffinity(
+      "documents",
+      Math.min(24, recentDocuments * 4),
+      "Recent document activity increased document affinity.",
+    );
+  }
+
+  const learningCount = input.learnAiActivity?.totalQuestions ?? 0;
+  const recentLearning =
+    input.learnAiActivity?.lastQuestion &&
+    daysBetween(now, new Date(input.learnAiActivity.lastQuestion.createdAt)) <= 30
+      ? 1
+      : 0;
+  recentCounts.learning = recentLearning;
+  addAffinity("learning", learningCount * 2);
+  if (learningCount > 0) {
+    addAffinity(
+      "learning",
+      Math.min(28, 12 + learningCount),
+      "Active learning history increased learning affinity.",
+    );
+  }
+  if (input.learnAiActivity?.lastQuestion) {
+    addAffinity(
+      "learning",
+      10,
+      "Unfinished learning context increased learning affinity.",
+    );
+  }
+
+  for (const signal of signals) {
+    if (signal.severity === "high") {
+      addAffinity(signal.domain, 8);
+    } else if (signal.severity === "medium") {
+      addAffinity(signal.domain, 4);
+    }
+  }
+
+  const totalSignals =
+    input.tasks.length +
+    input.events.length +
+    input.transactions.length +
+    input.habits.length +
+    input.documents.length +
+    learningCount;
+  const recentDomains = sortedDomainsByScore(recentCounts).filter(
+    (domain) => recentCounts[domain] > 0,
+  );
+  const preferredDomains = sortedDomainsByScore(affinity).filter(
+    (domain) => affinity[domain] >= 12,
+  );
+
+  if (totalSignals < 5) {
+    evidence.push("Sparse data keeps personalization confidence low.");
+  }
+
+  return {
+    domainAffinity: affinity,
+    recentDomains,
+    preferredDomains,
+    confidence: confidenceForEvidence(totalSignals),
+    evidence: evidence.slice(0, 8),
+    generatedAt,
+  };
+}

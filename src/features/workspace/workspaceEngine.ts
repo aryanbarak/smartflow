@@ -53,6 +53,22 @@ function scoreForDomain(
   return input.signals.find((signal) => signal.domain === domain)?.score ?? 0;
 }
 
+function severityForDomain(
+  input: WorkspaceEngineInput,
+  domain?: WorkspaceSignalDomain,
+) {
+  if (!domain) return "low";
+  const signal = input.signals.find((item) => item.domain === domain);
+  return signal?.severity ?? "low";
+}
+
+function affinityForDomain(
+  input: WorkspaceEngineInput,
+  domain?: WorkspaceSignalDomain,
+) {
+  return domain ? input.personalization.domainAffinity[domain] ?? 0 : 0;
+}
+
 function priorityRankForDomain(
   input: WorkspaceEngineInput,
   domain?: WorkspaceSignalDomain,
@@ -68,6 +84,10 @@ function sortBySignalPriority<T extends { signalDomain?: WorkspaceSignalDomain }
   input: WorkspaceEngineInput,
 ) {
   return [...items].sort((a, b) => {
+    const aIsUrgent = severityForDomain(input, a.signalDomain) === "high";
+    const bIsUrgent = severityForDomain(input, b.signalDomain) === "high";
+    if (aIsUrgent !== bIsUrgent) return bIsUrgent ? 1 : -1;
+
     const rankDiff =
       priorityRankForDomain(input, a.signalDomain) -
       priorityRankForDomain(input, b.signalDomain);
@@ -75,7 +95,12 @@ function sortBySignalPriority<T extends { signalDomain?: WorkspaceSignalDomain }
     const aScore = a.signalDomain ? scoreForDomain(input, a.signalDomain) : 0;
     const bScore = b.signalDomain ? scoreForDomain(input, b.signalDomain) : 0;
     const scoreDiff = bScore - aScore;
-    return scoreDiff;
+    if (scoreDiff !== 0) return scoreDiff;
+
+    return (
+      affinityForDomain(input, b.signalDomain) -
+      affinityForDomain(input, a.signalDomain)
+    );
   });
 }
 
@@ -88,12 +113,14 @@ const flowAISkills: WorkspaceSkill[] = [
       route: "/chat",
       initialPrompt: "Help me plan my day and choose what to do first.",
     },
+    signalDomain: "calendar",
   },
   {
     title: "Study With Me",
     description: "Focus and learning support.",
     icon: "book",
     target: { route: "/learn-ai" },
+    signalDomain: "learning",
   },
   {
     title: "Analyze My Habits",
@@ -103,18 +130,21 @@ const flowAISkills: WorkspaceSkill[] = [
       route: "/chat",
       initialPrompt: "Analyze my habits and give me insights on my routines.",
     },
+    signalDomain: "habits",
   },
   {
     title: "Review Finances",
     description: "Review spending patterns.",
     icon: "wallet",
     target: { route: "/finance" },
+    signalDomain: "finance",
   },
   {
     title: "Weekly Briefing",
     description: "AI-generated summaries.",
     icon: "file",
     target: { route: "/briefing/weekly" },
+    signalDomain: "documents",
   },
   {
     title: "Career Assistant",
@@ -125,6 +155,7 @@ const flowAISkills: WorkspaceSkill[] = [
       initialPrompt:
         "Help me with my career: jobs, CV, applications, and interview preparation.",
     },
+    signalDomain: "documents",
   },
 ];
 
@@ -194,36 +225,42 @@ const rightRailRecommendations: WorkspaceRecommendation[] = [
     reason: "Because you recently studied LangGraph.",
     icon: "sparkles",
     target: { route: "/chat", initialPrompt: "Help me explore Vector Databases." },
+    signalDomain: "learning",
   },
   {
     title: "Neural Networks",
     reason: "Good next step after Linear Algebra.",
     icon: "book",
     target: { route: "/chat", initialPrompt: "Help me explore Neural Networks." },
+    signalDomain: "learning",
   },
   {
     title: "AI Memory",
     reason: "Useful for your DailyFlow project.",
     icon: "message",
     target: { route: "/chat", initialPrompt: "Help me explore AI Memory." },
+    signalDomain: "documents",
   },
   {
     title: "MCP Protocol",
     reason: "Related to AI Agents.",
     icon: "file",
     target: { route: "/chat", initialPrompt: "Help me explore MCP Protocol." },
+    signalDomain: "learning",
   },
   {
     title: "Advanced Prompting",
     reason: "Matches your recent activity.",
     icon: "check",
     target: { route: "/chat", initialPrompt: "Help me explore Advanced Prompting." },
+    signalDomain: "learning",
   },
   {
     title: "RAG Systems",
     reason: "Recommended after embeddings.",
     icon: "briefcase",
     target: { route: "/chat", initialPrompt: "Help me explore RAG Systems." },
+    signalDomain: "documents",
   },
 ];
 
@@ -337,7 +374,7 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
     hero: {
       title: `${getGreeting(today)}. ${input.priority.missionTitle}`,
       summary: input.priority.missionSummary,
-      skills: flowAISkills,
+      skills: sortBySignalPriority(flowAISkills, input),
     },
     suggestedActions: sortBySignalPriority(suggestedActions, input),
     dailyStory: {
@@ -367,6 +404,7 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
       },
     ], input),
     signalFeed: input.signals,
+    personalization: input.personalization,
     welcome: {
       setupActions: welcomeSetupActions,
       learningSignals: welcomeLearningSignals,
@@ -376,7 +414,7 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
         ? "I'm learning from your first workspace signals."
         : "Always learning from your workspace.",
       recentLessons,
-      recommendations: rightRailRecommendations,
+      recommendations: sortBySignalPriority(rightRailRecommendations, input),
       recentConversation: latestConversation
         ? {
             title: latestConversation.title,
