@@ -9,6 +9,7 @@ import { useDocuments } from "@/features/documents/useDocuments";
 import { goalEngine } from "./goalEngine";
 import { interactionFeedbackEngine } from "./interactionFeedbackEngine";
 import { memoryEngine } from "./memoryEngine";
+import { plannerEngine } from "./plannerEngine";
 import { priorityEngine } from "./priorityEngine";
 import { personalizationEngine } from "./personalizationEngine";
 import { signalEngine } from "./signalEngine";
@@ -97,6 +98,11 @@ export function useWorkspace(): Workspace {
       memoryInsights: memoryResult.memoryInsights,
       interactionFeedback,
     });
+    const plan = plannerEngine({
+      ...engineInput,
+      goal,
+      signals,
+    });
 
     return {
       workspace: workspaceEngine({
@@ -107,6 +113,7 @@ export function useWorkspace(): Workspace {
         priority,
         interactionFeedback,
         goal,
+        plan,
       }),
       memoryResult,
     };

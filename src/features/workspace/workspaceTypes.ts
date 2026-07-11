@@ -186,6 +186,50 @@ export interface WorkspaceGoal {
   status: WorkspaceGoalStatus;
 }
 
+export type WorkspacePlanStatus = "proposed";
+export type WorkspacePlanStepStatus = "proposed";
+export type WorkspacePlanActionType =
+  | "review"
+  | "continue"
+  | "focus"
+  | "plan"
+  | "open"
+  | "select"
+  | "reflect";
+
+export interface WorkspacePlanStep {
+  id: string;
+  order: number;
+  title: string;
+  description: string;
+  domain: WorkspaceSignalDomain;
+  estimatedMinutes: number;
+  status: WorkspacePlanStepStatus;
+  actionType: WorkspacePlanActionType;
+  targetId?: string;
+  targetRoute?: WorkspaceRoute;
+  reason: string;
+  requiresApproval: boolean;
+  dependencies: string[];
+  optional: boolean;
+}
+
+export interface WorkspacePlan {
+  id: string;
+  goalId: string;
+  title: string;
+  summary: string;
+  status: WorkspacePlanStatus;
+  steps: WorkspacePlanStep[];
+  totalEstimatedMinutes: number;
+  confidence: WorkspacePriorityConfidence;
+  constraints: string[];
+  reasons: string[];
+  generatedAt: string;
+  sourceGoal: WorkspaceGoal;
+  sourceSignalIds: string[];
+}
+
 export interface WorkspaceDomainUsageMemory {
   openCount: number;
   lastOpenedAt?: string;
@@ -310,6 +354,12 @@ export interface WorkspaceGoalEngineInput {
   interactionFeedback: WorkspaceInteractionFeedback;
 }
 
+export interface WorkspacePlannerEngineInput {
+  now?: Date;
+  goal: WorkspaceGoal;
+  signals: WorkspaceSignal[];
+}
+
 export interface WorkspaceEngineInput extends WorkspaceSignalEngineInput {
   chatSessions: WorkspaceChatSignal[];
   signals: WorkspaceSignal[];
@@ -317,6 +367,7 @@ export interface WorkspaceEngineInput extends WorkspaceSignalEngineInput {
   priority: WorkspacePriorityModel;
   interactionFeedback: WorkspaceInteractionFeedback;
   goal: WorkspaceGoal;
+  plan: WorkspacePlan;
 }
 
 export interface WorkspaceToday {
@@ -392,6 +443,7 @@ export interface Workspace {
   signalFeed: WorkspaceSignal[];
   personalization: WorkspacePersonalizationModel;
   goal: WorkspaceGoal;
+  plan: WorkspacePlan;
   welcome: WorkspaceWelcome;
   rightRail: WorkspaceRightRail;
 }

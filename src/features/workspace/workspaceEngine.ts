@@ -430,6 +430,7 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
     signalFeed: input.signals,
     personalization: input.personalization,
     goal: input.goal,
+    plan: input.plan,
     welcome: {
       setupActions: welcomeSetupActions,
       learningSignals: welcomeLearningSignals,

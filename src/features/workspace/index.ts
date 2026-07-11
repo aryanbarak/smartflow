@@ -2,6 +2,7 @@ export { memoryEngine } from "./memoryEngine";
 export { goalEngine } from "./goalEngine";
 export { interactionFeedbackEngine } from "./interactionFeedbackEngine";
 export { personalizationEngine } from "./personalizationEngine";
+export { plannerEngine } from "./plannerEngine";
 export { priorityEngine } from "./priorityEngine";
 export { signalEngine } from "./signalEngine";
 export { trackWorkspaceInteraction } from "./interactionTracker";
@@ -38,6 +39,12 @@ export type {
   WorkspaceMemoryEngineResult,
   WorkspaceMemoryInsights,
   WorkspaceNavigationTarget,
+  WorkspacePlan,
+  WorkspacePlanActionType,
+  WorkspacePlannerEngineInput,
+  WorkspacePlanStatus,
+  WorkspacePlanStep,
+  WorkspacePlanStepStatus,
   WorkspacePersonalizationConfidence,
   WorkspacePersonalizationModel,
   WorkspacePriorityConfidence,
