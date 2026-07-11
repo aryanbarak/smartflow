@@ -6,6 +6,7 @@ import { useChatSessions } from "@/hooks/useChatSessions";
 import { useLearnAiActivity } from "@/hooks/useLearnAiActivity";
 import { useHabits } from "@/features/habits/useHabits";
 import { useDocuments } from "@/features/documents/useDocuments";
+import { goalEngine } from "./goalEngine";
 import { interactionFeedbackEngine } from "./interactionFeedbackEngine";
 import { memoryEngine } from "./memoryEngine";
 import { priorityEngine } from "./priorityEngine";
@@ -88,6 +89,14 @@ export function useWorkspace(): Workspace {
       interactionFeedback,
     );
     const priority = priorityEngine(signals, personalization, interactionFeedback);
+    const goal = goalEngine({
+      ...engineInput,
+      signals,
+      priority,
+      personalization,
+      memoryInsights: memoryResult.memoryInsights,
+      interactionFeedback,
+    });
 
     return {
       workspace: workspaceEngine({
@@ -97,6 +106,7 @@ export function useWorkspace(): Workspace {
         personalization,
         priority,
         interactionFeedback,
+        goal,
       }),
       memoryResult,
     };

@@ -163,6 +163,29 @@ export interface WorkspaceInteractionFeedback {
   generatedAt: string;
 }
 
+export type WorkspaceGoalStatus =
+  | "proposed"
+  | "accepted"
+  | "completed"
+  | "dismissed";
+
+export interface WorkspaceGoal {
+  id: string;
+  title: string;
+  summary: string;
+  primaryDomain: WorkspaceSignalDomain;
+  supportingDomains: WorkspaceSignalDomain[];
+  successCriteria: string[];
+  estimatedEffortMinutes: number;
+  confidence: WorkspacePriorityConfidence;
+  reasons: string[];
+  constraints: string[];
+  generatedAt: string;
+  sourceSignalIds: string[];
+  sourcePriorityDomains: WorkspaceSignalDomain[];
+  status: WorkspaceGoalStatus;
+}
+
 export interface WorkspaceDomainUsageMemory {
   openCount: number;
   lastOpenedAt?: string;
@@ -278,12 +301,22 @@ export interface WorkspaceMemoryEngineResult {
   hasChanges: boolean;
 }
 
+export interface WorkspaceGoalEngineInput {
+  now?: Date;
+  signals: WorkspaceSignal[];
+  priority: WorkspacePriorityModel;
+  personalization: WorkspacePersonalizationModel;
+  memoryInsights: WorkspaceMemoryInsights;
+  interactionFeedback: WorkspaceInteractionFeedback;
+}
+
 export interface WorkspaceEngineInput extends WorkspaceSignalEngineInput {
   chatSessions: WorkspaceChatSignal[];
   signals: WorkspaceSignal[];
   personalization: WorkspacePersonalizationModel;
   priority: WorkspacePriorityModel;
   interactionFeedback: WorkspaceInteractionFeedback;
+  goal: WorkspaceGoal;
 }
 
 export interface WorkspaceToday {
@@ -358,6 +391,7 @@ export interface Workspace {
   recommendationReasons: WorkspaceReason[];
   signalFeed: WorkspaceSignal[];
   personalization: WorkspacePersonalizationModel;
+  goal: WorkspaceGoal;
   welcome: WorkspaceWelcome;
   rightRail: WorkspaceRightRail;
 }

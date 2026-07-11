@@ -396,8 +396,8 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
       tasksCreatedThisWeek,
     },
     hero: {
-      title: `${getGreeting(today)}. ${input.priority.missionTitle}`,
-      summary: input.priority.missionSummary,
+      title: `${getGreeting(today)}. ${input.goal.title}`,
+      summary: input.goal.summary,
       skills: sortBySignalPriority(flowAISkills, input),
     },
     suggestedActions: sortBySignalPriority(suggestedActions, input),
@@ -429,6 +429,7 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
     ], input),
     signalFeed: input.signals,
     personalization: input.personalization,
+    goal: input.goal,
     welcome: {
       setupActions: welcomeSetupActions,
       learningSignals: welcomeLearningSignals,

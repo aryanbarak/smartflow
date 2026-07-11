@@ -1,4 +1,5 @@
 export { memoryEngine } from "./memoryEngine";
+export { goalEngine } from "./goalEngine";
 export { interactionFeedbackEngine } from "./interactionFeedbackEngine";
 export { personalizationEngine } from "./personalizationEngine";
 export { priorityEngine } from "./priorityEngine";
@@ -26,6 +27,9 @@ export type {
   Workspace,
   WorkspaceAction,
   WorkspaceDomainAffinity,
+  WorkspaceGoal,
+  WorkspaceGoalEngineInput,
+  WorkspaceGoalStatus,
   WorkspaceIconKey,
   WorkspaceInteractionFeedback,
   WorkspaceMemory,
