@@ -2,6 +2,8 @@ import type {
   WorkspaceApprovalModel,
   WorkspaceApprovalRiskLevel,
   WorkspaceApprovalScope,
+  WorkspacePlanStep,
+  WorkspaceStepApproval,
 } from "../workspace/workspaceTypes";
 
 export type AgentToolDomain =
@@ -104,4 +106,52 @@ export interface AgentToolRiskSummary {
 export interface AgentToolApprovalCheck {
   tool: AgentToolDefinition;
   approval?: WorkspaceApprovalModel | null;
+}
+
+export type ExecutionPolicyStatus =
+  | "allowed"
+  | "denied"
+  | "approval_required"
+  | "tool_not_found"
+  | "tool_disabled"
+  | "invalid_mapping"
+  | "risk_mismatch"
+  | "scope_insufficient"
+  | "domain_mismatch"
+  | "capability_mismatch";
+
+export type ExecutionPolicyCheckSeverity = "info" | "warning" | "blocking";
+
+export interface ExecutionPolicyCheck {
+  id: string;
+  passed: boolean;
+  reason: string;
+  severity: ExecutionPolicyCheckSeverity;
+}
+
+export interface ExecutionPolicyContext {
+  planId?: string;
+  approvalModel?: WorkspaceApprovalModel | null;
+  stepRiskLevel?: WorkspaceApprovalRiskLevel;
+}
+
+export interface ExecutionPolicyInput {
+  step?: WorkspacePlanStep | null;
+  approval?: WorkspaceStepApproval | null;
+  tool?: AgentToolDefinition | null;
+  currentTime?: Date;
+  context?: ExecutionPolicyContext;
+}
+
+export interface ExecutionPolicyDecision {
+  status: ExecutionPolicyStatus;
+  allowed: boolean;
+  reasons: string[];
+  effectiveRiskLevel: WorkspaceApprovalRiskLevel;
+  requiredApprovalScope: WorkspaceApprovalScope;
+  matchedToolId?: string;
+  stepId: string;
+  evaluatedAt: string;
+  policyVersion: "execution-policy-v1";
+  checks: ExecutionPolicyCheck[];
 }
