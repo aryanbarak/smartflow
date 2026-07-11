@@ -6,6 +6,7 @@ import { useChatSessions } from "@/hooks/useChatSessions";
 import { useLearnAiActivity } from "@/hooks/useLearnAiActivity";
 import { useHabits } from "@/features/habits/useHabits";
 import { useDocuments } from "@/features/documents/useDocuments";
+import { approvalEngine } from "./approvalEngine";
 import { goalEngine } from "./goalEngine";
 import { interactionFeedbackEngine } from "./interactionFeedbackEngine";
 import { memoryEngine } from "./memoryEngine";
@@ -103,6 +104,10 @@ export function useWorkspace(): Workspace {
       goal,
       signals,
     });
+    const approval = approvalEngine({
+      ...engineInput,
+      plan,
+    });
 
     return {
       workspace: workspaceEngine({
@@ -114,6 +119,7 @@ export function useWorkspace(): Workspace {
         interactionFeedback,
         goal,
         plan,
+        approval,
       }),
       memoryResult,
     };

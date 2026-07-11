@@ -1,3 +1,4 @@
+export { approvalEngine } from "./approvalEngine";
 export { memoryEngine } from "./memoryEngine";
 export { goalEngine } from "./goalEngine";
 export { interactionFeedbackEngine } from "./interactionFeedbackEngine";
@@ -27,6 +28,11 @@ export type {
 export type {
   Workspace,
   WorkspaceAction,
+  WorkspaceApprovalEngineInput,
+  WorkspaceApprovalModel,
+  WorkspaceApprovalOverallStatus,
+  WorkspaceApprovalRiskLevel,
+  WorkspaceApprovalScope,
   WorkspaceDomainAffinity,
   WorkspaceGoal,
   WorkspaceGoalEngineInput,
@@ -56,5 +62,7 @@ export type {
   WorkspaceSignalEngineInput,
   WorkspaceSignalSeverity,
   WorkspaceSetupAction,
+  WorkspaceStepApproval,
+  WorkspaceStepApprovalStatus,
   WorkspaceSkill,
 } from "./workspaceTypes";

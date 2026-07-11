@@ -195,7 +195,15 @@ export type WorkspacePlanActionType =
   | "plan"
   | "open"
   | "select"
-  | "reflect";
+  | "reflect"
+  | "inspect"
+  | "create"
+  | "update"
+  | "delete"
+  | "send"
+  | "pay"
+  | "share"
+  | "invite";
 
 export interface WorkspacePlanStep {
   id: string;
@@ -228,6 +236,53 @@ export interface WorkspacePlan {
   generatedAt: string;
   sourceGoal: WorkspaceGoal;
   sourceSignalIds: string[];
+}
+
+export type WorkspaceApprovalOverallStatus =
+  | "not_required"
+  | "pending"
+  | "partially_approved"
+  | "approved"
+  | "rejected";
+export type WorkspaceStepApprovalStatus =
+  | "not_required"
+  | "pending"
+  | "approved"
+  | "rejected";
+export type WorkspaceApprovalScope =
+  | "view_only"
+  | "single_step"
+  | "multiple_steps"
+  | "entire_plan";
+export type WorkspaceApprovalRiskLevel =
+  | "none"
+  | "low"
+  | "medium"
+  | "high";
+
+export interface WorkspaceStepApproval {
+  stepId: string;
+  status: WorkspaceStepApprovalStatus;
+  requiresApproval: boolean;
+  approvalReason: string;
+  riskLevel: WorkspaceApprovalRiskLevel;
+  reversible: boolean;
+  externalEffect: boolean;
+  dataDomains: WorkspaceSignalDomain[];
+  approvalScope: WorkspaceApprovalScope;
+}
+
+export interface WorkspaceApprovalModel {
+  planId: string;
+  goalId: string;
+  overallStatus: WorkspaceApprovalOverallStatus;
+  stepApprovals: WorkspaceStepApproval[];
+  approvalScope: WorkspaceApprovalScope;
+  requiresUserApproval: boolean;
+  approvalSummary: string;
+  riskLevel: WorkspaceApprovalRiskLevel;
+  generatedAt: string;
+  reasons: string[];
 }
 
 export interface WorkspaceDomainUsageMemory {
@@ -360,6 +415,11 @@ export interface WorkspacePlannerEngineInput {
   signals: WorkspaceSignal[];
 }
 
+export interface WorkspaceApprovalEngineInput {
+  now?: Date;
+  plan: WorkspacePlan;
+}
+
 export interface WorkspaceEngineInput extends WorkspaceSignalEngineInput {
   chatSessions: WorkspaceChatSignal[];
   signals: WorkspaceSignal[];
@@ -368,6 +428,7 @@ export interface WorkspaceEngineInput extends WorkspaceSignalEngineInput {
   interactionFeedback: WorkspaceInteractionFeedback;
   goal: WorkspaceGoal;
   plan: WorkspacePlan;
+  approval: WorkspaceApprovalModel;
 }
 
 export interface WorkspaceToday {
@@ -444,6 +505,7 @@ export interface Workspace {
   personalization: WorkspacePersonalizationModel;
   goal: WorkspaceGoal;
   plan: WorkspacePlan;
+  approval: WorkspaceApprovalModel;
   welcome: WorkspaceWelcome;
   rightRail: WorkspaceRightRail;
 }
