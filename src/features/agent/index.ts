@@ -1,3 +1,6 @@
+export * from "./approvalInteraction";
+export * from "./executionAudit";
+export type * from "./executionAuditTypes";
 export * from "./executionEngine";
 export * from "./executionPolicy";
 export type * from "./executionTypes";

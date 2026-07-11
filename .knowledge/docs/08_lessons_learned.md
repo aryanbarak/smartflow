@@ -1,167 +1,228 @@
-# smartFlow — Lessons Learned
+# SmartFlow - Lessons Learned
 
 ## Technical Decisions & Why
 
 ### Supabase Credentials Hardcoded
-Problem: GitHub secrets with wrong/truncated values broke auth repeatedly.
-Solution: Hardcode public URL + anon key directly in client.ts.
-Rule: NEVER add VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY to GitHub secrets.
-The anon key is a public credential — RLS enforces data isolation.
+
+Problem: GitHub secrets with wrong or truncated values repeatedly broke auth.
+
+Solution: hardcode the public Supabase URL and anon key directly in `client.ts`.
+
+Rule: never add `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` to GitHub
+secrets. The anon key is public; RLS enforces isolation.
 
 ### PWA Service Worker
-Problem: SW "non-precached-url" crash on page navigation (/tasks, /calendar, etc.).
-Solution: Set `navigateFallback: null` in vite-plugin-pwa config.
-Rule: Never cache index.html or Supabase API calls in the service worker.
 
-### Calendar: localStorage → Supabase
-Problem: Data lost between devices.
-Solution: Supabase as primary + localStorage as offline fallback.
-Pattern: Always provide offline fallback for critical data.
+Problem: service worker navigation fallback caused page crashes on routes such
+as `/tasks` and `/calendar`.
+
+Solution: set `navigateFallback: null` in Vite PWA config.
+
+Rule: never cache `index.html` or Supabase API calls in the service worker.
+
+### Calendar: localStorage to Supabase
+
+Problem: data was lost between devices.
+
+Solution: Supabase is primary storage with localStorage as offline fallback.
+
+Rule: critical personal data should provide an offline fallback when practical.
 
 ### Intel Arc 140V GPU with Ollama
-Problem: Ollama defaulted to CPU (slower inference).
-Solution: OLLAMA_VULKAN=1 environment variable enables iGPU acceleration.
-Result: ~14.5 t/s vs ~13 t/s on CPU — minor gain (iGPU shares RAM with CPU,
-  so the bottleneck is memory bandwidth, not compute).
-Note: Startup script (ollama-gpu.ps1) placed in Windows Startup folder for persistence.
-Rule: Always set OLLAMA_VULKAN=1 when using Intel Arc / AMD iGPU on Windows.
 
-### Continue.dev Crashes with Ollama on Windows/Intel Arc
+Problem: Ollama defaulted to CPU inference.
 
-Problem: Continue.dev IDE extension crashes or hangs when calling the local Ollama server
-  on Windows with Intel Arc 140V (Vulkan backend).
-Root cause: Unknown — possibly a conflict between the Vulkan driver, the Node.js extension
-  host, and the Ollama HTTP API under load.
-Workaround: Use kb-load to generate context_output.md, then paste into Claude.ai.
-  Claude.ai has a larger context window and more reliable behavior than local models.
-Status: Blocked until a stable Continue.dev + Ollama + Intel Arc combination is found.
-Rule: Don't rely on Continue.dev for the primary AI workflow on this machine.
+Solution: set `OLLAMA_VULKAN=1` and store models under `E:\ollamaModels`.
 
-### OLLAMA_MODELS Path — Verify Drive Letter
+Rule: verify drive letters before setting model paths. Wrong paths can silently
+fall back to defaults.
 
-Problem: OLLAMA_MODELS=F:\AI\models failed silently (F: drive didn't exist on this machine).
-  Models downloaded to default location instead.
-Solution: OLLAMA_MODELS=E:\ollamaModels (verified E: exists and has 500GB+ free).
-Lesson: Always verify the drive letter with `Get-PSDrive` before setting OLLAMA_MODELS.
-  A wrong path causes Ollama to silently fall back to the default location with no error.
+### Continue.dev Crashes with Ollama
 
-### Continue.dev Config Format
-Problem: Legacy config.json format was deprecated in Continue.dev v1.2+.
-Solution: New config.yaml format with `schema: v1`.
-Warning: Config format changes with updates — check docs.continue.dev for current format.
-Note: Even with correct config.yaml, Continue.dev remains blocked (see crash issue above).
+Problem: Continue.dev can crash or hang when calling local Ollama on this
+Windows/Intel Arc setup.
 
-### TanStack Query v5 Migration
-Problem: v4 code used `isLoading` for mutations and old `mutationKey` syntax.
-Solution: v5 uses `isPending` for mutations; `mutationKey` removed.
-Rule: Always use `isPending` (not `isLoading`) for mutation state in v5.
+Workaround: use `.knowledge/load_context.py` to generate context, then paste
+into Claude.ai or ChatGPT.
+
+Rule: do not rely on Continue.dev as the primary workflow on this machine until
+the local model stack is stable.
+
+### TanStack Query v5
+
+Rule: use `isPending` for mutation state, not the older v4 `isLoading` pattern.
 
 ### Zustand v5
-Problem: v4 persist middleware had different API.
-Solution: v5 uses `create<State>()(persist(set => ({...}), { name: '...' }))` pattern.
-Rule: All persist keys prefixed with `smartflow:` to avoid localStorage conflicts.
 
-### ARIA Accessibility
-Problem: Linter flagged `aria-checked={boolean}` as invalid on role=switch.
-Solution: Use string form: `aria-checked={checked ? 'true' : 'false'}`.
-Problem: Form inputs without explicit labels trigger accessibility errors.
-Solution: Use `id=` on input and matching `htmlFor=` on label.
+Rule: use the v5 persist pattern and prefix persisted keys with `smartflow:`.
 
-### Nested Interactive Controls
-Problem: `button` inside `div[role=button]` triggers linter rule S6819.
-Solution: Replace outer div[role=button] with a proper `button` element,
-making the inner delete button a sibling instead of a child.
+### Accessibility
+
+Rules:
+
+- Use string values for `aria-checked` on switches.
+- Use explicit labels for form inputs.
+- Avoid nested interactive controls.
 
 ### Audit Before Adding Features
 
-Problem: Over time, scaffold files (Index.tsx, NavLink.tsx, supabaseClient.ts),
-  abandoned features (user_api_keys hook + migration), planning docs, and build
-  artifacts accumulated in the repo unnoticed.
-Solution: Run a full codebase audit (AUDIT_REPORT.md) before starting new work.
-Result: Found 19 unused files, deleted 1,625 lines of dead code, removed 1 abandoned
-  DB table + migration.
-Rule: Audit the codebase every few months. A clean repo is faster to reason about.
+Problem: scaffold files, abandoned experiments, generated artifacts, and old
+planning docs accumulated in the repo.
+
+Solution: run periodic codebase audits before major feature work.
+
+Rule: a clean repo is faster and safer to reason about.
 
 ### DeepL vs Gemini for Translation
 
-Problem: Gemini translation quality for Farsi and German was inconsistent — occasional
-  hallucinations, wrong register, and poor handling of compound German words.
-Solution: Use DeepL API via Cloudflare Worker for all translation tasks.
-Result: Noticeably better Farsi and German output; 1M free characters/month is sufficient
-  for typical personal-app usage.
-Rule: Always use DeepL (not an LLM) for de/en/fa translation in this project.
+Problem: Gemini translation quality for Farsi and German was inconsistent.
 
-### VITE_AI_AGENT_URL Must Include the /analyze Path
+Solution: use DeepL via Cloudflare Worker for translation.
 
-Problem: Setting VITE_AI_AGENT_URL to just the base domain (e.g. `https://api.barakzai.cloud`)
-  caused all AI requests to 404. The translate URL was derived with `.replace('/analyze', '/translate')`,
-  so both endpoints silently pointed to the root.
-Solution: VITE_AI_AGENT_URL must be set to `https://api.barakzai.cloud/analyze` (full path).
-Rule: Always set VITE_AI_AGENT_URL to the full /analyze endpoint, not just the base URL.
+Rule: use deterministic translation services for translation quality; do not use
+an LLM unless translation requirements explicitly call for it.
 
-### PDF Document Translation → Simple Text Translator
+### Cloudflare Worker Secrets
 
-Problem: Translating entire PDF documents was impractical — chunking 50k+ characters in parallel
-  hits DeepL rate limits, and users rarely needed the full document translated verbatim.
-Solution: Replace the document-tied DocumentTranslation component with a standalone TextTranslator
-  that accepts free-form text input and calls translationService.translate() directly.
-Result: Better UX (no document required), simpler code, no chunking needed.
-Rule: Prefer a simple text-input translation UX over document-level translation unless bulk
-  translation is an explicit requirement.
+Rule: after adding or changing Worker secrets, verify names with
+`wrangler secret list`.
 
-### Cloudflare Worker Secrets — Always Verify with wrangler secret list
+### Generated Context Files Are Outputs
 
-Problem: A secret set via the Cloudflare dashboard appeared to be active but was under the wrong
-  name, causing the Worker to fall back to an undefined key silently.
-Solution: Run `wrangler secret list` to confirm the exact secret names visible to the Worker
-  at runtime. Dashboard display names and wrangler names can differ.
-Rule: After adding or updating any Cloudflare Worker secret, always verify with
-  `wrangler secret list` before assuming the Worker can see it.
+Problem: `.knowledge/context_output.md` looks editable but is regenerated by
+`.knowledge/load_context.py`.
 
-### Generated Context Files Are Outputs, Not Sources of Truth
+Solution: keep canonical project knowledge in `.knowledge/docs/`.
 
-Problem: `.knowledge/context_output.md` can look like editable project knowledge, but it is
-  regenerated by `.knowledge/load_context.py`.
-Solution: Keep canonical project knowledge in `.knowledge/docs/` and regenerate context output
-  from those files.
-Rule: Never manually edit `context_output.md`; manual edits will be overwritten.
+Rule: never manually edit generated context output; update the source markdown
+and regenerate.
 
 ### Workspace Memory Must Stay Minimal and Bounded
 
-Problem: Workspace memory can easily become a privacy risk if it stores raw user content.
-Solution: Memory Engine V1 stores bounded metadata only, such as domains, timestamps, lightweight
-  conversation metadata, and lightweight learning context.
-Rule: Do not store document bodies, journal content, chat bodies, or financial details in workspace
-  memory. Memory failure must degrade safely to stateless behavior.
+Problem: workspace memory can become a privacy risk if it stores raw user
+content.
+
+Solution: Memory Engine V1 stores bounded metadata only.
+
+Rule: do not store document bodies, journal content, chat bodies, task bodies,
+or financial details in workspace memory. Memory failure must degrade safely to
+stateless behavior.
 
 ### Current Urgency Dominates Historical Preference
 
-Problem: Historical preferences can make the workspace feel stale if they override current urgent
-  signals.
-Solution: Memory and personalization are weak preference inputs. They can influence medium and low
-  priorities, but high-severity current signals remain dominant.
-Rule: Never let memory or personalization suppress urgent current workspace signals.
+Problem: historical preference can make the workspace stale if it overrides
+urgent current signals.
+
+Solution: memory, interaction feedback, and personalization are weak inputs.
+
+Rule: never let memory or personalization suppress high-severity current
+signals.
 
 ### Dashboard Must Remain Presentation-Focused
 
-Problem: Dashboard pages become hard to maintain when they collect hooks, derive priorities, and
-  render UI in one file.
-Solution: Workspace decision logic belongs in `src/features/workspace/` engines. Dashboard consumes
-  the typed Workspace object and renders it.
-Rule: Keep business and decision logic out of `Dashboard.tsx`; add or change workspace behavior in
-  the workspace pipeline.
+Problem: Dashboard becomes hard to maintain when it collects hooks, derives
+priorities, and renders UI in one file.
+
+Solution: workspace decision logic belongs in `src/features/workspace/`.
+
+Rule: keep business and decision logic out of `Dashboard.tsx`.
+
+### Keep Execution Separated From Planning
+
+Problem: mixing planning and execution makes autonomous side effects too easy to
+introduce accidentally.
+
+Solution: Planner Engine proposes steps; Execution Engine runs only supported
+tools after approval and policy checks.
+
+Rule: planning output is not execution permission.
+
+### Approval Is a Mandatory Policy Boundary
+
+Problem: user intent can be ambiguous, especially for actions that may change
+data or expose sensitive context.
+
+Solution: Approval Model V1 annotates steps before execution policy evaluates
+them.
+
+Rule: approval requirements must be explicit and fail closed.
+
+### Approval Interaction Does Not Execute
+
+Problem: an approve button can accidentally become an execution trigger if UI,
+planning, and tool execution are coupled.
+
+Solution: Approval Interaction Boundary V1 captures only an exact-step approval
+or rejection. It does not import handlers, call tools, mutate audits, or start
+execution.
+
+Rule: human approval records intent only; execution must still pass through the
+tool registry, execution policy, execution engine, and audit path.
+
+### Approvals Must Bind to Exact Planned Steps
+
+Problem: reusable or broad approvals can silently authorize a different action
+than the one the user reviewed.
+
+Solution: approval interaction validates the planned `stepId`, scope, and
+effective risk before producing an immutable approval decision.
+
+Rule: approvals must never approve a different step, escalate scope, lower risk,
+or carry arbitrary planner metadata.
+
+### Tool Registry Contains Contracts Only
+
+Problem: registries become unsafe if they also execute tools or import services.
+
+Solution: Tool Registry V1 stores serializable tool definitions, schemas, risks,
+domains, capabilities, and approval requirements only.
+
+Rule: no handlers, API calls, secrets, backend calls, Supabase calls, or LLM
+logic inside the registry.
+
+### Execution Policy Must Fail Closed
+
+Problem: unknown tools, unsupported risks, missing approval, or stale approval
+can otherwise pass through accidentally.
+
+Solution: Execution Policy V1 denies by default unless the request satisfies the
+tool contract, step context, approval scope, freshness, and risk rules.
+
+Rule: unknown or ambiguous execution state must deny execution.
+
+### Read-Only Execution Ships Before Write Execution
+
+Problem: write execution requires stronger approval UX, auditability, rollback
+planning, and user trust.
+
+Solution: Execution Engine V1 supports read-only handlers only.
+
+Rule: write tools must wait for approval UI, execution audit, and stronger
+failure handling.
+
+### Agent Handlers Must Stay Framework-Independent
+
+Problem: handlers that import hooks or UI code become hard to test and unsafe to
+reuse.
+
+Solution: handlers receive plain context and input, validate input, and return
+typed results.
+
+Rule: hooks must never be imported into handlers.
 
 ## Development Workflow That Works
-1. Plan feature with Claude — get implementation plan as .md file
-2. Implement with Claude Code (terminal)
-3. Use .prompts/ templates for consistent patterns across features
-4. Update CLAUDE_CONTEXT.md after any significant changes
-5. Run `npm run build` locally to catch TypeScript errors before pushing
-6. Push to main — Cloudflare Pages auto-deploys in ~30 seconds
-7. Run `kb-build` after updating .knowledge/docs/ to keep vectors current
+
+1. Plan feature with a written implementation brief.
+2. Implement in small architecture increments.
+3. Keep engines deterministic before adding AI layers.
+4. Run focused tests for changed feature areas.
+5. Run `npm run build` before closing implementation work.
+6. Update `.knowledge/docs/` after major architecture changes.
+7. Run the knowledge regeneration scripts after documentation updates.
 
 ## IHK Exam Prep Notes
-- Flashcard feature built specifically for IHK Fachinformatiker AP2 exam
-- AI Tutor mode: fiae_algorithms with German IHK pseudocode style
-- SM-2 spaced repetition algorithm implemented for optimal review scheduling
-- ihk-explain.md template in .prompts/templates/ for exam topic explanations
+
+- Flashcards support IHK Fachinformatiker AP2 preparation.
+- AI Tutor mode uses German IHK pseudocode style.
+- SM-2 spaced repetition is implemented for review scheduling.
+- `ihk-explain.md` template exists in `.prompts/templates/`.

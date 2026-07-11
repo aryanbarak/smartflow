@@ -35,6 +35,12 @@ import { SkeletonBlock } from "@/components/common/Skeletons";
 import { useMusicPlayer, loadHistory } from "@/hooks/useMusicPlayer";
 import { useWorkspace } from "@/features/workspace";
 import { trackWorkspaceInteraction } from "@/features/workspace";
+import {
+  findApprovalPresentationTool,
+  type ApprovalInteractionResult,
+} from "@/features/agent";
+import { StepApprovalDialog } from "@/features/workspace/components/StepApprovalDialog";
+import { useT } from "@/i18n";
 import type {
   WorkspaceIconKey,
   WorkspaceInteractionSource,
@@ -636,9 +642,31 @@ function WelcomeWorkspace({
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { t } = useT();
   const [showAddHabit, setShowAddHabit] = useState(false);
   const [showDailyStoryDetails, setShowDailyStoryDetails] = useState(false);
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [latestApprovalDecision, setLatestApprovalDecision] =
+    useState<ApprovalInteractionResult | null>(null);
   const workspace = useWorkspace();
+  const pendingStepApproval = useMemo(
+    () =>
+      workspace.approval.stepApprovals.find(
+        (approval) => approval.status === "pending" && approval.requiresApproval,
+      ) ?? null,
+    [workspace.approval.stepApprovals],
+  );
+  const pendingApprovalStep = useMemo(
+    () =>
+      pendingStepApproval
+        ? workspace.plan.steps.find((step) => step.id === pendingStepApproval.stepId) ?? null
+        : null,
+    [pendingStepApproval, workspace.plan.steps],
+  );
+  const approvalPresentationTool = useMemo(
+    () => findApprovalPresentationTool(pendingApprovalStep),
+    [pendingApprovalStep],
+  );
 
   useSetPageTitle("Dashboard", workspace.today.label);
 
@@ -759,6 +787,41 @@ export default function Dashboard() {
           </div>
         </section>
       </WorkspaceRevealSection>
+
+      {pendingStepApproval && pendingApprovalStep && (
+        <WorkspaceRevealSection order={2}>
+          <section className="rounded-xl border border-primary/15 bg-primary/[0.035] p-3 sm:p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary/75">
+                  {t("approval_boundary_label")}
+                </p>
+                <h2 className="mt-1 text-sm font-semibold tracking-tight">
+                  {t("approval_card_title")}
+                </h2>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {t("approval_card_description")}
+                </p>
+                {latestApprovalDecision?.ok && latestApprovalDecision.decision !== "closed" && (
+                  <p className="mt-2 text-xs font-medium text-primary">
+                    {latestApprovalDecision.decision === "approved"
+                      ? t("approval_decision_approved")
+                      : t("approval_decision_rejected")}
+                  </p>
+                )}
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setApprovalDialogOpen(true)}
+                className="shrink-0"
+              >
+                {t("approval_review_action")}
+              </Button>
+            </div>
+          </section>
+        </WorkspaceRevealSection>
+      )}
 
       <WorkspaceRevealSection order={2}>
         <section className="space-y-3">
@@ -964,6 +1027,14 @@ export default function Dashboard() {
           <FlowAIAssistantRail rail={workspace.rightRail} />
         </WorkspaceRevealSection>
       </div>
+      <StepApprovalDialog
+        open={approvalDialogOpen}
+        step={pendingApprovalStep}
+        stepApproval={pendingStepApproval}
+        tool={approvalPresentationTool}
+        onClose={() => setApprovalDialogOpen(false)}
+        onDecision={setLatestApprovalDecision}
+      />
     </WorkspaceReveal>
   );
 }

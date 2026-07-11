@@ -1,3 +1,9 @@
+import {
+  appendExecutionAuditRecord,
+  clearExecutionAuditRecords,
+  getExecutionAuditRecords,
+} from "./executionAudit";
+import { EXECUTION_AUDIT_VERSION } from "./executionAudit";
 import { evaluateExecutionPolicy } from "./executionPolicy";
 import { getHandlerByToolId } from "./handlers";
 import { getToolById } from "./toolRegistry";
@@ -10,17 +16,16 @@ import type {
   ExecutionResult,
   ExecutionStatus,
 } from "./executionTypes";
+import type { ExecutionAuditRecord, ExecutionAuditStatus } from "./executionAuditTypes";
 import type { AgentToolDefinition, ExecutionPolicyDecision } from "./toolTypes";
 
 export const EXECUTION_ENGINE_VERSION = "execution-engine-v1" as const;
-const MAX_EXECUTION_RECORDS = 100;
-
-const executionRecords: ExecutionRecord[] = [];
 
 const defaultDependencies: ExecutionEngineDependencies = {
   getToolById,
   getHandlerByToolId,
   now: () => new Date(),
+  appendExecutionAuditRecord,
 };
 
 function duration(startedAt: string, completedAt: string) {
@@ -36,22 +41,69 @@ function error(code: string, message: string, retryable = false, details?: Recor
   };
 }
 
-function record(result: ExecutionResult) {
-  executionRecords.push({
-    requestId: result.requestId,
-    stepId: result.stepId,
-    toolId: result.toolId,
-    status: result.status,
-    startedAt: result.startedAt,
-    completedAt: result.completedAt,
-    durationMs: result.durationMs,
-    policyStatus: result.policyDecision.status,
-    errorCode: result.error?.code,
-  });
-
-  if (executionRecords.length > MAX_EXECUTION_RECORDS) {
-    executionRecords.splice(0, executionRecords.length - MAX_EXECUTION_RECORDS);
+function appendAuditSafely(
+  deps: ExecutionEngineDependencies,
+  record: ExecutionAuditRecord,
+) {
+  try {
+    deps.appendExecutionAuditRecord(record);
+  } catch {
+    // Audit failures must not block execution result delivery.
   }
+}
+
+function auditId(requestId: string, status: ExecutionAuditStatus, timestamp: string) {
+  return `audit:${requestId}:${status}:${timestamp}`;
+}
+
+function createAuditRecord(
+  request: ExecutionRequest,
+  status: ExecutionAuditStatus,
+  startedAt: string,
+  options: {
+    policyDecision?: ExecutionPolicyDecision;
+    completedAt?: string;
+    errorCode?: string;
+    handler?: AgentToolHandler;
+    retryable?: boolean;
+    data?: unknown;
+  } = {},
+): ExecutionAuditRecord {
+  const completedAt = options.completedAt;
+  const policyDecision = options.policyDecision;
+  const metadata: Record<string, unknown> = {
+    redacted: true,
+    handlerId: options.handler?.toolId,
+    retryable: options.retryable,
+  };
+
+  if (options.data && typeof options.data === "object") {
+    metadata.resultShape = Array.isArray(options.data) ? "array" : "object";
+    const values = Object.values(options.data as Record<string, unknown>);
+    const arrayValue = values.find(Array.isArray);
+    if (arrayValue) metadata.itemCount = arrayValue.length;
+  }
+
+  return {
+    auditId: auditId(request.requestId, status, completedAt ?? startedAt),
+    requestId: request.requestId,
+    stepId: request.step.id,
+    toolId: request.toolId,
+    status,
+    policyStatus: policyDecision?.status ?? "denied",
+    startedAt,
+    completedAt,
+    durationMs: completedAt ? duration(startedAt, completedAt) : undefined,
+    errorCode: options.errorCode,
+    riskLevel: policyDecision?.effectiveRiskLevel ?? "none",
+    approvalStatus: request.approval?.status,
+    approvalScope: request.approval?.approvalScope,
+    source: "agent",
+    executionVersion: EXECUTION_ENGINE_VERSION,
+    policyVersion: policyDecision?.policyVersion ?? "execution-policy-v1",
+    auditVersion: EXECUTION_AUDIT_VERSION,
+    metadata,
+  };
 }
 
 function result(
@@ -86,7 +138,6 @@ function result(
     },
   };
 
-  record(output);
   return output;
 }
 
@@ -128,6 +179,8 @@ export async function executeAgentTool(
 ): Promise<ExecutionResult> {
   const deps = { ...defaultDependencies, ...dependencies };
   const startedAt = deps.now().toISOString();
+  appendAuditSafely(deps, createAuditRecord(request, "started", startedAt));
+
   const tool = deps.getToolById(request.toolId);
   const policyDecision = evaluateExecutionPolicy({
     step: request.step,
@@ -139,6 +192,14 @@ export async function executeAgentTool(
 
   if (!tool) {
     const completedAt = deps.now().toISOString();
+    appendAuditSafely(
+      deps,
+      createAuditRecord(request, "tool_not_found", startedAt, {
+        completedAt,
+        policyDecision,
+        errorCode: "TOOL_NOT_FOUND",
+      }),
+    );
     return result(request, "tool_not_found", policyDecision, startedAt, completedAt, {
       error: error("TOOL_NOT_FOUND", "Tool is not registered."),
     });
@@ -146,6 +207,14 @@ export async function executeAgentTool(
 
   if (!policyDecision.allowed) {
     const completedAt = deps.now().toISOString();
+    appendAuditSafely(
+      deps,
+      createAuditRecord(request, "policy_denied", startedAt, {
+        completedAt,
+        policyDecision,
+        errorCode: "POLICY_DENIED",
+      }),
+    );
     return result(request, "policy_denied", policyDecision, startedAt, completedAt, {
       error: error("POLICY_DENIED", "Execution policy denied this request.", false, {
         policyStatus: policyDecision.status,
@@ -156,6 +225,14 @@ export async function executeAgentTool(
   const handler = deps.getHandlerByToolId(request.toolId);
   if (!handler || !isSupportedReadOnlyHandler(handler) || !isSupportedReadOnlyTool(tool, policyDecision)) {
     const completedAt = deps.now().toISOString();
+    appendAuditSafely(
+      deps,
+      createAuditRecord(request, "handler_not_found", startedAt, {
+        completedAt,
+        policyDecision,
+        errorCode: "HANDLER_NOT_FOUND",
+      }),
+    );
     return result(request, "handler_not_found", policyDecision, startedAt, completedAt, {
       error: error("HANDLER_NOT_FOUND", "No supported read-only handler is registered for this tool."),
     });
@@ -164,6 +241,15 @@ export async function executeAgentTool(
   const validation = handler.validateInput(request.input, tool.inputSchema);
   if (!validation.valid) {
     const completedAt = deps.now().toISOString();
+    appendAuditSafely(
+      deps,
+      createAuditRecord(request, "invalid_input", startedAt, {
+        completedAt,
+        policyDecision,
+        errorCode: "INVALID_INPUT",
+        handler,
+      }),
+    );
     return result(request, "invalid_input", policyDecision, startedAt, completedAt, {
       handler,
       error: error("INVALID_INPUT", "Tool input failed validation.", false, {
@@ -181,6 +267,15 @@ export async function executeAgentTool(
       handler.timeoutMs,
     );
     const completedAt = deps.now().toISOString();
+    appendAuditSafely(
+      deps,
+      createAuditRecord(request, "success", startedAt, {
+        completedAt,
+        policyDecision,
+        handler,
+        data,
+      }),
+    );
     return result(request, "success", policyDecision, startedAt, completedAt, {
       data,
       handler,
@@ -192,6 +287,16 @@ export async function executeAgentTool(
         ? (caught as ExecutionError)
         : error("HANDLER_FAILED", "Handler execution failed.", false);
     const status = normalizedError.code === "TIMEOUT" ? "timeout" : "failed";
+    appendAuditSafely(
+      deps,
+      createAuditRecord(request, status, startedAt, {
+        completedAt,
+        policyDecision,
+        handler,
+        errorCode: normalizedError.code,
+        retryable: normalizedError.retryable,
+      }),
+    );
     return result(request, status, policyDecision, startedAt, completedAt, {
       handler,
       error: normalizedError,
@@ -200,9 +305,22 @@ export async function executeAgentTool(
 }
 
 export function getExecutionRecords(): ExecutionRecord[] {
-  return executionRecords.map((item) => ({ ...item }));
+  return getExecutionAuditRecords()
+    .filter((record) => record.status !== "started")
+    .slice(-100)
+    .map((record) => ({
+      requestId: record.requestId,
+      stepId: record.stepId,
+      toolId: record.toolId,
+      status: record.status as ExecutionStatus,
+      startedAt: record.startedAt,
+      completedAt: record.completedAt ?? record.startedAt,
+      durationMs: record.durationMs ?? 0,
+      policyStatus: record.policyStatus,
+      errorCode: record.errorCode,
+    }));
 }
 
 export function clearExecutionRecords() {
-  executionRecords.splice(0, executionRecords.length);
+  clearExecutionAuditRecords();
 }

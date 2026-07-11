@@ -10,6 +10,7 @@ import type {
   ExecutionPolicyContext,
   ExecutionPolicyDecision,
 } from "./toolTypes";
+import type { ExecutionAuditRecord } from "./executionAuditTypes";
 
 export type ExecutionStatus =
   | "success"
@@ -129,4 +130,5 @@ export interface ExecutionEngineDependencies {
   getToolById(toolId: string): AgentToolDefinition | undefined;
   getHandlerByToolId(toolId: string): AgentToolHandler | undefined;
   now(): Date;
+  appendExecutionAuditRecord(record: ExecutionAuditRecord): ExecutionAuditRecord;
 }

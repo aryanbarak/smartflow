@@ -1,0 +1,218 @@
+import { describe, expect, it } from "vitest";
+import {
+  approveWorkspaceStep,
+  closeWorkspaceStepApproval,
+  findApprovalPresentationTool,
+  rejectWorkspaceStep,
+} from "./approvalInteraction";
+import { getToolById } from "./toolRegistry";
+import type { AgentToolDefinition } from "./toolTypes";
+import type {
+  WorkspaceApprovalRiskLevel,
+  WorkspaceApprovalScope,
+  WorkspacePlanStep,
+  WorkspaceStepApproval,
+} from "../workspace/workspaceTypes";
+
+const now = new Date("2026-07-10T09:00:00.000Z");
+
+function tool(id: string): AgentToolDefinition {
+  const found = getToolById(id);
+  if (!found) throw new Error(`Missing test tool: ${id}`);
+  return found;
+}
+
+function step(overrides: Partial<WorkspacePlanStep> = {}): WorkspacePlanStep {
+  return {
+    id: "step-1",
+    order: 1,
+    title: "Create task",
+    description: "Create a new task.",
+    domain: "tasks",
+    estimatedMinutes: 10,
+    status: "proposed",
+    actionType: "create",
+    reason: "Tasks need attention.",
+    requiresApproval: true,
+    dependencies: [],
+    optional: false,
+    ...overrides,
+  };
+}
+
+function stepApproval(
+  overrides: Partial<WorkspaceStepApproval> = {},
+): WorkspaceStepApproval {
+  return {
+    stepId: "step-1",
+    status: "pending",
+    requiresApproval: true,
+    approvalReason: "Future execution could modify user data.",
+    riskLevel: "medium",
+    reversible: true,
+    externalEffect: true,
+    dataDomains: ["tasks"],
+    approvalScope: "single_step",
+    ...overrides,
+  };
+}
+
+describe("approvalInteraction", () => {
+  it("approves an exact step with a typed immutable approval", () => {
+    const result = approveWorkspaceStep({
+      now,
+      step: step(),
+      stepApproval: stepApproval(),
+      tool: tool("tasks.create"),
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.decision).toBe("approved");
+    expect(result.approval).toEqual({
+      stepId: "step-1",
+      status: "approved",
+      requiresApproval: true,
+      approvalReason: "Future execution could modify user data.",
+      riskLevel: "medium",
+      reversible: true,
+      externalEffect: true,
+      dataDomains: ["tasks"],
+      approvalScope: "single_step",
+    });
+    expect(Object.isFrozen(result.approval)).toBe(true);
+  });
+
+  it("rejects an exact step as rejected, not as approved metadata", () => {
+    const result = rejectWorkspaceStep({
+      now,
+      step: step(),
+      stepApproval: stepApproval(),
+      tool: tool("tasks.create"),
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.decision).toBe("rejected");
+    expect(result.approval?.status).toBe("rejected");
+  });
+
+  it("closes without synthesizing approval", () => {
+    const result = closeWorkspaceStepApproval({ now });
+
+    expect(result.ok).toBe(true);
+    expect(result.decision).toBe("closed");
+    expect(result.approval).toBeNull();
+  });
+
+  it("fails safely for a missing step id", () => {
+    const result = approveWorkspaceStep({
+      now,
+      step: step({ id: "" }),
+      stepApproval: stepApproval(),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errorCode).toBe("MISSING_STEP");
+  });
+
+  it("does not accept mismatched step approval", () => {
+    const result = approveWorkspaceStep({
+      now,
+      step: step({ id: "step-a" }),
+      stepApproval: stepApproval({ stepId: "step-b" }),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errorCode).toBe("STEP_MISMATCH");
+  });
+
+  it("rejects unsupported approval scope at runtime", () => {
+    const result = approveWorkspaceStep({
+      now,
+      step: step(),
+      stepApproval: stepApproval(),
+      requestedApprovalScope: "unsupported" as WorkspaceApprovalScope,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errorCode).toBe("UNSUPPORTED_SCOPE");
+  });
+
+  it("rejects scope escalation", () => {
+    const result = approveWorkspaceStep({
+      now,
+      step: step(),
+      stepApproval: stepApproval({ approvalScope: "single_step" }),
+      requestedApprovalScope: "entire_plan",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errorCode).toBe("SCOPE_ESCALATION");
+  });
+
+  it("rejects risk understatement when tool risk is higher", () => {
+    const result = approveWorkspaceStep({
+      now,
+      step: step({ domain: "finance", actionType: "pay" }),
+      stepApproval: stepApproval({
+        riskLevel: "medium",
+        dataDomains: ["finance"],
+      }),
+      tool: tool("finance.create_transaction"),
+      requestedRiskLevel: "medium",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errorCode).toBe("RISK_UNDERSTATEMENT");
+  });
+
+  it("preserves effective higher risk when approving", () => {
+    const result = approveWorkspaceStep({
+      now,
+      step: step({ domain: "finance", actionType: "pay" }),
+      stepApproval: stepApproval({
+        riskLevel: "medium",
+        dataDomains: ["finance"],
+      }),
+      tool: tool("finance.create_transaction"),
+      requestedRiskLevel: "high",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.approval?.riskLevel).toBe("high");
+  });
+
+  it("does not copy arbitrary planner payloads or mutate inputs", () => {
+    const sourceStep = step({
+      description: "A sensitive planner payload should not be copied.",
+    });
+    const sourceApproval = stepApproval();
+    const before = JSON.stringify({ sourceStep, sourceApproval });
+
+    const first = approveWorkspaceStep({
+      now,
+      step: sourceStep,
+      stepApproval: sourceApproval,
+      tool: tool("tasks.create"),
+      requestedRiskLevel: "medium" as WorkspaceApprovalRiskLevel,
+    });
+    const second = approveWorkspaceStep({
+      now,
+      step: sourceStep,
+      stepApproval: sourceApproval,
+      tool: tool("tasks.create"),
+      requestedRiskLevel: "medium",
+    });
+
+    expect(second).toEqual(first);
+    expect(JSON.stringify({ sourceStep, sourceApproval })).toBe(before);
+    expect(JSON.stringify(first)).not.toContain("sensitive planner payload");
+    expect(first.approval).not.toHaveProperty("metadata");
+  });
+
+  it("finds a matching presentation tool without invoking handlers", () => {
+    expect(findApprovalPresentationTool(step())?.id).toBe("tasks.create");
+    expect(findApprovalPresentationTool(step({ domain: "finance", actionType: "pay" }))?.id).toBe(
+      "finance.create_transaction",
+    );
+  });
+});

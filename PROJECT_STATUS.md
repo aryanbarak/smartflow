@@ -1,234 +1,266 @@
 # SmartFlow - Project Status
 
-Last updated: 2026-07-10
+Last updated: 2026-07-11
 
 ---
 
 ## 1. Executive Summary
 
-SmartFlow has completed the Living Workspace Architecture milestone. The Dashboard is no longer treated as a static widget grid; it is now driven by a deterministic frontend workspace pipeline that collects existing activity data, derives signals, preserves lightweight client-side memory, personalizes ordering, selects priorities, and returns a typed Workspace object for presentation.
+SmartFlow has completed the core Living Workspace and deterministic agent
+architecture milestones. The product is no longer just a productivity
+dashboard; it is now structured as an AI Personal Operating System with a
+rule-based workspace pipeline, memory, personalization, planning, approval
+interaction boundaries, a tool registry, execution policy, read-only execution,
+and execution audit.
 
-Flow AI is now represented as a persistent product presence through the sidebar identity Orb and an active right-rail assistant surface. The workspace experience supports both established users and low-data first-run users through the Living Workspace and Welcome Workspace states.
+The current implementation remains intentionally safe. It does not perform
+autonomous actions, does not execute write tools, does not call backend execution
+services, and does not use Supabase or network calls for agent execution.
 
-The current implementation remains frontend-only for workspace intelligence. No backend, Supabase schema, AI service, route, or business-logic expansion was required for this milestone.
+Current focus: safe execution infrastructure before autonomous capabilities.
 
 ---
 
 ## 2. Current Project Phase
 
-Current phase: Living Workspace V1 complete; preparing for Workspace Interaction Tracking and AI-assisted planning.
+Current phase: deterministic AI Personal Operating System foundation complete;
+execution safety infrastructure in progress.
 
-Engineering focus has shifted from visual dashboard redesign to architecture readiness:
+Engineering posture:
 
-- Deterministic workspace generation is in place.
-- Client-side memory is versioned and bounded.
-- Personalization is weak, explainable, and rule-based.
-- Urgent current signals remain dominant.
-- The UI can now evolve without placing business logic back into `Dashboard.tsx`.
+- deterministic before LLM-driven,
+- read-only before write execution,
+- approval-gated before autonomous,
+- approval interaction before execution,
+- client-local memory before semantic/vector memory,
+- presentation-focused Dashboard,
+- explicit tool contracts and policy boundaries.
 
 ---
 
 ## 3. Completed Milestones
 
-- Flow AI Orb visual identity and sidebar identity variant.
-- Launch Experience and Workspace Birth synchronization.
-- App shell gating to prevent dashboard visibility before launch reveal.
-- Workspace Reveal orchestration.
-- Living Workspace V1 dashboard hierarchy.
-- Welcome Workspace for new or low-data users.
-- Flow AI right rail as persistent assistant surface.
-- Right rail scrolling UX moved to page-owned scrolling.
-- Smart Academy external linking via configurable app URL.
-- Workspace architecture refactor into feature-level engines.
-- Signal Engine V1.
-- Memory Engine V1.
-- Personalization Engine V1.
-- Priority Engine V1.
-- Workspace Engine V1.
+Completed workspace and UI milestones:
+
+- Living Workspace
+- Welcome Workspace
+- Living Hero
+- Flow AI Right Rail
+- Sidebar Orb Identity
+- Continue Learning
+- Learning Memory
+- Smart Academy integration
+- Smart Academy ecosystem navigation
+- Responsive workspace
+- Responsive/mobile layout improvements
+- Nested scroll removal
+
+Completed architecture milestones:
+
+- Workspace Engine V1
+- Signal Engine V1
+- Memory Engine V1
+- Interaction Tracking V1
+- Interaction Feedback Loop V1
+- Personalization Engine V1
+- Priority Engine V1
+- Goal Engine V1
+- Planner Engine V1
+- Approval Model V1
+- Approval Interaction Boundary V1
+- Tool Registry V1
+- Execution Policy V1
+- Execution Engine V1 (read-only)
+- Execution Audit V1
 
 ---
 
 ## 4. Living Workspace Architecture
 
-The Living Workspace is now generated through a dedicated architecture under:
+The Living Workspace is generated through `src/features/workspace/`.
 
-`src/features/workspace/`
-
-Current pipeline:
+Current deterministic Workspace pipeline:
 
 ```text
 useWorkspace()
 -> signalEngine()
 -> memoryEngine()
+-> interactionFeedbackEngine()
 -> personalizationEngine()
 -> priorityEngine()
+-> goalEngine()
+-> plannerEngine()
+-> approvalEngine()
 -> workspaceEngine()
 -> Dashboard
 ```
 
-Completed engines:
-
-- Workspace Engine: converts typed workspace inputs into the final Workspace object consumed by the Dashboard.
-- Signal Engine: derives deterministic task, calendar, finance, learning, and onboarding signals from existing frontend data.
-- Memory Engine: stores bounded, versioned, client-side workspace memory in localStorage.
-- Personalization Engine: applies weak domain affinity based on recent activity, repeated activity, and memory insights.
-- Priority Engine: selects the primary workspace domain, secondary domains, mission copy, confidence, and ordered signal IDs.
-
-Completed UI milestones:
-
-- Living Workspace Hero.
-- Flow AI Right Rail.
-- Welcome Workspace.
-- Sidebar Orb Identity.
-- Continue Learning.
-- Ecosystem navigation.
-- Smart Academy external linking.
-
-The Dashboard now acts primarily as a presentation layer. Workspace decision-making belongs to the workspace feature folder, not the page component.
+The Dashboard is now primarily a presentation surface for a typed Workspace
+object. Workspace decision-making belongs in the workspace engines, not in
+`Dashboard.tsx`.
 
 ---
 
-## 5. Current Workspace Pipeline
+## 5. Current Agent Architecture
 
-`useWorkspace()` collects existing frontend data through current hooks:
+Current agent stack:
 
-- tasks
-- events
-- finance transactions
-- habits
-- documents
-- Learn AI activity
-- chat sessions
+```text
+Signals
+->
+Memory
+->
+Interaction Feedback
+->
+Personalization
+->
+Priority
+->
+Goal
+->
+Planner
+->
+Approval
+->
+Approval Interaction Boundary
+->
+Tool Registry
+->
+Execution Policy
+->
+Execution Engine
+->
+Execution Audit
+```
 
-`signalEngine()` creates deterministic signals such as:
+The agent stack is deterministic and non-autonomous. It can prepare, rank,
+explain, plan, and safely execute supported read-only tools, but it cannot
+perform write operations.
 
-- many open tasks
-- events today
-- focus opportunity
-- monthly finance activity
-- active learning history
-- low-data onboarding
-
-`memoryEngine()` reads and updates lightweight client memory:
-
-- recent domains
-- domain usage counts
-- preferred usage windows
-- previous primary domain
-- lightweight latest conversation metadata
-- lightweight learning continuity
-- bounded workspace history
-
-`personalizationEngine()` uses current activity plus memory insights as weak preference evidence. It may reorder medium and low-priority surfaces but cannot override urgent current signals or low-data onboarding.
-
-`priorityEngine()` determines:
-
-- primary domain
-- secondary domains
-- mission title
-- mission summary
-- confidence
-- ordered signal IDs
-
-`workspaceEngine()` returns the final typed Workspace object used by the Dashboard UI.
+Approval Interaction Boundary V1 captures user intent for an exact planned
+step. It can approve, reject, or close a pending step review, but it does not
+execute tools, mutate audit records, call handlers, or broaden approval scope.
 
 ---
 
-## 6. Current Capabilities
+## 6. Execution Engine
+
+Execution Engine V1 provides policy-enforced read-only tool execution.
+
+Current guarantees:
+
+- explicit handler registry,
+- policy enforced execution,
+- mandatory execution audit,
+- read-only tools only,
+- no write execution,
+- no backend execution,
+- no Supabase execution,
+- no network execution,
+- no autonomous behavior.
+
+Supported handlers:
+
+- `tasks.list`
+- `calendar.list_today`
+- `learning.get_progress`
+- `workspace.get_context`
+
+Handlers are framework-independent and must not import hooks, UI components,
+routes, Supabase clients, or AI services.
+
+---
+
+## 7. Current Capabilities
 
 The current system can:
 
-- Generate a decision-first Living Workspace from existing frontend data.
-- Detect low-data users and show an honest Welcome Workspace.
-- Preserve lightweight client-side workspace context across browser sessions.
-- Personalize safe ordering of hero skills, suggested actions, secondary domains, and recommendations.
-- Keep high-severity current signals above memory and personalization.
-- Keep Flow AI present through the sidebar identity Orb and right rail.
-- Open Smart Academy as an external configurable application when configured.
-- Fall back safely when workspace memory is unavailable, corrupt, or unsupported.
-
-Current workspace memory storage:
-
-- Storage key: `smartflow.workspace.memory.v1`
-- Version: `1`
-- Storage type: localStorage
-- Scope: single browser/device
-- Sensitive content policy: metadata only
+- generate a decision-first Living Workspace from existing frontend data,
+- detect low-data users and show an honest Welcome Workspace,
+- preserve bounded client-side workspace continuity metadata,
+- track workspace interactions,
+- feed interaction feedback into deterministic personalization,
+- choose daily priorities and goals,
+- propose deterministic plan steps,
+- annotate plan steps with approval requirements,
+- capture exact-step user approval or rejection without execution,
+- enforce execution policy before read-only execution,
+- execute supported read-only handlers,
+- keep urgent current signals above memory and personalization,
+- keep Flow AI present through the sidebar identity Orb and right rail,
+- open Smart Academy as a configurable external ecosystem link.
 
 ---
 
-## 7. Remaining Major Systems
+## 8. Remaining Major Systems
 
-The following systems are not complete and remain future work:
+Remaining major systems:
 
-- Workspace Interaction Tracking.
-- Semantic Memory.
-- LLM Integration.
-- Vector Memory.
-- RAG.
-- Planner.
-- Action Execution.
-- Cross-device Memory.
-- Autonomous Flow AI.
-
-These systems should build on the existing deterministic architecture rather than replacing it.
+- Write Tool Execution
+- Reflection Engine
+- Semantic Memory
+- Vector Memory
+- RAG
+- LLM Reasoning Layer
+- Execution Planner
+- Cross-device Memory
+- Autonomous Flow AI
+- Live AI-generated recommendations
+- Real multi-session conversation memory
 
 ---
 
-## 8. Technical Debt
+## 9. Technical Debt
 
+- Execution is read-only; write execution requires rollback and stronger failure
+  handling before any write handler ships.
 - Workspace memory is localStorage-only and does not sync across devices.
-- Right rail recommendation and learning-memory examples still include placeholder/static data where live sources are not available.
-- Workspace interaction events are not yet tracked, so action memory has typed support but limited real event input.
-- Some personalization for habits and documents depends on available date-like fields in existing frontend data.
-- The production build still reports large Vite chunks; code splitting should be revisited.
-- Some older feature areas still contain hardcoded UI strings and incomplete i18n/RTL polish.
-- Error tracking is still not centralized.
-- Some historical data growth risks remain open, including unbounded Learn AI/chat-related storage areas.
+- Right-rail learning/recommendation content still includes static placeholders.
+- Some interaction events are only captured where the UI genuinely exposes them.
+- Learn AI and chat-related storage still need pruning policies.
+- Error tracking is not centralized.
+- Supabase generated types should be regenerated after schema changes.
+- Some older UI strings still need i18n/RTL polish.
+- Production build still reports large Vite chunks.
 
 ---
 
-## 9. Next Sprint
+## 10. Next Sprint
 
-Recommended next sprint: Workspace Interaction Tracking V1.
+Recommended next milestone: Write Tool Execution Readiness.
 
 Primary goals:
 
-- Track real user interactions with suggested actions.
-- Record shown, clicked, completed, and dismissed action events where the UI genuinely exposes those events.
-- Feed real interaction events into Memory Engine V1.
-- Keep action tracking lightweight and privacy-safe.
-- Preserve the current Dashboard layout.
-- Avoid AI/LLM behavior until deterministic event tracking is reliable.
-
-Secondary goals:
-
-- Replace remaining right-rail placeholders with available live frontend data where possible.
-- Add focused tests around action memory updates.
-- Document memory reset/debug behavior for local development.
+- define the smallest safe write-capable tool surface,
+- preserve exact-step approval as mandatory intent capture,
+- keep execution policy and audit mandatory for every write attempt,
+- define rollback and user-visible failure behavior,
+- keep autonomous write execution disabled.
 
 ---
 
-## 10. Long-Term Roadmap
+## 11. Long-Term Roadmap
 
 Near term:
 
-- Workspace Interaction Tracking.
-- Stronger live data mapping for Continue Learning and Recent Conversation.
-- Better deterministic recommendation ranking.
-- More test coverage for workspace engines.
+- Approval Interaction Boundary V1
+- stronger handler test coverage
+- improved live data mapping for right-rail memory surfaces
 
 Mid term:
 
-- Semantic Memory design.
-- Cross-device memory backed by Supabase.
-- Planner model that can propose multi-step daily plans.
-- Safe action execution boundaries.
-- Flow AI page-transition architecture originating from the sidebar Orb.
+- Write Tool Execution
+- Reflection Engine
+- Semantic Memory
+- Vector Memory
+- RAG
+- LLM Reasoning Layer
+- Execution Planner
+- Cross-device Memory
 
 Long term:
 
-- LLM-assisted reasoning layered on top of deterministic signals.
-- Vector memory and RAG for documents, learning, and workspace history.
-- Autonomous Flow AI that can plan, explain, and execute user-approved actions.
-- Full multi-device continuity for memory, preferences, and workspace context.
+- Autonomous Flow AI
+- live AI-generated recommendations
+- real multi-session conversation memory
+- user-approved action execution across SmartFlow domains

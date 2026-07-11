@@ -1,27 +1,45 @@
-# smartFlow — Project Overview
+# SmartFlow - Project Overview
 
-## What is smartFlow?
-Personal productivity web app (React SPA) for one user (barakzahi@web.de).
-Unified workspace for tasks, calendar, finances, family scheduling,
+## What is SmartFlow?
+
+SmartFlow is a personal productivity web app for one user (`barakzahi@web.de`).
+It provides a unified workspace for tasks, calendar, finances, family scheduling,
 documents, music, photos, and AI-powered learning.
 
 ## Current Phase
-SmartFlow has completed Living Workspace Architecture V1. The Dashboard is now
-driven by a deterministic workspace pipeline instead of page-local dashboard
-decision logic.
 
-SmartFlow is transitioning from a static productivity dashboard into a Personal
-AI Operating System. The current engineering focus is behavior-aware
-personalization and real interaction learning, while keeping the workspace
-frontend-only, deterministic, and privacy-safe until later AI layers are added.
+SmartFlow has moved beyond a static productivity dashboard. It is now becoming
+an AI Personal Operating System with a deterministic agent architecture.
+
+The completed Living Workspace and agent foundation now allow SmartFlow to:
+
+- collect existing frontend activity data,
+- derive workspace signals,
+- preserve bounded client-side memory,
+- apply interaction feedback and personalization,
+- choose priorities and goals,
+- plan safe daily steps,
+- enforce explicit human approval, execution policy, and audit boundaries,
+- execute only explicitly supported read-only tools.
+
+Current engineering focus: safe execution infrastructure before autonomous
+capabilities. The system remains deterministic, frontend-controlled, and
+privacy-safe while future semantic memory, LLM reasoning, and action execution
+layers are designed.
+
+The latest milestone adds a human approval interaction boundary. Users can
+approve or reject an exact planned step, but approval does not execute tools,
+does not escalate scope, and does not bypass execution policy.
 
 ## Live URLs
+
 - App: https://barakzai.cloud
 - AI Worker: https://api.barakzai.cloud/analyze
 - Repo: https://github.com/aryanbarak/smartflow
 - Supabase: taqxwnlwllbywaklwyno (FREE tier)
 
 ## Tech Stack
+
 - Frontend: React 18.3.1 + TypeScript 5.8.3 + Vite 7 + SWC
 - UI: Tailwind CSS 3.4 + Radix UI + Framer Motion
 - State: TanStack React Query v5 + Zustand v5
@@ -35,11 +53,13 @@ frontend-only, deterministic, and privacy-safe until later AI layers are added.
 - Fonts: Sora, Inter, Vazirmatn (RTL/Farsi)
 
 ## Key Architectural Decisions
-- Supabase credentials hardcoded in client.ts (not in GitHub secrets) — intentional
-- VITE_SUPABASE_URL must NOT be added to GitHub secrets (caused broken auth in the past)
-- OLLAMA_VULKAN=1 required for Intel Arc 140V GPU
-- Models stored in E:\ollamaModels
-- All tables use RLS with user_id FK to auth.users
-- PWA: navigateFallback=null to prevent SW crashes on navigation
-- Calendar: Supabase primary + localStorage offline fallback
-- i18n: lightweight custom useT() hook (no i18next), en/de/fa, RTL for fa
+
+- Supabase credentials are hardcoded in `client.ts` intentionally.
+- `VITE_SUPABASE_URL` must not be added to GitHub secrets.
+- `OLLAMA_VULKAN=1` is required for Intel Arc 140V GPU.
+- Models are stored in `E:\ollamaModels`.
+- All tables use RLS with `user_id` FK to `auth.users`.
+- PWA uses `navigateFallback=null` to prevent service worker navigation crashes.
+- Calendar uses Supabase primary storage plus localStorage offline fallback.
+- i18n uses a lightweight custom `useT()` hook, with English, German, and Farsi.
+- Workspace intelligence is deterministic before any LLM autonomy is introduced.

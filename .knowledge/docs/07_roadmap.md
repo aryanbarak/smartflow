@@ -1,6 +1,6 @@
-# smartFlow - Roadmap
+# SmartFlow - Roadmap
 
-## Completed Features
+## Completed Product Features
 
 - Authentication (Supabase email + password)
 - Dashboard / Living Workspace
@@ -13,93 +13,126 @@
 - Photos (masonry grid + lightbox + tags + AI tagging)
 - Music (YouTube + local files + Pomodoro + task link + playlists)
 - PWA (installable + service worker + offline badge)
-- Habit Tracker (streak + progress bar + notifications)
-- Daily Journal (mood + auto-save + calendar navigation)
-- Flashcards (SM-2 spaced repetition - Again/Hard/Good/Easy)
-- Mood Tracker (dashboard widget + 14-day recharts chart)
-- Global Search (Ctrl+K - tasks + events + links + journal)
-- Shopping List (FamilyPage tab, grouped by category)
-- Recurring Tasks & Events
-- Settings page
-- i18n (en/de/fa - English default, RTL for Farsi)
-- Local AI Setup (Ollama + GPU via OLLAMA_VULKAN=1 + models on E:\ollamaModels)
-- Prompt Library (.prompts/)
-- Knowledge Base (ChromaDB + nomic-embed-text, kb-build/load/query shortcuts)
-- Project Audit & Cleanup
-- Document Intelligence - PDF Merge
-- AI Summary - PDF text extraction + Gemini summary
-- Text Translator - DeepL API via Cloudflare Worker
-- Auto text extraction on document upload
+- Habit Tracker
+- Daily Journal
+- Flashcards with SM-2 spaced repetition
+- Mood Tracker
+- Global Search
+- Shopping List
+- Settings
+- i18n (English, German, Farsi)
+- Local AI setup with Ollama
+- Prompt Library
+- Knowledge Base
+- Document Intelligence - PDF merge and AI summary
+- Text Translator via DeepL Cloudflare Worker
 
-## Completed Living Workspace Milestone
+## Completed Living Workspace and Agent Milestones
 
-- Living Workspace Foundation
+- Living Workspace
 - Welcome Workspace
-- Workspace Engine V1
-- Signal Engine V1
-- Priority Engine V1
-- Workspace Personalization V1
-- Memory Engine V1
+- Living Hero
 - Flow AI Right Rail
 - Sidebar Orb Identity
-- Continue Learning / Learning Memory UI
+- Continue Learning
+- Learning Memory
+- Smart Academy integration
 - Smart Academy ecosystem navigation
+- Responsive workspace
 - Responsive/mobile layout improvements
-- Right rail nested scroll removal
+- Nested scroll removal
+- Workspace Engine V1
+- Signal Engine V1
+- Memory Engine V1
+- Interaction Tracking V1
+- Interaction Feedback Loop V1
+- Workspace Personalization V1
+- Priority Engine V1
+- Goal Engine V1
+- Planner Engine V1
+- Approval Model V1
+- Approval Interaction Boundary V1
+- Tool Registry V1
+- Execution Policy V1
+- Execution Engine V1 (read-only)
+- Execution Audit V1
 
-Current workspace pipeline:
+Current deterministic workspace pipeline:
 
 ```text
 useWorkspace()
 -> signalEngine()
 -> memoryEngine()
+-> interactionFeedbackEngine()
 -> personalizationEngine()
 -> priorityEngine()
+-> goalEngine()
+-> plannerEngine()
+-> approvalEngine()
 -> workspaceEngine()
 -> Dashboard
 ```
 
-## Next Sprint
+Current agent stack:
 
-Workspace Interaction Tracking V1
+```text
+Signals
+-> Memory
+-> Interaction Feedback
+-> Personalization
+-> Priority
+-> Goal
+-> Planner
+-> Approval
+-> Approval Interaction Boundary
+-> Tool Registry
+-> Execution Policy
+-> Execution Engine
+-> Execution Audit
+```
 
-Goal: capture real user interactions and feed genuine behavioral evidence into
-Memory Engine V1.
+## Current Phase
 
-Target interaction events:
+SmartFlow is no longer only a productivity dashboard. It is now an AI Personal
+Operating System with a deterministic agent architecture.
 
-- suggested action clicks
-- AI skill opens
-- continue learning clicks
-- dismiss events only when genuinely available
-- completion events only when genuinely available
+Current focus: safe execution infrastructure before autonomous capabilities.
 
-This sprint should remain deterministic and privacy-safe. It must not introduce
-LLM reasoning, fake interaction events, or backend memory unless explicitly
-scoped later.
+## Next Milestone
 
-## Planned / Not Implemented
+Write Tool Execution Readiness
 
-- semantic memory
-- vector database
+Goal: prepare the safety design for user-approved write execution without
+enabling autonomous side effects. This includes narrowing supported write
+contracts, preserving exact-step approval, keeping audit mandatory, and defining
+rollback/failure behavior before any write handler ships.
+
+## Future Milestones
+
+- Write Tool Execution
+- Reflection Engine
+- Semantic Memory
+- Vector Memory
 - RAG
-- LLM reasoning layer
-- cross-device memory sync
-- planner
-- action execution
-- autonomous Flow AI
-- live AI-generated recommendations
-- real multi-session conversation memory
+- LLM Reasoning Layer
+- Execution Planner
+- Cross-device Memory
+- Autonomous Flow AI
+- Live AI-generated recommendations
+- Real multi-session conversation memory
 
 ## In Progress / Blocked
 
-- Continue.dev integration remains blocked by Ollama crashes on Windows/Intel Arc; current workflow uses Claude.ai or ChatGPT with `kb-load`.
+- Continue.dev integration remains blocked by Ollama crashes on Windows/Intel Arc.
+  Current workflow uses generated knowledge context with Claude.ai or ChatGPT.
 
 ## Technical Debt / Known Gaps
 
-- learn_ai_messages grows unbounded and still needs pruning.
+- Learn AI messages and chat-related storage still need pruning policies.
 - Family JSONB arrays can grow unbounded.
 - Error tracking is not centralized.
 - Supabase generated types should be regenerated after schema changes.
 - Some older UI strings still need i18n/RTL polish.
-- Some right-rail learning/recommendation content is static until live data or AI layers replace it.
+- Right-rail learning/recommendation content still includes static placeholders.
+- Execution is read-only; write execution must wait for stronger rollback and
+  failure-handling design.
