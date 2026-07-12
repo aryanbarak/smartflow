@@ -44,6 +44,7 @@ import {
   type ReadOnlyRunState,
 } from "@/features/agent";
 import { StepApprovalDialog } from "@/features/workspace/components/StepApprovalDialog";
+import { ReflectionSummary } from "@/features/workspace/components/ReflectionSummary";
 import { useT } from "@/i18n";
 import type {
   WorkspaceIconKey,
@@ -926,7 +927,10 @@ export default function Dashboard() {
                 </div>
                 {readOnlyRunResult && (
                   <div className="rounded-lg border border-primary/15 bg-primary/10 px-3 py-2">
-                    <p className="text-xs font-medium text-foreground">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-primary/75">
+                      {t("agent_result_label")}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-foreground">
                       {readOnlyRunResult.safeSummary}
                     </p>
                     {readOnlyRunResult.safePreviewItems.length > 0 && (
@@ -936,6 +940,7 @@ export default function Dashboard() {
                         ))}
                       </ul>
                     )}
+                    <ReflectionSummary result={readOnlyRunResult} />
                   </div>
                 )}
               </div>
