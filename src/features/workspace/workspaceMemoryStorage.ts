@@ -1,6 +1,8 @@
 import type {
   WorkspaceDomainUsageMemory,
   WorkspaceMemory,
+  WorkspaceReflectionEvidence,
+  WorkspaceReflectionEvidenceDomain,
   WorkspaceSignalDomain,
   WorkspaceSuggestedActionMemory,
   WorkspaceUsageWindow,
@@ -24,6 +26,13 @@ const workspaceDomains: WorkspaceSignalDomain[] = [
   "documents",
   "learning",
 ];
+
+const reflectionDomains: WorkspaceReflectionEvidenceDomain[] = [
+  ...workspaceDomains,
+  "workspace",
+];
+
+const MAX_REFLECTION_EVIDENCE = 30;
 
 const usageWindows: WorkspaceUsageWindow[] = [
   "morning",
@@ -86,6 +95,10 @@ function getStorage(storage?: Storage): Storage | null {
 
 function isWorkspaceDomain(value: unknown): value is WorkspaceSignalDomain {
   return typeof value === "string" && workspaceDomains.includes(value as WorkspaceSignalDomain);
+}
+
+function isReflectionDomain(value: unknown): value is WorkspaceReflectionEvidenceDomain {
+  return typeof value === "string" && reflectionDomains.includes(value as WorkspaceReflectionEvidenceDomain);
 }
 
 function isInteractionType(value: unknown): value is WorkspaceInteractionType {
@@ -188,6 +201,49 @@ function sanitizeActionMemory(items: unknown): WorkspaceSuggestedActionMemory[] 
     .slice(0, 30);
 }
 
+function sanitizeReflectionEvidence(items: unknown): WorkspaceReflectionEvidence[] {
+  if (!Array.isArray(items)) return [];
+  const seen = new Set<string>();
+
+  return items
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+    .map((item) => {
+      const requestId = sanitizeText(item.requestId) ?? "";
+      const stepId = sanitizeText(item.stepId) ?? "";
+      const toolId = sanitizeText(item.toolId) ?? "";
+      const dedupeKey = `${requestId}:${stepId}:${toolId}`;
+      const reflectedAt = asIsoString(item.reflectedAt, new Date(0).toISOString());
+      const retainedAt = asIsoString(item.retainedAt, reflectedAt);
+
+      return {
+        id: sanitizeText(item.id) ?? `reflection:${dedupeKey}`,
+        requestId,
+        stepId,
+        toolId,
+        domain: isReflectionDomain(item.domain) ? item.domain : "workspace",
+        outcome: item.outcome === "empty" ? "empty" : "successful",
+        usefulness:
+          item.usefulness === "high" ||
+          item.usefulness === "medium" ||
+          item.usefulness === "low"
+            ? item.usefulness
+            : "low",
+        goalProgress: item.goalProgress === "supported" ? "supported" : "informed",
+        reflectedAt,
+        retainedAt,
+        schemaVersion: 1 as const,
+      };
+    })
+    .filter((item) => item.requestId && item.stepId && item.toolId)
+    .filter((item) => {
+      const key = `${item.requestId}:${item.stepId}:${item.toolId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(-MAX_REFLECTION_EVIDENCE);
+}
+
 export function createDefaultWorkspaceMemory(now = new Date()): WorkspaceMemory {
   const timestamp = now.toISOString();
   return {
@@ -204,6 +260,7 @@ export function createDefaultWorkspaceMemory(now = new Date()): WorkspaceMemory 
     recentInteractions: [],
     interactionCountsByType: {},
     interactionCountsByDomain: {},
+    recentReflectionEvidence: [],
     workspaceHistory: [],
   };
 }
@@ -357,6 +414,7 @@ export function migrateWorkspaceMemory(value: unknown): WorkspaceMemory {
         : undefined,
     lastConversation: lastConversation?.id ? lastConversation : undefined,
     lastLearningContext,
+    recentReflectionEvidence: sanitizeReflectionEvidence(record.recentReflectionEvidence),
     workspaceHistory,
   };
 }

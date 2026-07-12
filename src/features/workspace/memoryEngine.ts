@@ -6,6 +6,8 @@ import type {
   WorkspaceMemoryEngineInput,
   WorkspaceMemoryEngineResult,
   WorkspaceMemoryInsights,
+  WorkspaceReflectionEvidence,
+  WorkspaceReflectionEvidenceDomain,
   WorkspacePriorityConfidence,
   WorkspaceSignal,
   WorkspaceSignalDomain,
@@ -16,6 +18,7 @@ const MAX_RECENT_DOMAINS = 10;
 const MAX_ACTION_MEMORY = 30;
 const MAX_WORKSPACE_HISTORY = 14;
 const MAX_DOMAIN_TIMESTAMPS = 20;
+const REFLECTION_RECENT_DAYS = 30;
 
 const workspaceDomains: WorkspaceSignalDomain[] = [
   "tasks",
@@ -57,6 +60,7 @@ function cloneMemory(memory: WorkspaceMemory): WorkspaceMemory {
     })),
     interactionCountsByType: { ...memory.interactionCountsByType },
     interactionCountsByDomain: { ...memory.interactionCountsByDomain },
+    recentReflectionEvidence: memory.recentReflectionEvidence.map((item) => ({ ...item })),
     lastConversation: memory.lastConversation
       ? { ...memory.lastConversation }
       : undefined,
@@ -150,7 +154,54 @@ function latestConversation(chatSessions: WorkspaceChatSignal[]) {
   )[0];
 }
 
+function daysBetween(a: Date, b: Date) {
+  return Math.abs(a.getTime() - b.getTime()) / 86_400_000;
+}
+
+function reflectionWeight(item: WorkspaceReflectionEvidence, now: Date) {
+  const reflectedAt = new Date(item.reflectedAt);
+  if (Number.isNaN(reflectedAt.getTime())) return 0;
+  const age = daysBetween(now, reflectedAt);
+  if (age > REFLECTION_RECENT_DAYS) return 0;
+  const freshness = age <= 7 ? 1 : 0.35;
+  const usefulness =
+    item.usefulness === "high" ? 1 : item.usefulness === "medium" ? 0.65 : 0.35;
+  const progress = item.goalProgress === "supported" ? 1 : 0.6;
+  const outcome = item.outcome === "successful" ? 1 : 0.45;
+  const domainWeight = item.domain === "workspace" ? 0.25 : 1;
+  return freshness * usefulness * progress * outcome * domainWeight;
+}
+
+function reflectionInsights(
+  evidence: WorkspaceReflectionEvidence[],
+  now: Date,
+) {
+  const engagement: Partial<Record<WorkspaceReflectionEvidenceDomain, number>> = {};
+
+  for (const item of evidence) {
+    const weight = reflectionWeight(item, now);
+    if (weight <= 0) continue;
+    engagement[item.domain] = (engagement[item.domain] ?? 0) + weight;
+  }
+
+  const recentReflectedDomains = Object.entries(engagement)
+    .sort(([, a], [, b]) => b - a)
+    .map(([domain]) => domain as WorkspaceReflectionEvidenceDomain);
+  const totalWeight = Object.values(engagement).reduce((sum, value) => sum + value, 0);
+
+  return {
+    recentReflectedDomains,
+    reflectionEngagementByDomain: engagement,
+    reflectionContinuityConfidence:
+      totalWeight >= 4 ? "medium" : totalWeight >= 1.5 ? "low" : "low",
+  } satisfies Pick<
+    WorkspaceMemoryInsights,
+    "recentReflectedDomains" | "reflectionEngagementByDomain" | "reflectionContinuityConfidence"
+  >;
+}
+
 function createInsights(memory: WorkspaceMemory, now = new Date()): WorkspaceMemoryInsights {
+  const reflections = reflectionInsights(memory.recentReflectionEvidence, now);
   const interactionDomains = workspaceDomains
     .filter((domain) => (memory.interactionCountsByDomain[domain] ?? 0) >= 2)
     .sort(
@@ -212,6 +263,11 @@ function createInsights(memory: WorkspaceMemory, now = new Date()): WorkspaceMem
   if (interactionDomains.length > 0) {
     evidence.push(`Recent interaction domains: ${interactionDomains.slice(0, 3).join(", ")}.`);
   }
+  if (reflections.recentReflectedDomains.length > 0) {
+    evidence.push(
+      `Recent read-only reflection evidence: ${reflections.recentReflectedDomains.slice(0, 3).join(", ")}.`,
+    );
+  }
 
   return {
     recentDomains: memory.recentDomains,
@@ -220,6 +276,9 @@ function createInsights(memory: WorkspaceMemory, now = new Date()): WorkspaceMem
     lastPrimaryDomain: memory.lastPrimaryDomain,
     repeatedActionPatterns,
     interactionDomains,
+    recentReflectedDomains: reflections.recentReflectedDomains,
+    reflectionEngagementByDomain: reflections.reflectionEngagementByDomain,
+    reflectionContinuityConfidence: reflections.reflectionContinuityConfidence,
     learningContinuity: memory.lastLearningContext,
     confidence,
     evidence: evidence.slice(0, 8),

@@ -230,6 +230,14 @@ export function personalizationEngine(
         "Learning memory added weak continuity evidence.",
       );
     }
+    if (memoryInsights.recentReflectedDomains.length > 0) {
+      for (const domain of memoryInsights.recentReflectedDomains.slice(0, 3)) {
+        if (domain === "workspace") continue;
+        const engagement = memoryInsights.reflectionEngagementByDomain[domain] ?? 0;
+        addAffinity(domain, Math.min(6, engagement * 2));
+      }
+      evidence.push("Read-only reflection added weak continuity evidence.");
+    }
   }
 
   if (interactionFeedback && !isOnboarding) {

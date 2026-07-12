@@ -11,6 +11,7 @@ export type * from "./toolResolverTypes";
 export * from "./readOnlyRuntime";
 export * from "./readOnlyResultPresenter";
 export * from "./reflectionEngine";
+export * from "./reflectionIntegration";
 export type * from "./reflectionTypes";
 export * from "./tasksListVerticalSlice";
 export type * from "./toolTypes";

@@ -27,6 +27,9 @@ const memoryInsights: WorkspaceMemoryInsights = {
   preferredTimeDomains: [],
   repeatedActionPatterns: [],
   interactionDomains: [],
+  recentReflectedDomains: [],
+  reflectionEngagementByDomain: {},
+  reflectionContinuityConfidence: "low",
   confidence: "low",
   evidence: [],
 };

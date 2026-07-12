@@ -345,6 +345,22 @@ export interface WorkspaceHistoryEntry {
   confidence: WorkspacePriorityConfidence;
 }
 
+export type WorkspaceReflectionEvidenceDomain = WorkspaceSignalDomain | "workspace";
+
+export interface WorkspaceReflectionEvidence {
+  id: string;
+  requestId: string;
+  stepId: string;
+  toolId: string;
+  domain: WorkspaceReflectionEvidenceDomain;
+  outcome: "successful" | "empty";
+  usefulness: "low" | "medium" | "high";
+  goalProgress: "informed" | "supported";
+  reflectedAt: string;
+  retainedAt: string;
+  schemaVersion: 1;
+}
+
 export interface WorkspaceMemory {
   version: 1;
   createdAt: string;
@@ -364,6 +380,7 @@ export interface WorkspaceMemory {
   lastInteractionAt?: string;
   lastConversation?: WorkspaceConversationMemory;
   lastLearningContext?: WorkspaceLearningContextMemory;
+  recentReflectionEvidence: WorkspaceReflectionEvidence[];
   workspaceHistory: WorkspaceHistoryEntry[];
 }
 
@@ -374,6 +391,9 @@ export interface WorkspaceMemoryInsights {
   lastPrimaryDomain?: WorkspaceSignalDomain;
   repeatedActionPatterns: WorkspaceSignalDomain[];
   interactionDomains: WorkspaceSignalDomain[];
+  recentReflectedDomains: WorkspaceReflectionEvidenceDomain[];
+  reflectionEngagementByDomain: Partial<Record<WorkspaceReflectionEvidenceDomain, number>>;
+  reflectionContinuityConfidence: WorkspacePersonalizationConfidence;
   learningContinuity?: WorkspaceLearningContextMemory;
   confidence: WorkspaceMemoryConfidence;
   evidence: string[];

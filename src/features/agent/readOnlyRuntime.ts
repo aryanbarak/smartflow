@@ -1,12 +1,14 @@
 import { executeAgentTool } from "./executionEngine";
 import { getToolById } from "./toolRegistry";
 import { presentReadOnlyResult } from "./readOnlyResultPresenter";
+import { processReadOnlyReflection } from "./reflectionIntegration";
 import type {
   ExecutionContext,
   ExecutionEngineDependencies,
   ExecutionRequest,
   ExecutionResult,
 } from "./executionTypes";
+import type { AgentReflectionResult } from "./reflectionTypes";
 import type { ToolResolutionResult } from "./toolResolverTypes";
 import type {
   WorkspacePlanStep,
@@ -49,6 +51,7 @@ export interface ReadOnlyRuntimeRequest {
   executionContext?: ExecutionContext;
   requestedAt?: string;
   currentTime?: Date;
+  reflectionStorage?: Storage;
 }
 
 export interface ReadOnlyRuntimeResult {
@@ -58,6 +61,8 @@ export interface ReadOnlyRuntimeResult {
   status: ReadOnlyRuntimeStatus;
   success: boolean;
   executionResult?: ExecutionResult;
+  reflection?: AgentReflectionResult;
+  memoryEvidenceRetained: boolean;
   safeSummary: string;
   safePreviewItems: string[];
   reasons: string[];
@@ -96,6 +101,7 @@ function blocked(
     toolId: request.toolResolution?.toolId,
     status,
     success: false,
+    memoryEvidenceRetained: false,
     safeSummary,
     safePreviewItems: [],
     reasons,
@@ -207,6 +213,23 @@ export async function runReadOnlyTool(
   const executionRequest = createExecutionRequest(request, toolId, requestedAt);
   const executionResult = await executeAgentTool(executionRequest, dependencies);
   const presentation = presentReadOnlyResult(executionResult);
+  let reflection: AgentReflectionResult | undefined;
+  let memoryEvidenceRetained = false;
+
+  try {
+    const reflectionResult = processReadOnlyReflection({
+      executionResult,
+      step: request.step,
+      toolResolution: request.toolResolution,
+      workspace: request.executionContext?.workspace,
+      reflectedAt: request.currentTime,
+      storage: request.reflectionStorage,
+    });
+    reflection = reflectionResult.reflection;
+    memoryEvidenceRetained = reflectionResult.memoryEvidenceRetained;
+  } catch {
+    memoryEvidenceRetained = false;
+  }
 
   return {
     requestId: executionResult.requestId,
@@ -215,6 +238,8 @@ export async function runReadOnlyTool(
     status: mapExecutionStatus(executionResult),
     success: executionResult.success,
     executionResult,
+    reflection,
+    memoryEvidenceRetained,
     safeSummary: presentation.safeSummary,
     safePreviewItems: presentation.safePreviewItems,
     reasons: executionResult.success ? [] : [presentation.safeSummary],
