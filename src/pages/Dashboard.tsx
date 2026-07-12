@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
 import {
   WorkspaceReveal,
   WorkspaceRevealSection,
@@ -36,11 +36,12 @@ import { useMusicPlayer, loadHistory } from "@/hooks/useMusicPlayer";
 import { useWorkspace } from "@/features/workspace";
 import { trackWorkspaceInteraction } from "@/features/workspace";
 import {
-  canStartTasksListRun,
-  runTasksListVerticalSlice,
+  SUPPORTED_READ_ONLY_TOOL_IDS,
+  canStartReadOnlyRun,
+  runReadOnlyTool,
   type ApprovalInteractionResult,
-  type TasksListVerticalSliceResult,
-  type TasksListRunStatus,
+  type ReadOnlyRuntimeResult,
+  type ReadOnlyRunState,
 } from "@/features/agent";
 import { StepApprovalDialog } from "@/features/workspace/components/StepApprovalDialog";
 import { useT } from "@/i18n";
@@ -651,10 +652,11 @@ export default function Dashboard() {
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [latestApprovalDecision, setLatestApprovalDecision] =
     useState<ApprovalInteractionResult | null>(null);
-  const [tasksListRunStatus, setTasksListRunStatus] =
-    useState<TasksListRunStatus>("idle");
-  const [tasksListRunResult, setTasksListRunResult] =
-    useState<TasksListVerticalSliceResult | null>(null);
+  const [readOnlyRunStatus, setReadOnlyRunStatus] =
+    useState<ReadOnlyRunState>("idle");
+  const [readOnlyRunResult, setReadOnlyRunResult] =
+    useState<ReadOnlyRuntimeResult | null>(null);
+  const readOnlyRunInFlightRef = useRef(false);
   const workspace = useWorkspace();
   const pendingStepApproval = useMemo(
     () =>
@@ -679,42 +681,60 @@ export default function Dashboard() {
         : null,
     [pendingStepApproval, workspace.toolResolutions],
   );
-  const tasksListResolution = useMemo(
+  const readOnlyRuntimeResolution = useMemo(
     () =>
       workspace.toolResolutions.find(
-        (resolution) => resolution.resolved && resolution.toolId === "tasks.list",
+        (resolution) =>
+          resolution.resolved &&
+          SUPPORTED_READ_ONLY_TOOL_IDS.includes(
+            resolution.toolId as (typeof SUPPORTED_READ_ONLY_TOOL_IDS)[number],
+          ),
       ) ?? null,
     [workspace.toolResolutions],
   );
-  const tasksListStep = useMemo(
+  const readOnlyRuntimeStep = useMemo(
     () =>
-      tasksListResolution
-        ? workspace.plan.steps.find((step) => step.id === tasksListResolution.stepId) ?? null
+      readOnlyRuntimeResolution
+        ? workspace.plan.steps.find((step) => step.id === readOnlyRuntimeResolution.stepId) ?? null
         : null,
-    [tasksListResolution, workspace.plan.steps],
+    [readOnlyRuntimeResolution, workspace.plan.steps],
   );
-  const tasksListApproval = useMemo(
+  const readOnlyRuntimeApproval = useMemo(
     () =>
-      tasksListStep
-        ? workspace.approval.stepApprovals.find((approval) => approval.stepId === tasksListStep.id) ?? null
+      readOnlyRuntimeStep
+        ? workspace.approval.stepApprovals.find((approval) => approval.stepId === readOnlyRuntimeStep.id) ?? null
         : null,
-    [tasksListStep, workspace.approval.stepApprovals],
+    [readOnlyRuntimeStep, workspace.approval.stepApprovals],
   );
 
-  const handleRunTasksList = async () => {
-    if (!canStartTasksListRun(tasksListRunStatus)) return;
-    if (!tasksListStep || !tasksListResolution) return;
+  const handleRunReadOnlyTool = async () => {
+    if (readOnlyRunInFlightRef.current) return;
+    if (!canStartReadOnlyRun(readOnlyRunStatus)) return;
+    if (!readOnlyRuntimeStep || !readOnlyRuntimeResolution) return;
 
-    setTasksListRunStatus("running");
-    setTasksListRunResult(null);
-    const result = await runTasksListVerticalSlice({
-      step: tasksListStep,
-      resolution: tasksListResolution,
-      approval: tasksListApproval,
-      tasks: workspace.agentContext.tasks,
-    });
-    setTasksListRunStatus(result.status);
-    setTasksListRunResult(result);
+    readOnlyRunInFlightRef.current = true;
+    setReadOnlyRunStatus("running");
+    setReadOnlyRunResult(null);
+    try {
+      const result = await runReadOnlyTool({
+        step: readOnlyRuntimeStep,
+        toolResolution: readOnlyRuntimeResolution,
+        approval: readOnlyRuntimeApproval,
+        executionInput: {},
+        executionContext: {
+          tasks: workspace.agentContext.tasks,
+          events: workspace.agentContext.events,
+          learningProgress: workspace.agentContext.learningProgress,
+          workspace,
+        },
+      });
+      setReadOnlyRunStatus(
+        result.status === "success" ? "success" : result.status === "failed" ? "failed" : "denied",
+      );
+      setReadOnlyRunResult(result);
+    } finally {
+      readOnlyRunInFlightRef.current = false;
+    }
   };
 
   useSetPageTitle("Dashboard", workspace.today.label);
@@ -872,7 +892,7 @@ export default function Dashboard() {
         </WorkspaceRevealSection>
       )}
 
-      {tasksListStep && tasksListResolution && (
+      {readOnlyRuntimeStep && readOnlyRuntimeResolution && (
         <WorkspaceRevealSection order={2}>
           <section className="rounded-xl border border-primary/15 bg-card/45 p-3 sm:p-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -882,16 +902,16 @@ export default function Dashboard() {
                     {t("agent_vertical_slice_label")}
                   </p>
                   <h2 className="mt-1 text-sm font-semibold tracking-tight">
-                    {tasksListStep.title}
+                    {readOnlyRuntimeStep.title}
                   </h2>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    {tasksListStep.description}
+                    {readOnlyRuntimeStep.description}
                   </p>
                 </div>
                 <div className="grid gap-2 text-xs sm:grid-cols-3">
                   <div className="rounded-lg border border-border/25 bg-background/25 px-3 py-2">
                     <p className="font-semibold text-muted-foreground">{t("agent_resolved_tool")}</p>
-                    <p className="mt-1 font-medium text-foreground">{tasksListResolution.toolId}</p>
+                    <p className="mt-1 font-medium text-foreground">{readOnlyRuntimeResolution.toolId}</p>
                   </div>
                   <div className="rounded-lg border border-border/25 bg-background/25 px-3 py-2">
                     <p className="font-semibold text-muted-foreground">{t("agent_execution_mode")}</p>
@@ -900,18 +920,18 @@ export default function Dashboard() {
                   <div className="rounded-lg border border-border/25 bg-background/25 px-3 py-2">
                     <p className="font-semibold text-muted-foreground">{t("agent_approval_state")}</p>
                     <p className="mt-1 font-medium text-foreground">
-                      {tasksListApproval?.status ?? t("approval_not_declared")}
+                      {readOnlyRuntimeApproval?.status ?? t("approval_not_declared")}
                     </p>
                   </div>
                 </div>
-                {tasksListRunResult && (
+                {readOnlyRunResult && (
                   <div className="rounded-lg border border-primary/15 bg-primary/10 px-3 py-2">
                     <p className="text-xs font-medium text-foreground">
-                      {tasksListRunResult.summary}
+                      {readOnlyRunResult.safeSummary}
                     </p>
-                    {tasksListRunResult.safeTaskTitles.length > 0 && (
+                    {readOnlyRunResult.safePreviewItems.length > 0 && (
                       <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                        {tasksListRunResult.safeTaskTitles.map((title) => (
+                        {readOnlyRunResult.safePreviewItems.map((title) => (
                           <li key={title}>{title}</li>
                         ))}
                       </ul>
@@ -922,11 +942,11 @@ export default function Dashboard() {
               <Button
                 type="button"
                 size="sm"
-                onClick={() => void handleRunTasksList()}
-                disabled={tasksListRunStatus === "running"}
+                onClick={() => void handleRunReadOnlyTool()}
+                disabled={readOnlyRunStatus === "running"}
                 className="shrink-0"
               >
-                {tasksListRunStatus === "running"
+                {readOnlyRunStatus === "running"
                   ? t("agent_run_running")
                   : t("agent_run_read_only_action")}
               </Button>

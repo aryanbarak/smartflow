@@ -441,6 +441,22 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
         status: task.completed ? "completed" : "open",
         createdAt: task.createdAt,
       })),
+      events: input.events.map((event) => ({
+        id: event.id,
+        title: event.title,
+        dateTimeStart: event.dateTimeStart,
+      })),
+      learningProgress: {
+        lessons: recentLessons.map((lesson, index) => ({
+          id: `lesson-${index + 1}`,
+          title: lesson.title,
+          completionPercentage: lesson.progress,
+          completed: lesson.progress >= 100,
+        })),
+        totalQuestions: input.learnAiActivity?.totalQuestions,
+        lastActivityAt: input.learnAiActivity?.lastQuestion?.createdAt,
+        mode: input.learnAiActivity?.mostActiveMode?.mode,
+      },
     },
     welcome: {
       setupActions: welcomeSetupActions,

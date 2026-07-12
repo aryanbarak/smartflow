@@ -4,7 +4,11 @@ import type {
   WorkspaceInteractionType,
 } from "./workspaceInteractionTypes";
 import type { ToolResolutionResult } from "../agent/toolResolverTypes";
-import type { ExecutionContextTask } from "../agent/executionTypes";
+import type {
+  ExecutionContextEvent,
+  ExecutionContextTask,
+  ExecutionLearningProgressSnapshot,
+} from "../agent/executionTypes";
 import type { AgentToolCapability, AgentToolMode } from "../agent/toolTypes";
 
 export type WorkspaceIconKey =
@@ -496,6 +500,8 @@ export interface WorkspaceRightRail {
 
 export interface WorkspaceAgentContext {
   tasks: ExecutionContextTask[];
+  events: ExecutionContextEvent[];
+  learningProgress: ExecutionLearningProgressSnapshot | null;
 }
 
 export interface WorkspaceWelcome {
