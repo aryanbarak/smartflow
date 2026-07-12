@@ -751,6 +751,13 @@ const en = {
   approval_approve: 'Approve',
   approval_decision_approved: 'Approved for this exact step. Execution still requires policy checks.',
   approval_decision_rejected: 'Rejected for this exact step.',
+  agent_vertical_slice_label: 'Agent vertical slice',
+  agent_resolved_tool: 'Resolved tool',
+  agent_execution_mode: 'Mode',
+  agent_read_only: 'Read-only',
+  agent_approval_state: 'Approval state',
+  agent_run_read_only_action: 'Run read-only action',
+  agent_run_running: 'Running...',
 
   finance_subtitle: 'Financial Overview & Insights',
   finance_tools: 'Tools',
@@ -1586,6 +1593,13 @@ const de: TranslationDict = {
   approval_approve: 'Genehmigen',
   approval_decision_approved: 'Fuer genau diesen Schritt genehmigt. Ausfuehrung braucht weiterhin Policy-Pruefungen.',
   approval_decision_rejected: 'Fuer genau diesen Schritt abgelehnt.',
+  agent_vertical_slice_label: 'Agent-Vertikalschnitt',
+  agent_resolved_tool: 'Aufgeloestes Tool',
+  agent_execution_mode: 'Modus',
+  agent_read_only: 'Nur Lesen',
+  agent_approval_state: 'Genehmigungsstatus',
+  agent_run_read_only_action: 'Nur-Lese-Aktion ausfuehren',
+  agent_run_running: 'Laeuft...',
 };
 
 const fa: TranslationDict = {
@@ -2366,6 +2380,13 @@ const fa: TranslationDict = {
   approval_approve: 'تایید',
   approval_decision_approved: 'برای همین مرحله دقیق تایید شد. اجرا همچنان به بررسی سیاست نیاز دارد.',
   approval_decision_rejected: 'برای همین مرحله دقیق رد شد.',
+  agent_vertical_slice_label: 'برش عمودی عامل',
+  agent_resolved_tool: 'ابزار انتخاب شده',
+  agent_execution_mode: 'حالت',
+  agent_read_only: 'فقط خواندنی',
+  agent_approval_state: 'وضعیت تایید',
+  agent_run_read_only_action: 'اجرای اقدام فقط خواندنی',
+  agent_run_running: 'در حال اجرا...',
 };
 
 export type TranslationKey = keyof TranslationDict;

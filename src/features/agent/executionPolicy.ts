@@ -268,6 +268,13 @@ export function evaluateExecutionPolicy(input: ExecutionPolicyInput): ExecutionP
   } else {
     checks.push(
       check(
+        "approval-step",
+        !input.approval || input.approval.stepId === step.id,
+        "Approval must match the exact plan step.",
+      ),
+    );
+    checks.push(
+      check(
         "approval-tool",
         !input.approval?.toolId || input.approval.toolId === tool.id,
         "Approval must match the exact resolved tool.",

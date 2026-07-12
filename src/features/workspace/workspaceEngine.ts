@@ -433,6 +433,15 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
     plan: input.plan,
     toolResolutions: input.toolResolutions,
     approval: input.approval,
+    agentContext: {
+      tasks: input.tasks.map((task) => ({
+        id: task.id,
+        title: task.title,
+        completed: task.completed,
+        status: task.completed ? "completed" : "open",
+        createdAt: task.createdAt,
+      })),
+    },
     welcome: {
       setupActions: welcomeSetupActions,
       learningSignals: welcomeLearningSignals,

@@ -8,4 +8,5 @@ export * from "./handlers";
 export * from "./toolRegistry";
 export * from "./toolResolver";
 export type * from "./toolResolverTypes";
+export * from "./tasksListVerticalSlice";
 export type * from "./toolTypes";

@@ -35,7 +35,13 @@ import { SkeletonBlock } from "@/components/common/Skeletons";
 import { useMusicPlayer, loadHistory } from "@/hooks/useMusicPlayer";
 import { useWorkspace } from "@/features/workspace";
 import { trackWorkspaceInteraction } from "@/features/workspace";
-import { type ApprovalInteractionResult } from "@/features/agent";
+import {
+  canStartTasksListRun,
+  runTasksListVerticalSlice,
+  type ApprovalInteractionResult,
+  type TasksListVerticalSliceResult,
+  type TasksListRunStatus,
+} from "@/features/agent";
 import { StepApprovalDialog } from "@/features/workspace/components/StepApprovalDialog";
 import { useT } from "@/i18n";
 import type {
@@ -645,6 +651,10 @@ export default function Dashboard() {
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [latestApprovalDecision, setLatestApprovalDecision] =
     useState<ApprovalInteractionResult | null>(null);
+  const [tasksListRunStatus, setTasksListRunStatus] =
+    useState<TasksListRunStatus>("idle");
+  const [tasksListRunResult, setTasksListRunResult] =
+    useState<TasksListVerticalSliceResult | null>(null);
   const workspace = useWorkspace();
   const pendingStepApproval = useMemo(
     () =>
@@ -669,6 +679,43 @@ export default function Dashboard() {
         : null,
     [pendingStepApproval, workspace.toolResolutions],
   );
+  const tasksListResolution = useMemo(
+    () =>
+      workspace.toolResolutions.find(
+        (resolution) => resolution.resolved && resolution.toolId === "tasks.list",
+      ) ?? null,
+    [workspace.toolResolutions],
+  );
+  const tasksListStep = useMemo(
+    () =>
+      tasksListResolution
+        ? workspace.plan.steps.find((step) => step.id === tasksListResolution.stepId) ?? null
+        : null,
+    [tasksListResolution, workspace.plan.steps],
+  );
+  const tasksListApproval = useMemo(
+    () =>
+      tasksListStep
+        ? workspace.approval.stepApprovals.find((approval) => approval.stepId === tasksListStep.id) ?? null
+        : null,
+    [tasksListStep, workspace.approval.stepApprovals],
+  );
+
+  const handleRunTasksList = async () => {
+    if (!canStartTasksListRun(tasksListRunStatus)) return;
+    if (!tasksListStep || !tasksListResolution) return;
+
+    setTasksListRunStatus("running");
+    setTasksListRunResult(null);
+    const result = await runTasksListVerticalSlice({
+      step: tasksListStep,
+      resolution: tasksListResolution,
+      approval: tasksListApproval,
+      tasks: workspace.agentContext.tasks,
+    });
+    setTasksListRunStatus(result.status);
+    setTasksListRunResult(result);
+  };
 
   useSetPageTitle("Dashboard", workspace.today.label);
 
@@ -819,6 +866,69 @@ export default function Dashboard() {
                 className="shrink-0"
               >
                 {t("approval_review_action")}
+              </Button>
+            </div>
+          </section>
+        </WorkspaceRevealSection>
+      )}
+
+      {tasksListStep && tasksListResolution && (
+        <WorkspaceRevealSection order={2}>
+          <section className="rounded-xl border border-primary/15 bg-card/45 p-3 sm:p-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0 space-y-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-primary/75">
+                    {t("agent_vertical_slice_label")}
+                  </p>
+                  <h2 className="mt-1 text-sm font-semibold tracking-tight">
+                    {tasksListStep.title}
+                  </h2>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {tasksListStep.description}
+                  </p>
+                </div>
+                <div className="grid gap-2 text-xs sm:grid-cols-3">
+                  <div className="rounded-lg border border-border/25 bg-background/25 px-3 py-2">
+                    <p className="font-semibold text-muted-foreground">{t("agent_resolved_tool")}</p>
+                    <p className="mt-1 font-medium text-foreground">{tasksListResolution.toolId}</p>
+                  </div>
+                  <div className="rounded-lg border border-border/25 bg-background/25 px-3 py-2">
+                    <p className="font-semibold text-muted-foreground">{t("agent_execution_mode")}</p>
+                    <p className="mt-1 font-medium text-foreground">{t("agent_read_only")}</p>
+                  </div>
+                  <div className="rounded-lg border border-border/25 bg-background/25 px-3 py-2">
+                    <p className="font-semibold text-muted-foreground">{t("agent_approval_state")}</p>
+                    <p className="mt-1 font-medium text-foreground">
+                      {tasksListApproval?.status ?? t("approval_not_declared")}
+                    </p>
+                  </div>
+                </div>
+                {tasksListRunResult && (
+                  <div className="rounded-lg border border-primary/15 bg-primary/10 px-3 py-2">
+                    <p className="text-xs font-medium text-foreground">
+                      {tasksListRunResult.summary}
+                    </p>
+                    {tasksListRunResult.safeTaskTitles.length > 0 && (
+                      <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                        {tasksListRunResult.safeTaskTitles.map((title) => (
+                          <li key={title}>{title}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void handleRunTasksList()}
+                disabled={tasksListRunStatus === "running"}
+                className="shrink-0"
+              >
+                {tasksListRunStatus === "running"
+                  ? t("agent_run_running")
+                  : t("agent_run_read_only_action")}
               </Button>
             </div>
           </section>

@@ -4,6 +4,7 @@ import type {
   WorkspaceInteractionType,
 } from "./workspaceInteractionTypes";
 import type { ToolResolutionResult } from "../agent/toolResolverTypes";
+import type { ExecutionContextTask } from "../agent/executionTypes";
 import type { AgentToolCapability, AgentToolMode } from "../agent/toolTypes";
 
 export type WorkspaceIconKey =
@@ -493,6 +494,10 @@ export interface WorkspaceRightRail {
   isChatLoading: boolean;
 }
 
+export interface WorkspaceAgentContext {
+  tasks: ExecutionContextTask[];
+}
+
 export interface WorkspaceWelcome {
   setupActions: WorkspaceSetupAction[];
   learningSignals: string[];
@@ -516,6 +521,7 @@ export interface Workspace {
   plan: WorkspacePlan;
   toolResolutions: ToolResolutionResult[];
   approval: WorkspaceApprovalModel;
+  agentContext: WorkspaceAgentContext;
   welcome: WorkspaceWelcome;
   rightRail: WorkspaceRightRail;
 }
