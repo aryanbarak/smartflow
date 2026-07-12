@@ -52,9 +52,11 @@ function approval(
   riskLevel: WorkspaceApprovalRiskLevel = "medium",
   approvalScope: WorkspaceApprovalScope = "single_step",
   status: WorkspaceStepApproval["status"] = "approved",
+  toolId = status === "not_required" ? undefined : "tasks.create",
 ): WorkspaceStepApproval {
   return {
     stepId,
+    toolId,
     status,
     requiresApproval: status !== "not_required",
     approvalReason: "Approved by user in a future approval flow.",
@@ -155,6 +157,18 @@ describe("executionPolicy", () => {
     expect(decision.allowed).toBe(false);
   });
 
+  it("denies rejected approval", () => {
+    const decision = evaluateExecutionPolicy({
+      currentTime: now,
+      step: step("create"),
+      tool: tool("tasks.create"),
+      approval: approval("step-1", "medium", "single_step", "rejected"),
+    });
+
+    expect(decision.status).toBe("approval_required");
+    expect(decision.allowed).toBe(false);
+  });
+
   it("allows approved exact-step write tool", () => {
     const decision = evaluateExecutionPolicy({
       currentTime: now,
@@ -180,6 +194,19 @@ describe("executionPolicy", () => {
     expect(decision.allowed).toBe(false);
   });
 
+  it("denies approval for another tool on the same step", () => {
+    const decision = evaluateExecutionPolicy({
+      currentTime: now,
+      step: step("update", { targetId: "task-1" }),
+      tool: tool("tasks.update"),
+      approval: approval("step-1", "medium", "single_step", "approved", "tasks.create"),
+    });
+
+    expect(decision.status).toBe("approval_required");
+    expect(decision.allowed).toBe(false);
+    expect(decision.checks.find((item) => item.id === "approval-tool")?.passed).toBe(false);
+  });
+
   it("denies insufficient scope", () => {
     const decision = evaluateExecutionPolicy({
       currentTime: now,
@@ -197,7 +224,7 @@ describe("executionPolicy", () => {
       currentTime: now,
       step: step("pay", { domain: "finance" }),
       tool: tool("finance.create_transaction"),
-      approval: approval("step-1", "medium"),
+      approval: approval("step-1", "medium", "single_step", "approved", "finance.create_transaction"),
     });
 
     expect(decision.status).toBe("risk_mismatch");
@@ -210,7 +237,7 @@ describe("executionPolicy", () => {
       currentTime: now,
       step: step("pay", { domain: "finance" }),
       tool: tool("finance.create_transaction"),
-      approval: approval("step-1", "high", "single_step", "pending"),
+      approval: approval("step-1", "high", "single_step", "pending", "finance.create_transaction"),
     });
 
     expect(decision.status).toBe("approval_required");
@@ -222,7 +249,7 @@ describe("executionPolicy", () => {
       currentTime: now,
       step: step("pay", { domain: "finance" }),
       tool: tool("finance.create_transaction"),
-      approval: approval("step-1", "high"),
+      approval: approval("step-1", "high", "single_step", "approved", "finance.create_transaction"),
     });
 
     expect(decision.status).toBe("allowed");
@@ -234,7 +261,7 @@ describe("executionPolicy", () => {
       currentTime: now,
       step: step("delete", { domain: "documents", targetId: "document-1" }),
       tool: tool("documents.delete"),
-      approval: approval("step-1", "low"),
+      approval: approval("step-1", "low", "single_step", "approved", "documents.delete"),
     });
 
     expect(decision.status).toBe("risk_mismatch");

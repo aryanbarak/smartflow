@@ -35,10 +35,7 @@ import { SkeletonBlock } from "@/components/common/Skeletons";
 import { useMusicPlayer, loadHistory } from "@/hooks/useMusicPlayer";
 import { useWorkspace } from "@/features/workspace";
 import { trackWorkspaceInteraction } from "@/features/workspace";
-import {
-  findApprovalPresentationTool,
-  type ApprovalInteractionResult,
-} from "@/features/agent";
+import { type ApprovalInteractionResult } from "@/features/agent";
 import { StepApprovalDialog } from "@/features/workspace/components/StepApprovalDialog";
 import { useT } from "@/i18n";
 import type {
@@ -664,8 +661,13 @@ export default function Dashboard() {
     [pendingStepApproval, workspace.plan.steps],
   );
   const approvalPresentationTool = useMemo(
-    () => findApprovalPresentationTool(pendingApprovalStep),
-    [pendingApprovalStep],
+    () =>
+      pendingStepApproval?.toolId
+        ? workspace.toolResolutions.find(
+            (resolution) => resolution.stepId === pendingStepApproval.stepId,
+          )?.tool ?? null
+        : null,
+    [pendingStepApproval, workspace.toolResolutions],
   );
 
   useSetPageTitle("Dashboard", workspace.today.label);

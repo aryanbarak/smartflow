@@ -137,6 +137,18 @@ tools after approval and policy checks.
 
 Rule: planning output is not execution permission.
 
+### Tool Resolution Is Not Authorization
+
+Problem: mapping a planned step to a tool can be mistaken for permission to
+execute that tool.
+
+Solution: Tool Resolver V1 maps only explicit, read-only, handler-backed tools
+and returns unresolved or ambiguous states when the mapping is unsafe.
+
+Rule: resolver output is advisory context for approval and policy. Execution
+Policy must still independently validate the step, tool, approval, scope, and
+risk before any handler can run.
+
 ### Approval Is a Mandatory Policy Boundary
 
 Problem: user intent can be ambiguous, especially for actions that may change
@@ -159,16 +171,16 @@ execution.
 Rule: human approval records intent only; execution must still pass through the
 tool registry, execution policy, execution engine, and audit path.
 
-### Approvals Must Bind to Exact Planned Steps
+### Approvals Must Bind to Exact Planned Steps and Tools
 
 Problem: reusable or broad approvals can silently authorize a different action
 than the one the user reviewed.
 
-Solution: approval interaction validates the planned `stepId`, scope, and
-effective risk before producing an immutable approval decision.
+Solution: approval interaction validates the planned `stepId`, resolved tool ID,
+scope, and effective risk before producing an immutable approval decision.
 
-Rule: approvals must never approve a different step, escalate scope, lower risk,
-or carry arbitrary planner metadata.
+Rule: approvals must never approve a different step, substitute another tool,
+escalate scope, lower risk, or carry arbitrary planner metadata.
 
 ### Tool Registry Contains Contracts Only
 

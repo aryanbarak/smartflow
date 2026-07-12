@@ -70,6 +70,11 @@ describe("approvalInteraction", () => {
     expect(result.decision).toBe("approved");
     expect(result.approval).toEqual({
       stepId: "step-1",
+      toolId: "tasks.create",
+      toolName: "Create task",
+      toolDescription: "Future contract for creating a task after explicit approval.",
+      toolCapability: "create",
+      toolMode: "write",
       status: "approved",
       requiresApproval: true,
       approvalReason: "Future execution could modify user data.",
@@ -123,6 +128,18 @@ describe("approvalInteraction", () => {
 
     expect(result.ok).toBe(false);
     expect(result.errorCode).toBe("STEP_MISMATCH");
+  });
+
+  it("does not accept mismatched resolved tool approval", () => {
+    const result = approveWorkspaceStep({
+      now,
+      step: step(),
+      stepApproval: stepApproval({ toolId: "tasks.create" }),
+      tool: tool("tasks.update"),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errorCode).toBe("TOOL_MISMATCH");
   });
 
   it("rejects unsupported approval scope at runtime", () => {
@@ -210,9 +227,8 @@ describe("approvalInteraction", () => {
   });
 
   it("finds a matching presentation tool without invoking handlers", () => {
-    expect(findApprovalPresentationTool(step())?.id).toBe("tasks.create");
-    expect(findApprovalPresentationTool(step({ domain: "finance", actionType: "pay" }))?.id).toBe(
-      "finance.create_transaction",
-    );
+    expect(findApprovalPresentationTool(step({ actionType: "review" }))?.id).toBe("tasks.list");
+    expect(findApprovalPresentationTool(step())?.id).toBeUndefined();
+    expect(findApprovalPresentationTool(step({ domain: "finance", actionType: "pay" }))).toBeNull();
   });
 });

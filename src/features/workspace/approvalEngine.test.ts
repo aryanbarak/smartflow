@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { resolveToolForStep } from "@/features/agent";
 import { approvalEngine } from "./approvalEngine";
 import { plannerEngine } from "./plannerEngine";
 import type {
@@ -150,6 +151,27 @@ describe("approvalEngine", () => {
       ),
     ).toBe(false);
     expect(approval.overallStatus).toBe("pending");
+  });
+
+  it("preserves resolved tool metadata on matching step approvals", () => {
+    const sourcePlan = plan([step("step-1", "continue", "learning", true)]);
+    const toolResolutions = sourcePlan.steps.map((item) =>
+      resolveToolForStep({ step: item, currentTime: now }),
+    );
+
+    const approval = approvalEngine({
+      now,
+      plan: sourcePlan,
+      toolResolutions,
+    });
+
+    expect(approval.stepApprovals[0]).toMatchObject({
+      stepId: "step-1",
+      toolId: "learning.get_progress",
+      toolName: "Get learning progress",
+      toolCapability: "inspect",
+      toolMode: "read",
+    });
   });
 
   it("classifies high-impact future actions as high risk", () => {

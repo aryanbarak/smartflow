@@ -1,6 +1,6 @@
 # SmartFlow - Project Status
 
-Last updated: 2026-07-11
+Last updated: 2026-07-12
 
 ---
 
@@ -32,6 +32,7 @@ Engineering posture:
 - read-only before write execution,
 - approval-gated before autonomous,
 - approval interaction before execution,
+- tool resolution before approval,
 - client-local memory before semantic/vector memory,
 - presentation-focused Dashboard,
 - explicit tool contracts and policy boundaries.
@@ -66,6 +67,7 @@ Completed architecture milestones:
 - Priority Engine V1
 - Goal Engine V1
 - Planner Engine V1
+- Tool Resolver V1
 - Approval Model V1
 - Approval Interaction Boundary V1
 - Tool Registry V1
@@ -90,6 +92,7 @@ useWorkspace()
 -> priorityEngine()
 -> goalEngine()
 -> plannerEngine()
+-> toolResolver()
 -> approvalEngine()
 -> workspaceEngine()
 -> Dashboard
@@ -120,6 +123,8 @@ Goal
 ->
 Planner
 ->
+Tool Resolver
+->
 Approval
 ->
 Approval Interaction Boundary
@@ -137,9 +142,15 @@ The agent stack is deterministic and non-autonomous. It can prepare, rank,
 explain, plan, and safely execute supported read-only tools, but it cannot
 perform write operations.
 
+Tool Resolver V1 maps proposed plan steps to explicitly registered read-only
+tools where safe. It resolves only `tasks.list`, `calendar.list_today`,
+`learning.get_progress`, and `workspace.get_context`; it fails closed for write
+actions, ambiguous mappings, disabled tools, and external-effect tools.
+
 Approval Interaction Boundary V1 captures user intent for an exact planned
 step. It can approve, reject, or close a pending step review, but it does not
-execute tools, mutate audit records, call handlers, or broaden approval scope.
+execute tools, mutate audit records, call handlers, substitute resolved tools,
+or broaden approval scope.
 
 ---
 
@@ -182,6 +193,7 @@ The current system can:
 - feed interaction feedback into deterministic personalization,
 - choose daily priorities and goals,
 - propose deterministic plan steps,
+- resolve safe read-only tools for plan steps,
 - annotate plan steps with approval requirements,
 - capture exact-step user approval or rejection without execution,
 - enforce execution policy before read-only execution,

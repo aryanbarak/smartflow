@@ -53,9 +53,11 @@ function step(
 function approval(
   riskLevel: WorkspaceApprovalRiskLevel = "medium",
   stepId = "step-1",
+  toolId = "tasks.create",
 ): WorkspaceStepApproval {
   return {
     stepId,
+    toolId,
     status: "approved",
     requiresApproval: true,
     approvalReason: "Approved by user in a future approval flow.",
@@ -396,7 +398,7 @@ describe("executionEngine", () => {
     const result = await executeAgentTool(
       request("finance.create_transaction", "pay", {}, {
         step: step("pay", { domain: "finance" }),
-        approval: approval("high"),
+        approval: approval("high", "step-1", "finance.create_transaction"),
       }),
       fixedDeps({
         getHandlerByToolId: () => accidentalHandler,

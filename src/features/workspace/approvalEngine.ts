@@ -97,17 +97,29 @@ function approvalScopeForStep(actionType: WorkspacePlanActionType): WorkspaceApp
   return viewOnlyActions.includes(actionType) ? "view_only" : "single_step";
 }
 
-function classifyStep(step: WorkspaceApprovalEngineInput["plan"]["steps"][number]): WorkspaceStepApproval {
+function classifyStepWithResolution(
+  step: WorkspaceApprovalEngineInput["plan"]["steps"][number],
+  resolution: WorkspaceApprovalEngineInput["toolResolutions"][number] | undefined,
+): WorkspaceStepApproval {
   const requiresApproval = !viewOnlyActions.includes(step.actionType) || step.requiresApproval;
   const riskLevel = riskFor(step.actionType);
+  const resolvedTool = resolution?.resolved ? resolution.tool : undefined;
+  const effectiveRisk = resolvedTool && riskOrder[resolvedTool.riskLevel] > riskOrder[riskLevel]
+    ? resolvedTool.riskLevel
+    : riskLevel;
   return {
     stepId: step.id,
+    toolId: resolvedTool?.id,
+    toolName: resolvedTool?.name,
+    toolDescription: resolvedTool?.description,
+    toolCapability: resolvedTool?.capability,
+    toolMode: resolvedTool?.mode,
     status: requiresApproval ? "pending" : "not_required",
     requiresApproval,
     approvalReason: approvalReasonFor(step.actionType),
-    riskLevel,
-    reversible: reversibleFor(step.actionType),
-    externalEffect: externalEffectFor(step.actionType),
+    riskLevel: effectiveRisk,
+    reversible: resolvedTool ? resolvedTool.reversible && reversibleFor(step.actionType) : reversibleFor(step.actionType),
+    externalEffect: resolvedTool ? resolvedTool.externalEffect || externalEffectFor(step.actionType) : externalEffectFor(step.actionType),
     dataDomains: [step.domain],
     approvalScope: approvalScopeForStep(step.actionType),
   };
@@ -129,7 +141,12 @@ function approvalSummaryFor(stepApprovals: WorkspaceStepApproval[]) {
 export function approvalEngine(input: WorkspaceApprovalEngineInput): WorkspaceApprovalModel {
   const now = input.now ?? new Date();
   const generatedAt = now.toISOString();
-  const stepApprovals = input.plan.steps.map(classifyStep);
+  const resolutionByStepId = new Map(
+    (input.toolResolutions ?? []).map((resolution) => [resolution.stepId, resolution]),
+  );
+  const stepApprovals = input.plan.steps.map((step) =>
+    classifyStepWithResolution(step, resolutionByStepId.get(step.id)),
+  );
   const requiresUserApproval = stepApprovals.some((step) => step.requiresApproval);
   const riskLevel = maxRisk(stepApprovals.map((step) => step.riskLevel));
   const approvalScope = overallScope(stepApprovals);

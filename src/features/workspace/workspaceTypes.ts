@@ -3,6 +3,8 @@ import type {
   WorkspaceInteractionSource,
   WorkspaceInteractionType,
 } from "./workspaceInteractionTypes";
+import type { ToolResolutionResult } from "../agent/toolResolverTypes";
+import type { AgentToolCapability, AgentToolMode } from "../agent/toolTypes";
 
 export type WorkspaceIconKey =
   | "book"
@@ -262,6 +264,11 @@ export type WorkspaceApprovalRiskLevel =
 
 export interface WorkspaceStepApproval {
   stepId: string;
+  toolId?: string;
+  toolName?: string;
+  toolDescription?: string;
+  toolCapability?: AgentToolCapability;
+  toolMode?: AgentToolMode;
   status: WorkspaceStepApprovalStatus;
   requiresApproval: boolean;
   approvalReason: string;
@@ -418,6 +425,7 @@ export interface WorkspacePlannerEngineInput {
 export interface WorkspaceApprovalEngineInput {
   now?: Date;
   plan: WorkspacePlan;
+  toolResolutions?: ToolResolutionResult[];
 }
 
 export interface WorkspaceEngineInput extends WorkspaceSignalEngineInput {
@@ -428,6 +436,7 @@ export interface WorkspaceEngineInput extends WorkspaceSignalEngineInput {
   interactionFeedback: WorkspaceInteractionFeedback;
   goal: WorkspaceGoal;
   plan: WorkspacePlan;
+  toolResolutions: ToolResolutionResult[];
   approval: WorkspaceApprovalModel;
 }
 
@@ -505,6 +514,7 @@ export interface Workspace {
   personalization: WorkspacePersonalizationModel;
   goal: WorkspaceGoal;
   plan: WorkspacePlan;
+  toolResolutions: ToolResolutionResult[];
   approval: WorkspaceApprovalModel;
   welcome: WorkspaceWelcome;
   rightRail: WorkspaceRightRail;

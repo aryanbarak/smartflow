@@ -6,4 +6,6 @@ export * from "./executionPolicy";
 export type * from "./executionTypes";
 export * from "./handlers";
 export * from "./toolRegistry";
+export * from "./toolResolver";
+export type * from "./toolResolverTypes";
 export type * from "./toolTypes";

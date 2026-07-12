@@ -46,12 +46,12 @@ export function StepApprovalDialog({
   const diagnosticRows = useMemo(
     () => [
       [t("approval_step_id"), step?.id],
-      [t("approval_tool_id"), tool?.id],
+      [t("approval_tool_id"), tool?.id ?? stepApproval?.toolId],
       [t("approval_tool_domain"), tool?.domain ?? step?.domain],
-      [t("approval_tool_capability"), tool?.capability ?? step?.actionType],
+      [t("approval_tool_capability"), tool?.capability ?? stepApproval?.toolCapability ?? step?.actionType],
       [t("approval_risk_level"), stepApproval?.riskLevel],
       [t("approval_scope"), stepApproval?.approvalScope],
-      [t("approval_read_only"), tool ? tool.mode === "read" : undefined],
+      [t("approval_read_only"), tool ? tool.mode === "read" : stepApproval?.toolMode ? stepApproval.toolMode === "read" : undefined],
       [t("approval_external_effect"), tool?.externalEffect ?? stepApproval?.externalEffect],
       [t("approval_irreversible"), tool ? !tool.reversible : stepApproval ? !stepApproval.reversible : undefined],
     ],

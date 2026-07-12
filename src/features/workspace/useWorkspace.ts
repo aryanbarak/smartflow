@@ -4,6 +4,7 @@ import { useTasks } from "@/hooks/useTasks";
 import { useFinance } from "@/hooks/useFinance";
 import { useChatSessions } from "@/hooks/useChatSessions";
 import { useLearnAiActivity } from "@/hooks/useLearnAiActivity";
+import { resolveToolForStep } from "@/features/agent";
 import { useHabits } from "@/features/habits/useHabits";
 import { useDocuments } from "@/features/documents/useDocuments";
 import { approvalEngine } from "./approvalEngine";
@@ -104,9 +105,16 @@ export function useWorkspace(): Workspace {
       goal,
       signals,
     });
+    const toolResolutions = plan.steps.map((step) =>
+      resolveToolForStep({
+        step,
+        currentTime: engineInput.now,
+      }),
+    );
     const approval = approvalEngine({
       ...engineInput,
       plan,
+      toolResolutions,
     });
 
     return {
@@ -119,6 +127,7 @@ export function useWorkspace(): Workspace {
         interactionFeedback,
         goal,
         plan,
+        toolResolutions,
         approval,
       }),
       memoryResult,

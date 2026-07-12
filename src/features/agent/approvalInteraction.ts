@@ -1,5 +1,5 @@
-import { compareRiskLevels, isStepToolMappingValid } from "./executionPolicy";
-import { listEnabledTools } from "./toolRegistry";
+import { compareRiskLevels } from "./executionPolicy";
+import { resolveToolForStep } from "./toolResolver";
 import type { AgentToolDefinition } from "./toolTypes";
 import type {
   WorkspaceApprovalRiskLevel,
@@ -16,6 +16,7 @@ export type ApprovalInteractionErrorCode =
   | "MISSING_STEP"
   | "MISSING_APPROVAL"
   | "STEP_MISMATCH"
+  | "TOOL_MISMATCH"
   | "UNSUPPORTED_SCOPE"
   | "SCOPE_ESCALATION"
   | "RISK_UNDERSTATEMENT";
@@ -88,9 +89,15 @@ function cloneApproval(
   status: WorkspaceStepApproval["status"],
   riskLevel: WorkspaceApprovalRiskLevel,
   approvalScope: WorkspaceApprovalScope,
+  tool?: AgentToolDefinition | null,
 ): WorkspaceStepApproval {
   return Object.freeze({
     stepId: source.stepId,
+    toolId: source.toolId ?? tool?.id,
+    toolName: source.toolName ?? tool?.name,
+    toolDescription: source.toolDescription ?? tool?.description,
+    toolCapability: source.toolCapability ?? tool?.capability,
+    toolMode: source.toolMode ?? tool?.mode,
     status,
     requiresApproval: source.requiresApproval,
     approvalReason: source.approvalReason,
@@ -123,6 +130,10 @@ function validateInteraction(input: ApprovalInteractionInput) {
 
   if (stepApproval.stepId !== step.id) {
     return failure(input, "STEP_MISMATCH", "Approval must match the exact plan step.");
+  }
+
+  if (stepApproval.toolId && input.tool?.id && stepApproval.toolId !== input.tool.id) {
+    return failure(input, "TOOL_MISMATCH", "Approval must match the exact resolved tool.");
   }
 
   const requestedScope = input.requestedApprovalScope ?? stepApproval.approvalScope;
@@ -161,6 +172,7 @@ export function approveWorkspaceStep(
       "approved",
       validation.requestedRisk,
       validation.requestedScope,
+      input.tool,
     ),
     decidedAt: timestamp(input.now),
     interactionVersion: APPROVAL_INTERACTION_VERSION,
@@ -181,6 +193,7 @@ export function rejectWorkspaceStep(
       "rejected",
       validation.requestedRisk,
       validation.requestedScope,
+      input.tool,
     ),
     decidedAt: timestamp(input.now),
     interactionVersion: APPROVAL_INTERACTION_VERSION,
@@ -203,5 +216,6 @@ export function findApprovalPresentationTool(
   step?: WorkspacePlanStep | null,
 ): AgentToolDefinition | null {
   if (!step) return null;
-  return listEnabledTools().find((tool) => isStepToolMappingValid(step, tool)) ?? null;
+  const result = resolveToolForStep({ step });
+  return result.resolved ? result.tool ?? null : null;
 }

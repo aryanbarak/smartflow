@@ -55,6 +55,7 @@ useWorkspace()
 -> priorityEngine()
 -> goalEngine()
 -> plannerEngine()
+-> toolResolver()
 -> approvalEngine()
 -> workspaceEngine()
 -> Dashboard
@@ -70,6 +71,7 @@ Layer responsibilities:
 - `priorityEngine`: selects primary and secondary workspace priorities while protecting urgent signals.
 - `goalEngine`: converts priorities into a daily goal model.
 - `plannerEngine`: proposes deterministic, non-executing workspace plan steps.
+- `toolResolver`: maps plan steps to explicitly registered read-only tools where safe.
 - `approvalEngine`: annotates planned steps with approval requirements and safety state.
 - `workspaceEngine`: composes the final typed Workspace model consumed by Dashboard.
 
@@ -101,6 +103,8 @@ Goal
 ->
 Planner
 ->
+Tool Resolver
+->
 Approval
 ->
 Approval Interaction Boundary
@@ -125,12 +129,35 @@ Completed agent systems:
 - Priority Engine V1
 - Goal Engine V1
 - Planner Engine V1
+- Tool Resolver V1
 - Approval Model V1
 - Approval Interaction Boundary V1
 - Tool Registry V1
 - Execution Policy V1
 - Execution Engine V1 (read-only)
 - Execution Audit V1
+
+## Tool Resolver V1
+
+Tool Resolver V1 is deterministic and conservative. It maps a proposed
+`WorkspacePlanStep` to one explicitly registered `AgentToolDefinition` only when
+the mapping is safe and read-only.
+
+Supported read-only mappings:
+
+- task review/open/inspect -> `tasks.list`
+- calendar review/open/plan -> `calendar.list_today`
+- learning review/open/continue -> `learning.get_progress`
+- workspace review/reflect/inspect/open -> `workspace.get_context`
+
+It does not execute tools, import handlers, call backend services, call
+Supabase, use network APIs, or perform LLM/semantic matching. It fails closed for
+write actions, disabled tools, external-effect tools, ambiguous candidates,
+domain mismatch, capability mismatch, and unsupported actions.
+
+Tool Resolver V1 does not authorize execution. Execution Policy still
+independently verifies the step/tool mapping, enabled state, approval step ID,
+approval tool ID, scope, and risk before Execution Engine can invoke a handler.
 
 ## Approval Interaction Boundary V1
 
@@ -149,11 +176,12 @@ It provides:
 - no network calls,
 - no autonomous behavior.
 
-Approvals bind to a specific `WorkspacePlanStep.id`. They cannot approve a
-different step, escalate from `single_step` to broader scopes, lower the
-declared risk level, or attach arbitrary planner metadata. Approval is only
-intent capture; execution still requires the Tool Registry, Execution Policy,
-Execution Engine, and Execution Audit path.
+Approvals bind to a specific `WorkspacePlanStep.id` and, when a tool has been
+resolved, the exact resolved tool ID. They cannot approve a different step,
+substitute a different tool, escalate from `single_step` to broader scopes,
+lower the declared risk level, or attach arbitrary planner metadata. Approval is
+only intent capture; execution still requires the Tool Registry, Execution
+Policy, Execution Engine, and Execution Audit path.
 
 ## Execution Engine V1
 

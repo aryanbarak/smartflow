@@ -431,6 +431,7 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
     personalization: input.personalization,
     goal: input.goal,
     plan: input.plan,
+    toolResolutions: input.toolResolutions,
     approval: input.approval,
     welcome: {
       setupActions: welcomeSetupActions,

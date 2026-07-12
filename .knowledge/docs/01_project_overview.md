@@ -19,6 +19,7 @@ The completed Living Workspace and agent foundation now allow SmartFlow to:
 - apply interaction feedback and personalization,
 - choose priorities and goals,
 - plan safe daily steps,
+- resolve safe read-only tools for planned steps,
 - enforce explicit human approval, execution policy, and audit boundaries,
 - execute only explicitly supported read-only tools.
 
@@ -27,9 +28,11 @@ capabilities. The system remains deterministic, frontend-controlled, and
 privacy-safe while future semantic memory, LLM reasoning, and action execution
 layers are designed.
 
-The latest milestone adds a human approval interaction boundary. Users can
-approve or reject an exact planned step, but approval does not execute tools,
-does not escalate scope, and does not bypass execution policy.
+The latest milestones add a conservative Tool Resolver and a human approval
+interaction boundary. SmartFlow can map safe planned steps to explicit read-only
+tool contracts, then let users approve or reject exact planned steps. Approval
+does not execute tools, substitute tools, escalate scope, or bypass execution
+policy.
 
 ## Live URLs
 

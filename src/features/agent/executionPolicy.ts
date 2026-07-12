@@ -153,6 +153,7 @@ function firstBlockingStatus(
     case "approval-present":
     case "approval-status":
     case "approval-step":
+    case "approval-tool":
     case "external-effect-approval":
     case "irreversible-approval":
       return "approval_required";
@@ -245,6 +246,13 @@ export function evaluateExecutionPolicy(input: ExecutionPolicyInput): ExecutionP
     );
     checks.push(
       check(
+        "approval-tool",
+        input.approval?.toolId === tool.id,
+        "Approval must match the exact resolved tool.",
+      ),
+    );
+    checks.push(
+      check(
         "approval-scope",
         Boolean(input.approval && isApprovalScopeSufficient(input.approval.approvalScope, requiredApprovalScope)),
         "Approval scope is insufficient for this tool.",
@@ -258,6 +266,13 @@ export function evaluateExecutionPolicy(input: ExecutionPolicyInput): ExecutionP
       ),
     );
   } else {
+    checks.push(
+      check(
+        "approval-tool",
+        !input.approval?.toolId || input.approval.toolId === tool.id,
+        "Approval must match the exact resolved tool.",
+      ),
+    );
     checks.push(
       check(
         "read-only-approval",

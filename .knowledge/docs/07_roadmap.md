@@ -50,6 +50,7 @@
 - Priority Engine V1
 - Goal Engine V1
 - Planner Engine V1
+- Tool Resolver V1
 - Approval Model V1
 - Approval Interaction Boundary V1
 - Tool Registry V1
@@ -68,6 +69,7 @@ useWorkspace()
 -> priorityEngine()
 -> goalEngine()
 -> plannerEngine()
+-> toolResolver()
 -> approvalEngine()
 -> workspaceEngine()
 -> Dashboard
@@ -83,6 +85,7 @@ Signals
 -> Priority
 -> Goal
 -> Planner
+-> Tool Resolver
 -> Approval
 -> Approval Interaction Boundary
 -> Tool Registry
