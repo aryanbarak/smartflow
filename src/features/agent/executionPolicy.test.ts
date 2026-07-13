@@ -182,6 +182,45 @@ describe("executionPolicy", () => {
     expect(decision.matchedToolId).toBe("tasks.create");
   });
 
+  it("allows tasks.complete only with exact approved step and tool at medium external-effect risk", () => {
+    const decision = evaluateExecutionPolicy({
+      currentTime: now,
+      step: step("complete", { targetId: "task-1" }),
+      tool: tool("tasks.complete"),
+      approval: approval("step-1", "medium", "single_step", "approved", "tasks.complete"),
+    });
+
+    expect(decision.status).toBe("allowed");
+    expect(decision.allowed).toBe(true);
+    expect(decision.matchedToolId).toBe("tasks.complete");
+    expect(decision.effectiveRiskLevel).toBe("medium");
+    expect(decision.requiredApprovalScope).toBe("single_step");
+    expect(tool("tasks.complete")).toMatchObject({
+      mode: "write",
+      externalEffect: true,
+      riskLevel: "medium",
+      requiresApproval: true,
+    });
+  });
+
+  it.each([
+    ["pending approval", approval("step-1", "medium", "single_step", "pending", "tasks.complete"), "approval_required"],
+    ["rejected approval", approval("step-1", "medium", "single_step", "rejected", "tasks.complete"), "approval_required"],
+    ["wrong step", approval("step-2", "medium", "single_step", "approved", "tasks.complete"), "approval_required"],
+    ["wrong tool", approval("step-1", "medium", "single_step", "approved", "tasks.create"), "approval_required"],
+    ["insufficient scope", approval("step-1", "medium", "view_only", "approved", "tasks.complete"), "scope_insufficient"],
+  ] as const)("denies tasks.complete with %s", (_name, sourceApproval, expectedStatus) => {
+    const decision = evaluateExecutionPolicy({
+      currentTime: now,
+      step: step("complete", { targetId: "task-1" }),
+      tool: tool("tasks.complete"),
+      approval: sourceApproval,
+    });
+
+    expect(decision.status).toBe(expectedStatus);
+    expect(decision.allowed).toBe(false);
+  });
+
   it("denies approval for another step", () => {
     const decision = evaluateExecutionPolicy({
       currentTime: now,

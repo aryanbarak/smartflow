@@ -126,6 +126,47 @@ export interface AgentToolHandler {
   readOnly: true;
 }
 
+export type AgentWriteToolExecutionStatus =
+  | "success"
+  | "invalid_input"
+  | "failed"
+  | "verification_failed";
+
+export interface AgentWriteToolAuditMetadata {
+  taskId?: string;
+  alreadyCompleted?: boolean;
+  verified: boolean;
+  resultShape: "object";
+  redacted: true;
+}
+
+export interface AgentWriteToolCompensationDescriptor {
+  taskId: string;
+  previousCompleted: boolean;
+  previousCompletedAt?: string | null;
+}
+
+export interface AgentWriteToolExecutionResult<TData = unknown> {
+  status: AgentWriteToolExecutionStatus;
+  success: boolean;
+  data?: TData;
+  error?: ExecutionError;
+  auditMetadata: AgentWriteToolAuditMetadata;
+  compensation?: AgentWriteToolCompensationDescriptor;
+}
+
+export interface AgentWriteToolHandler<TData = unknown> {
+  toolId: string;
+  mode: "write";
+  readOnly: false;
+  externalEffect: true;
+  reversible: boolean;
+  requiresVerification: true;
+  execute(input: Record<string, unknown>, context: ExecutionContext): Promise<AgentWriteToolExecutionResult<TData>>;
+  validateInput(input: unknown, schema: readonly AgentToolSchemaField[]): ExecutionInputValidationResult;
+  timeoutMs: number;
+}
+
 export interface ExecutionEngineDependencies {
   getToolById(toolId: string): AgentToolDefinition | undefined;
   getHandlerByToolId(toolId: string): AgentToolHandler | undefined;

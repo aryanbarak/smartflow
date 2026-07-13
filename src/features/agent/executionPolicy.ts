@@ -41,6 +41,7 @@ const actionCapabilityMap: Record<WorkspacePlanActionType, AgentToolCapability[]
   inspect: ["inspect", "search", "analyze"],
   create: ["create"],
   update: ["update"],
+  complete: ["complete"],
   delete: ["delete"],
   send: ["send"],
   pay: ["create"],

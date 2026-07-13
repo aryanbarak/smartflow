@@ -179,6 +179,38 @@ describe("readOnlyRuntime", () => {
     expect(handlerResolved).toBe(false);
   });
 
+  it("rejects tasks.complete before handler resolution because it is outside the read-only runtime", async () => {
+    let handlerResolved = false;
+    const completeStep = step("tasks.complete", {
+      actionType: "complete" as WorkspacePlanActionType,
+      targetId: "task-1",
+      requiresApproval: true,
+    });
+    const result = await runReadOnlyTool({
+      step: completeStep,
+      toolResolution: resolution("tasks.complete", completeStep),
+      approval: approval(completeStep, {
+        status: "approved",
+        requiresApproval: true,
+        approvalScope: "single_step",
+        riskLevel: "medium",
+        externalEffect: true,
+        toolId: "tasks.complete",
+      }),
+      currentTime: now,
+    }, {
+      now: () => now,
+      getHandlerByToolId: () => {
+        handlerResolved = true;
+        return undefined;
+      },
+    });
+
+    expect(result.status).toBe("unresolved");
+    expect(result.reasons).toContain("The resolved tool is outside the read-only runtime boundary.");
+    expect(handlerResolved).toBe(false);
+  });
+
   it("stops unresolved steps safely", async () => {
     const sourceStep = step("tasks.list");
     const result = await runReadOnlyTool({
