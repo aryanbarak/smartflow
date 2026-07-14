@@ -8,7 +8,7 @@ import { StatePanel } from "@/components/common/StatePanel";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { cn } from "@/lib/utils";
 import { useLearnAI } from "@/hooks/useLearnAI";
-import type { LearnAILanguage, LearnAIMode } from "@/features/learn-ai/types";
+import type { LearnAIResponseLanguage, LearnAIMode } from "@/features/learn-ai/types";
 
 const MODE_OPTIONS: { value: LearnAIMode; label: string }[] = [
   { value: "fiae_algorithms", label: "Algorithms" },
@@ -17,7 +17,8 @@ const MODE_OPTIONS: { value: LearnAIMode; label: string }[] = [
   { value: "planner", label: "Planner" },
 ];
 
-const LANGUAGE_OPTIONS: { value: LearnAILanguage; label: string }[] = [
+const LANGUAGE_OPTIONS: { value: LearnAIResponseLanguage; label: string }[] = [
+  { value: "auto", label: "AUTO" },
   { value: "de", label: "DE" },
   { value: "fa", label: "FA" },
   { value: "en", label: "EN" },

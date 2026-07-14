@@ -14,9 +14,16 @@ import { getThisWeekMoodSummary } from '@/features/habits/habitMoodService';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { SkeletonBlock } from '@/components/common/Skeletons';
+import { useAppearance } from '@/features/settings/appearanceStore';
+import {
+  getAiResponseLanguageInstruction,
+  getStoredAiResponseLanguage,
+  resolveAiResponseLanguage,
+} from '@/features/ai/responseLanguage';
 
 export default function HabitsPage() {
   const navigate = useNavigate();
+  const interfaceLanguage = useAppearance((state) => state.language);
   const [showAdd, setShowAdd] = useState(false);
   const { user } = useAuth();
   const [weekMood, setWeekMood] = useState<{ avgMood: number; entries: number; emoji: string } | null>(null);
@@ -56,9 +63,17 @@ export default function HabitsPage() {
     setSuggestionsLoading(true);
     supabase.auth.getSession().then(({ data: { session: authSession } }) => {
       if (!authSession) { setSuggestionsLoading(false); return; }
+      const responseLanguage = resolveAiResponseLanguage({
+        configuredResponseLanguage: getStoredAiResponseLanguage(),
+        interfaceLanguage,
+      });
       fetch(`${workerUrl}/habits/suggestions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession.access_token}` },
+        body: JSON.stringify({
+          responseLanguage,
+          responseLanguageInstruction: getAiResponseLanguageInstruction(responseLanguage),
+        }),
       })
         .then(res => res.ok ? res.json() : { suggestions: [] })
         .then((body: { suggestions: Array<{ text: string; type: string }> }) => {
@@ -67,7 +82,7 @@ export default function HabitsPage() {
         .catch(() => setHabitSuggestions([]))
         .finally(() => setSuggestionsLoading(false));
     });
-  }, [allHabits.length, isLoading, workerUrl]);
+  }, [allHabits.length, isLoading, workerUrl, interfaceLanguage]);
 
   function renderBody() {
     if (isLoading) {

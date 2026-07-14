@@ -77,6 +77,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
 import { Sparkles, Lightbulb, ArrowRight } from "lucide-react";
+import { useAppearance } from "@/features/settings/appearanceStore";
+import {
+  getAiResponseLanguageInstruction,
+  getStoredAiResponseLanguage,
+  resolveAiResponseLanguage,
+} from "@/features/ai/responseLanguage";
 
 const categories = ["Food", "Transport", "Rent", "Health", "Other"];
 
@@ -136,6 +142,7 @@ interface TransactionGroup {
 }
 
 export default function FinancePage() {
+  const interfaceLanguage = useAppearance((state) => state.language);
   const { t } = useT();
   const {
     transactions,
@@ -357,9 +364,17 @@ export default function FinancePage() {
     setFinSugLoading(true);
     supabase.auth.getSession().then(({ data: { session: authSession } }) => {
       if (!authSession) { setFinSugLoading(false); return; }
+      const responseLanguage = resolveAiResponseLanguage({
+        configuredResponseLanguage: getStoredAiResponseLanguage(),
+        interfaceLanguage,
+      });
       fetch(`${workerUrl}/finance/suggestions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession.access_token}` },
+        body: JSON.stringify({
+          responseLanguage,
+          responseLanguageInstruction: getAiResponseLanguageInstruction(responseLanguage),
+        }),
       })
         .then(res => res.ok ? res.json() : { suggestions: [] })
         .then((body: { suggestions: Array<{ text: string; type: string }> }) => {

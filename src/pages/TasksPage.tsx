@@ -37,6 +37,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
+import { useAppearance } from "@/features/settings/appearanceStore";
+import {
+  getAiResponseDirection,
+  getAiResponseLanguageInstruction,
+  getStoredAiResponseLanguage,
+  resolveAiResponseLanguage,
+  type SupportedAiResponseLanguage,
+} from "@/features/ai/responseLanguage";
 
 type TaskFilter = "all" | "today" | "upcoming" | "overdue" | "completed";
 
@@ -58,6 +66,7 @@ const TASK_MD_COMPONENTS = { p: MdP, ul: MdUl, li: MdLi } as const;
 export default function TasksPage() {
   const { tasks, isLoading, error, addTask, updateTask, toggleTaskCompleted, deleteTask } = useTasks();
   const { t } = useT();
+  const interfaceLanguage = useAppearance((state) => state.language);
   const [filter, setFilter] = useState<TaskFilter>("today");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -117,9 +126,17 @@ export default function TasksPage() {
     setSuggestionsLoading(true);
     supabase.auth.getSession().then(({ data: { session: authSession } }) => {
       if (!authSession) { setSuggestionsLoading(false); return; }
+      const responseLanguage = resolveAiResponseLanguage({
+        configuredResponseLanguage: getStoredAiResponseLanguage(),
+        interfaceLanguage,
+      });
       fetch(`${workerUrl}/tasks/suggestions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession.access_token}` },
+        body: JSON.stringify({
+          responseLanguage,
+          responseLanguageInstruction: getAiResponseLanguageInstruction(responseLanguage),
+        }),
       })
         .then(res => res.ok ? res.json() : { suggestions: [] })
         .then((body: { suggestions: Array<{ text: string; type: string }> }) => {
@@ -128,13 +145,14 @@ export default function TasksPage() {
         .catch(() => setAiSuggestions([]))
         .finally(() => setSuggestionsLoading(false));
     });
-  }, [tasks.length, isLoading, workerUrl]);
+  }, [tasks.length, isLoading, workerUrl, interfaceLanguage]);
 
   // Task chat — compact ask-and-answer
   const navigate = useNavigate();
   const { createSession } = useChatSessions();
   const [taskQuestion, setTaskQuestion] = useState('');
   const [taskAnswer, setTaskAnswer] = useState<string | null>(null);
+  const [taskAnswerLanguage, setTaskAnswerLanguage] = useState<SupportedAiResponseLanguage | null>(null);
   const [taskChatSessionId, setTaskChatSessionId] = useState<string | null>(null);
   const [taskChatSending, setTaskChatSending] = useState(false);
 
@@ -168,8 +186,14 @@ export default function TasksPage() {
   const handleAskAboutTasks = useCallback(async () => {
     const q = taskQuestion.trim();
     if (!q || taskChatSending) return;
+    const responseLanguage = resolveAiResponseLanguage({
+      configuredResponseLanguage: getStoredAiResponseLanguage(),
+      latestUserMessage: q,
+      interfaceLanguage,
+    });
     setTaskChatSending(true);
     setTaskAnswer(null);
+    setTaskAnswerLanguage(null);
     try {
       const { data: { session: authSession } } = await supabase.auth.getSession();
       if (!authSession) throw new Error('No session');
@@ -177,21 +201,28 @@ export default function TasksPage() {
       if (!sessionId) throw new Error('Failed to create session');
       setTaskChatSessionId(sessionId);
       const context = buildTaskContext();
+      const responseLanguageInstruction = getAiResponseLanguageInstruction(responseLanguage);
       const res = await fetch(`${workerUrl}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession.access_token}` },
-        body: JSON.stringify({ message: `${context}\nUser question: ${q}`, session_id: sessionId }),
+        body: JSON.stringify({
+          message: `${context}\nUser question: ${q}`,
+          session_id: sessionId,
+          responseLanguage,
+          responseLanguageInstruction,
+        }),
       });
       if (!res.ok) throw new Error(`Worker ${res.status}`);
       const { reply } = await res.json() as { reply: string };
       setTaskAnswer(reply);
+      setTaskAnswerLanguage(responseLanguage);
       setTaskQuestion('');
     } catch {
       setTaskAnswer(t('chat_error_send'));
     } finally {
       setTaskChatSending(false);
     }
-  }, [taskQuestion, taskChatSending, workerUrl, createSession, buildTaskContext, t]);
+  }, [taskQuestion, taskChatSending, workerUrl, createSession, buildTaskContext, t, interfaceLanguage]);
 
   const prodStats = useMemo(() => {
     const now = new Date();
@@ -669,7 +700,7 @@ export default function TasksPage() {
                 <span className="text-sm font-semibold">Ask about your tasks</span>
               </div>
               {taskAnswer && (
-                <div className="rounded-lg bg-secondary/20 px-3 py-2.5 text-xs leading-relaxed" dir="auto">
+                <div className="rounded-lg bg-secondary/20 px-3 py-2.5 text-xs leading-relaxed" dir={taskAnswerLanguage ? getAiResponseDirection(taskAnswerLanguage) : "auto"} lang={taskAnswerLanguage ?? undefined}>
                   <ReactMarkdown components={TASK_MD_COMPONENTS}>
                     {taskAnswer.replace(/^•\s*/gm, '- ')}
                   </ReactMarkdown>

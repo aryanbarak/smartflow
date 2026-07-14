@@ -1,4 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
+import {
+  getAiResponseLanguageInstruction,
+  withAiResponseLanguageInstruction,
+  type SupportedAiResponseLanguage,
+} from '@/features/ai/responseLanguage';
 
 const WORKER_URL = (import.meta.env.VITE_AGENT_WORKER_URL as string | undefined) ?? '';
 
@@ -44,10 +49,19 @@ export const documentAiService = {
     options?: { text?: string; fileData?: { base64: string; mimeType: string; name: string }; language?: string }
   ): Promise<string> {
     const headers = await getAuthHeaders();
-    const body: Record<string, unknown> = { message };
+    const responseLanguage = options?.language === 'fa' || options?.language === 'de' || options?.language === 'en'
+      ? options.language as SupportedAiResponseLanguage
+      : undefined;
+    const body: Record<string, unknown> = {
+      message: responseLanguage ? withAiResponseLanguageInstruction(message, responseLanguage) : message,
+    };
     if (options?.text) body.text = options.text;
     if (options?.fileData) body.fileData = options.fileData;
-    if (options?.language) body.language = options.language;
+    if (responseLanguage) {
+      body.language = responseLanguage;
+      body.responseLanguage = responseLanguage;
+      body.responseLanguageInstruction = getAiResponseLanguageInstruction(responseLanguage);
+    }
 
     const response = await fetch(`${WORKER_URL}/documents/analyze`, {
       method: 'POST',

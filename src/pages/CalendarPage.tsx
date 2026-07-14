@@ -29,6 +29,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDateTime, toDateOnly } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { SmartflowAsciiVisual } from "@/components/smartflow";
+import { useAppearance } from "@/features/settings/appearanceStore";
+import {
+  getAiResponseLanguageInstruction,
+  getStoredAiResponseLanguage,
+  resolveAiResponseLanguage,
+} from "@/features/ai/responseLanguage";
 
 type EventFilter = "all" | "today" | "week";
 
@@ -145,6 +151,7 @@ function getCategoryDotColor(event: CalendarEvent): string {
 }
 
 export default function CalendarPage() {
+  const interfaceLanguage = useAppearance((state) => state.language);
   const queryClient = useQueryClient();
   const renderCount = useRef(0);
   renderCount.current += 1;
@@ -399,9 +406,17 @@ export default function CalendarPage() {
     setCalSuggestionsLoading(true);
     supabase.auth.getSession().then(({ data: { session: authSession } }) => {
       if (!authSession) { setCalSuggestionsLoading(false); return; }
+      const responseLanguage = resolveAiResponseLanguage({
+        configuredResponseLanguage: getStoredAiResponseLanguage(),
+        interfaceLanguage,
+      });
       fetch(`${workerUrl}/calendar/suggestions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession.access_token}` },
+        body: JSON.stringify({
+          responseLanguage,
+          responseLanguageInstruction: getAiResponseLanguageInstruction(responseLanguage),
+        }),
       })
         .then(res => res.ok ? res.json() : { suggestions: [] })
         .then((body: { suggestions: Array<{ text: string; type: string; suggestedDate?: string }> }) => {
@@ -410,7 +425,7 @@ export default function CalendarPage() {
         .catch(() => setCalSuggestions([]))
         .finally(() => setCalSuggestionsLoading(false));
     });
-  }, [monthEvents.length, workerUrl]);
+  }, [monthEvents.length, workerUrl, interfaceLanguage]);
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;

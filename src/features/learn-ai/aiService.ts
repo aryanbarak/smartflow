@@ -16,6 +16,8 @@ type AskInput = {
   history: HistoryItem[];
   mode?: string;
   language?: string;
+  responseLanguage?: string;
+  responseLanguageInstruction?: string;
   memoryContext?: string;
   fileData?: FileData; // ← new
 };
@@ -45,6 +47,8 @@ export async function askLearnAI(input: AskInput): Promise<AIResult> {
         history: input.history,
         mode: input.mode,
         language: input.language,
+        responseLanguage: input.responseLanguage ?? input.language,
+        responseLanguageInstruction: input.responseLanguageInstruction,
         memoryContext: input.memoryContext,
         fileData: input.fileData ?? null, // ← new
       }),

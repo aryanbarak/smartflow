@@ -6,6 +6,14 @@ import { Button } from '@/components/ui/button'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import briefingBg from '@/assets/briefing-bg.jpg'
+import { useAppearance } from '@/features/settings/appearanceStore'
+import {
+  getAiResponseDirection,
+  getAiResponseLanguageInstruction,
+  getStoredAiResponseLanguage,
+  resolveAiResponseLanguage,
+  type SupportedAiResponseLanguage,
+} from '@/features/ai/responseLanguage'
 
 interface Briefing {
   id: string
@@ -39,6 +47,7 @@ function formatTimeAgo(date: Date): string {
 
 export default function WeeklyBriefingPage() {
   const { user } = useAuth()
+  const interfaceLanguage = useAppearance((state) => state.language)
   const navigate = useNavigate()
   const [briefing, setBriefing] = useState<Briefing | null>(null)
   const [loading, setLoading] = useState(true)
@@ -77,9 +86,20 @@ export default function WeeklyBriefingPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No session')
       const workerUrl = import.meta.env.VITE_AGENT_WORKER_URL as string
+      const responseLanguage = resolveAiResponseLanguage({
+        configuredResponseLanguage: getStoredAiResponseLanguage(),
+        interfaceLanguage,
+      })
       const res = await fetch(`${workerUrl}/generate?mode=weekly`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          responseLanguage,
+          responseLanguageInstruction: getAiResponseLanguageInstruction(responseLanguage),
+        }),
       })
       if (!res.ok) throw new Error('Worker error')
       await new Promise(r => setTimeout(r, 1500))
@@ -92,6 +112,9 @@ export default function WeeklyBriefingPage() {
   }
 
   const md = briefing?.content.replace(/^•\s*/gm, '- ') ?? ''
+  const briefingLanguage = briefing?.language === 'fa' || briefing?.language === 'de' || briefing?.language === 'en'
+    ? briefing.language as SupportedAiResponseLanguage
+    : undefined
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 pb-8 max-w-3xl mx-auto">
@@ -132,7 +155,7 @@ export default function WeeklyBriefingPage() {
           ) : error ? (
             <p className="text-sm text-destructive">{error}</p>
           ) : briefing ? (
-            <div>
+            <div dir={briefingLanguage ? getAiResponseDirection(briefingLanguage) : 'auto'} lang={briefingLanguage}>
               <ReactMarkdown components={MD_COMPONENTS}>{md}</ReactMarkdown>
               <p className="text-[11px] text-muted-foreground mt-4">
                 Generated {formatTimeAgo(new Date(briefing.created_at))}

@@ -29,11 +29,20 @@ import { SmartflowAsciiVisual } from '@/components/smartflow'
 import { useT } from '@/i18n'
 import type { TranslationKey } from '@/i18n'
 import { useChatSessions } from '@/hooks/useChatSessions'
+import { useAppearance } from '@/features/settings/appearanceStore'
+import {
+  getAiResponseDirection,
+  getAiResponseLanguageInstruction,
+  getStoredAiResponseLanguage,
+  resolveAiResponseLanguage,
+  type SupportedAiResponseLanguage,
+} from '@/features/ai/responseLanguage'
 
 interface ChatMsg {
   id: string
   role: 'user' | 'assistant'
   content: string
+  language?: SupportedAiResponseLanguage
 }
 
 interface QuickAction {
@@ -112,10 +121,12 @@ function AssistantContent({ content }: Readonly<{ content: string }>) {
   return <ReactMarkdown components={MSG_MD_COMPONENTS}>{md}</ReactMarkdown>
 }
 
-function ChatBubble({ role, content }: Readonly<{
+function ChatBubble({ role, content, language }: Readonly<{
   role: 'user' | 'assistant'
   content: string
+  language?: SupportedAiResponseLanguage
 }>) {
+  const direction = role === 'assistant' && language ? getAiResponseDirection(language) : 'auto'
   return (
     <div className={cn('flex gap-2.5', role === 'user' ? 'justify-end' : 'justify-start')}>
       {role === 'assistant' && (
@@ -130,7 +141,8 @@ function ChatBubble({ role, content }: Readonly<{
             ? 'bg-primary text-primary-foreground rounded-br-sm'
             : 'glass-card rounded-bl-sm'
         )}
-        dir="auto"
+        dir={direction}
+        lang={language}
       >
         {role === 'assistant'
           ? <AssistantContent content={content} />
@@ -170,6 +182,7 @@ export default function ChatPage() {
   const { profile } = useProfile()
   const { tasks } = useTasks()
   const { t } = useT()
+  const interfaceLanguage = useAppearance((state) => state.language)
   const location = useLocation()
   const nav = useNavigate()
   const { sessions, refresh: refreshSessions, createSession, deleteSession } = useChatSessions()
@@ -225,6 +238,12 @@ export default function ChatPage() {
   const handleSend = useCallback(async (overrideText?: string) => {
     const text = (overrideText ?? draft).trim()
     if (text === '' || sending) return
+    const responseLanguage = resolveAiResponseLanguage({
+      configuredResponseLanguage: getStoredAiResponseLanguage(),
+      latestUserMessage: text,
+      interfaceLanguage,
+    })
+    const responseLanguageInstruction = getAiResponseLanguageInstruction(responseLanguage)
 
     if (!overrideText) setDraft('')
     setSending(true)
@@ -249,7 +268,12 @@ export default function ChatPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ message: text, session_id: sessionId }),
+        body: JSON.stringify({
+          message: text,
+          session_id: sessionId,
+          responseLanguage,
+          responseLanguageInstruction,
+        }),
       })
 
       if (!res.ok) throw new Error(`Worker responded ${res.status}`)
@@ -259,7 +283,7 @@ export default function ChatPage() {
       setMessages(prev => [
         ...prev,
         { id: `u-${Date.now()}`, role: 'user', content: text },
-        { id: `a-${Date.now() + 1}`, role: 'assistant', content: reply },
+        { id: `a-${Date.now() + 1}`, role: 'assistant', content: reply, language: responseLanguage },
       ])
 
       void refreshSessions()
@@ -269,7 +293,7 @@ export default function ChatPage() {
     } finally {
       setSending(false)
     }
-  }, [draft, sending, workerUrl, t, activeSessionId, createSession, refreshSessions])
+  }, [draft, sending, workerUrl, t, activeSessionId, createSession, refreshSessions, interfaceLanguage])
 
   useEffect(() => {
     const prompt = (location.state as { initialPrompt?: string } | null)?.initialPrompt
@@ -424,7 +448,7 @@ export default function ChatPage() {
                 )}
 
                 {messages.map(msg => (
-                  <ChatBubble key={msg.id} role={msg.role} content={msg.content} />
+                  <ChatBubble key={msg.id} role={msg.role} content={msg.content} language={msg.language} />
                 ))}
 
                 {sending && <TypingIndicator label={t('chat_typing')} />}

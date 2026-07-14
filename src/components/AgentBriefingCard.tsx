@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
+import { useAppearance } from '@/features/settings/appearanceStore'
+import {
+  getAiResponseDirection,
+  getAiResponseLanguageInstruction,
+  getStoredAiResponseLanguage,
+  resolveAiResponseLanguage,
+  type SupportedAiResponseLanguage,
+} from '@/features/ai/responseLanguage'
 import './AgentBriefingCard.css'
 
 // =============================================
@@ -32,9 +40,16 @@ function MdLi({ children }: Readonly<{ children: React.ReactNode }>) {
 }
 const MD_COMPONENTS = { p: MdP, ul: MdUl, li: MdLi } as const
 
-function BriefingContent({ content }: Readonly<{ content: string }>) {
+function BriefingContent({ content, language }: Readonly<{ content: string; language?: string | null }>) {
   const md = content.replace(/^•\s*/gm, '- ')
-  return <ReactMarkdown components={MD_COMPONENTS}>{md}</ReactMarkdown>
+  const responseLanguage = language === 'fa' || language === 'de' || language === 'en'
+    ? language as SupportedAiResponseLanguage
+    : undefined
+  return (
+    <div dir={responseLanguage ? getAiResponseDirection(responseLanguage) : 'auto'} lang={responseLanguage}>
+      <ReactMarkdown components={MD_COMPONENTS}>{md}</ReactMarkdown>
+    </div>
+  )
 }
 
 // =============================================
@@ -42,6 +57,7 @@ function BriefingContent({ content }: Readonly<{ content: string }>) {
 // =============================================
 export function AgentBriefingCard() {
   const { user } = useAuth()
+  const interfaceLanguage = useAppearance((state) => state.language)
   const navigate = useNavigate()
   const [mode, setMode] = useState<Mode>('daily')
   const [briefing, setBriefing] = useState<Briefing | null>(null)
@@ -86,9 +102,20 @@ export function AgentBriefingCard() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No session')
       const workerUrl = import.meta.env.VITE_AGENT_WORKER_URL as string
+      const responseLanguage = resolveAiResponseLanguage({
+        configuredResponseLanguage: getStoredAiResponseLanguage(),
+        interfaceLanguage,
+      })
       const res = await fetch(`${workerUrl}/generate?mode=${mode}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          responseLanguage,
+          responseLanguageInstruction: getAiResponseLanguageInstruction(responseLanguage),
+        }),
       })
       if (!res.ok) throw new Error('Worker error')
       await new Promise(r => setTimeout(r, 1000))
@@ -163,7 +190,7 @@ export function AgentBriefingCard() {
         {error && <p className="agent-briefing-card__error">{error}</p>}
         {!error && briefing && (
           <>
-            <BriefingContent content={briefing.content} />
+            <BriefingContent content={briefing.content} language={briefing.language} />
             {timeAgo && <span className="agent-briefing-card__time">{timeAgo}</span>}
           </>
         )}

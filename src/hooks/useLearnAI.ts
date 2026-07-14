@@ -10,13 +10,19 @@ import {
 import type {
   LearnAIMode,
   LearnAILanguage,
+  LearnAIResponseLanguage,
   LearnAIMessage,
 } from "@/features/learn-ai/types";
 import { insertMessage, listHistory } from "@/features/learn-ai/learnAiService";
 import { aiMemoryService } from "@/features/ai-memory/aiMemoryService";
+import { useAppearance } from "@/features/settings/appearanceStore";
+import {
+  getAiResponseLanguageInstruction,
+  getStoredAiResponseLanguage,
+  resolveAiResponseLanguage,
+} from "@/features/ai/responseLanguage";
 
 const DEFAULT_MODE: LearnAIMode = "fiae_algorithms";
-const DEFAULT_LANGUAGE: LearnAILanguage = "de";
 
 function getSignInError(lang: LearnAILanguage): AIError {
   if (lang === "fa") {
@@ -45,11 +51,12 @@ const ACCEPTED_MIME_TYPES = [
 
 export function useLearnAI() {
   const { user } = useAuth();
+  const interfaceLanguage = useAppearance((state) => state.language);
   const [messages, setMessages] = useState<LearnAIMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<AIError | null>(null);
   const [mode, setMode] = useState<LearnAIMode>(DEFAULT_MODE);
-  const [language, setLanguage] = useState<LearnAILanguage>(DEFAULT_LANGUAGE);
+  const [language, setLanguage] = useState<LearnAIResponseLanguage>(() => getStoredAiResponseLanguage());
   const [attachedFile, setAttachedFile] = useState<File | null>(null); // ← new
   const [isProcessingFile, setIsProcessingFile] = useState(false);    // ← new
   const messagesRef = useRef<LearnAIMessage[]>([]);
@@ -66,11 +73,14 @@ export function useLearnAI() {
       const items = await listHistory(mode, user.id);
       setMessages(items);
     } catch (err) {
-      setError(formatError(err, language));
+      setError(formatError(err, resolveAiResponseLanguage({
+        configuredResponseLanguage: language,
+        interfaceLanguage,
+      })));
     } finally {
       setIsLoading(false);
     }
-  }, [mode, user, language]);
+  }, [mode, user, language, interfaceLanguage]);
 
   useEffect(() => {
     void reload();
@@ -108,12 +118,19 @@ export function useLearnAI() {
 
   const sendMessage = useCallback(
     async (content: string) => {
+      const trimmed = content.trim();
+      const provisionalMessage = trimmed || `[File: ${attachedFile?.name ?? "attachment"}]`;
+      const resolvedLanguage = resolveAiResponseLanguage({
+        configuredResponseLanguage: language,
+        latestUserMessage: provisionalMessage,
+        interfaceLanguage,
+      });
+
       if (!user) {
-        setError(getSignInError(language));
+        setError(getSignInError(resolvedLanguage));
         return;
       }
 
-      const trimmed = content.trim();
       if (!trimmed && !attachedFile) return;
 
       setError(null);
@@ -125,7 +142,7 @@ export function useLearnAI() {
         try {
           fileData = await fileToFileData(attachedFile);
         } catch (err) {
-          setError(formatError(err, language));
+          setError(formatError(err, resolvedLanguage));
           setIsProcessingFile(false);
           return;
         } finally {
@@ -133,7 +150,7 @@ export function useLearnAI() {
         }
       }
 
-      const messageContent = trimmed || `[File: ${attachedFile?.name ?? "attachment"}]`;
+      const messageContent = provisionalMessage;
 
       const history = messagesRef.current.map((m) => ({
         role: m.role,
@@ -147,7 +164,7 @@ export function useLearnAI() {
           role: "user",
           content: messageContent,
           createdAt: new Date().toISOString(),
-          language,
+          language: resolvedLanguage,
         },
       ]);
 
@@ -155,9 +172,9 @@ export function useLearnAI() {
       setAttachedFile(null);
 
       try {
-        await insertMessage({ userId: user.id, mode, language, role: "user", content: messageContent });
+        await insertMessage({ userId: user.id, mode, language: resolvedLanguage, role: "user", content: messageContent });
       } catch (err) {
-        setError(formatError(err, language));
+        setError(formatError(err, resolvedLanguage));
       }
 
       let answer: string;
@@ -168,16 +185,18 @@ export function useLearnAI() {
           message: messageContent,
           history,
           mode,
-          language,
+          language: resolvedLanguage,
+          responseLanguage: resolvedLanguage,
+          responseLanguageInstruction: getAiResponseLanguageInstruction(resolvedLanguage),
           memoryContext,
           fileData, // ← new
         });
         answer = result.answer;
       } catch (err) {
         console.error("[LearnAI] Error getting AI response:", err);
-        aiError = formatError(err, language);
+        aiError = formatError(err, resolvedLanguage);
         setError(aiError);
-        answer = getFallbackAnswer(language);
+        answer = getFallbackAnswer(resolvedLanguage);
       }
 
       setMessages((prev) => [
@@ -187,20 +206,20 @@ export function useLearnAI() {
           role: "assistant",
           content: answer,
           createdAt: new Date().toISOString(),
-          language,
+          language: resolvedLanguage,
         },
       ]);
 
       try {
-        await insertMessage({ userId: user.id, mode, language, role: "assistant", content: answer });
+        await insertMessage({ userId: user.id, mode, language: resolvedLanguage, role: "assistant", content: answer });
       } catch (err) {
         console.error("[LearnAI] Failed to save assistant message:", err);
         if (!aiError) {
-          setError(formatError(err, language));
+          setError(formatError(err, resolvedLanguage));
         }
       }
     },
-    [language, mode, user, attachedFile]
+    [language, mode, user, attachedFile, interfaceLanguage]
   );
 
   return {

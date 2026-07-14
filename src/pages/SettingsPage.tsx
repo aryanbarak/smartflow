@@ -25,7 +25,12 @@ import { useNotificationPrefs } from '@/features/settings/notificationSettings';
 import { dataExportService } from '@/features/settings/dataExportService';
 import { supabase } from '@/integrations/supabase/client';
 import { safeGet, safeSet, storageKey } from '@/lib/storage';
-import type { LearnAIMode, LearnAILanguage } from '@/features/learn-ai/types';
+import type { LearnAIMode } from '@/features/learn-ai/types';
+import {
+  getStoredAiResponseLanguage,
+  normalizeAiResponseLanguage,
+  type AiResponseLanguage,
+} from '@/features/ai/responseLanguage';
 import { AiMemoryTab } from '@/features/ai-memory/AiMemoryTab';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -41,12 +46,20 @@ const TABS: { id: Tab; label: string; icon: React.ComponentType<{ size?: number 
   { id: 'ai-memory',     label: 'AI Memory',      icon: Brain     },
 ];
 
-type AiDefaults = { mode: LearnAIMode; language: LearnAILanguage };
+type AiDefaults = { mode: LearnAIMode; aiResponseLanguage: AiResponseLanguage; language?: AiResponseLanguage };
 
 const AVATAR_COLORS = [
   '#0EA5E9', '#8B5CF6', '#EC4899', '#F59E0B',
   '#10B981', '#EF4444', '#6366F1', '#14B8A6',
 ];
+
+function readAiDefaults(): AiDefaults {
+  const stored = safeGet<Partial<AiDefaults>>(storageKey('ai-defaults'), {});
+  return {
+    mode: stored.mode ?? 'fiae_algorithms',
+    aiResponseLanguage: normalizeAiResponseLanguage(stored.aiResponseLanguage ?? stored.language ?? getStoredAiResponseLanguage()),
+  };
+}
 
 // ── Shared building blocks ─────────────────────────────────────────────────
 
@@ -363,9 +376,7 @@ function AppearanceTab() {
   const { density, accentColor, reducedMotion, language, setDensity, setAccentColor, setReducedMotion, setLanguage } = useAppearance();
   const { preferences, setTheme: setPrefTheme, setCurrency } = usePreferences();
 
-  const [aiDefaults, setAiDefaults] = useState<AiDefaults>(() =>
-    safeGet<AiDefaults>(storageKey('ai-defaults'), { mode: 'fiae_algorithms', language: 'de' }),
-  );
+  const [aiDefaults, setAiDefaults] = useState<AiDefaults>(() => readAiDefaults());
 
   const themes = [
     { id: 'dark',   label: 'Dark',   icon: Moon    },
@@ -379,7 +390,10 @@ function AppearanceTab() {
   }
 
   function saveAiDefaults() {
-    safeSet(storageKey('ai-defaults'), aiDefaults);
+    safeSet(storageKey('ai-defaults'), {
+      mode: aiDefaults.mode,
+      aiResponseLanguage: aiDefaults.aiResponseLanguage,
+    });
     toast.success('AI defaults saved');
   }
 
@@ -513,13 +527,14 @@ function AppearanceTab() {
         </SettingRow>
         <SettingRow label="Response language">
           <Select
-            value={aiDefaults.language}
-            onValueChange={v => setAiDefaults(p => ({ ...p, language: v as LearnAILanguage }))}
+            value={aiDefaults.aiResponseLanguage}
+            onValueChange={v => setAiDefaults(p => ({ ...p, aiResponseLanguage: normalizeAiResponseLanguage(v) }))}
           >
-            <SelectTrigger className="w-28 h-8 text-xs" aria-label="Select AI language">
+            <SelectTrigger className="w-40 h-8 text-xs" aria-label="Select AI response language">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="auto">Auto - match my message</SelectItem>
               <SelectItem value="de">Deutsch</SelectItem>
               <SelectItem value="en">English</SelectItem>
               <SelectItem value="fa">فارسی</SelectItem>
