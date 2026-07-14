@@ -206,6 +206,7 @@ export type WorkspacePlanActionType =
   | "inspect"
   | "create"
   | "update"
+  | "complete"
   | "delete"
   | "send"
   | "pay"
@@ -269,6 +270,7 @@ export type WorkspaceApprovalRiskLevel =
 
 export interface WorkspaceStepApproval {
   stepId: string;
+  targetId?: string;
   toolId?: string;
   toolName?: string;
   toolDescription?: string;
@@ -550,4 +552,7 @@ export interface Workspace {
   agentContext: WorkspaceAgentContext;
   welcome: WorkspaceWelcome;
   rightRail: WorkspaceRightRail;
+  refresh?: {
+    tasks(): Promise<void>;
+  };
 }

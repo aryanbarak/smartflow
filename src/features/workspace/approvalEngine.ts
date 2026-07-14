@@ -31,6 +31,7 @@ const pendingMediumActions: WorkspacePlanActionType[] = [
   "plan",
   "create",
   "update",
+  "complete",
   "invite",
 ];
 
@@ -109,6 +110,7 @@ function classifyStepWithResolution(
     : riskLevel;
   return {
     stepId: step.id,
+    ...(step.targetId ? { targetId: step.targetId } : {}),
     toolId: resolvedTool?.id,
     toolName: resolvedTool?.name,
     toolDescription: resolvedTool?.description,

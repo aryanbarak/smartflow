@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveToolForStep } from "@/features/agent";
+import { resolveToolForStep } from "@/features/agent/toolResolver";
 import { approvalEngine } from "./approvalEngine";
 import { plannerEngine } from "./plannerEngine";
 import type {
@@ -248,5 +248,17 @@ describe("approvalEngine", () => {
     expect(approval.reasons).toContain(
       "No execution, tools, network calls, or data mutations are performed.",
     );
+  });
+
+  it("binds approval metadata to the exact step target when present", () => {
+    const sourceStep = step("step-1", "complete", "tasks", true);
+    sourceStep.targetId = "task-1";
+
+    const approval = approvalEngine({
+      now,
+      plan: plan([sourceStep]),
+    });
+
+    expect(approval.stepApprovals[0]?.targetId).toBe("task-1");
   });
 });

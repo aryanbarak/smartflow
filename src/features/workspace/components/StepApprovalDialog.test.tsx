@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { StepApprovalDialog } from "./StepApprovalDialog";
-import { getToolById } from "@/features/agent";
+import { getToolById } from "@/features/agent/toolRegistry";
 import { translations } from "@/i18n";
 import type {
   WorkspacePlanStep,

@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   WorkspaceReveal,
   WorkspaceRevealSection,
@@ -35,14 +35,20 @@ import { SkeletonBlock } from "@/components/common/Skeletons";
 import { useMusicPlayer, loadHistory } from "@/hooks/useMusicPlayer";
 import { useWorkspace } from "@/features/workspace";
 import { trackWorkspaceInteraction } from "@/features/workspace";
+import type { ApprovalInteractionResult } from "@/features/agent/approvalInteraction";
 import {
   SUPPORTED_READ_ONLY_TOOL_IDS,
   canStartReadOnlyRun,
   runReadOnlyTool,
-  type ApprovalInteractionResult,
   type ReadOnlyRuntimeResult,
   type ReadOnlyRunState,
-} from "@/features/agent";
+} from "@/features/agent/readOnlyRuntime";
+import type { ToolResolutionResult } from "@/features/agent/toolResolverTypes";
+import {
+  runWriteTool,
+  type WriteRuntimeResult,
+  type WriteRuntimeStatus,
+} from "@/features/agent/writeRuntime";
 import { StepApprovalDialog } from "@/features/workspace/components/StepApprovalDialog";
 import { ReflectionSummary } from "@/features/workspace/components/ReflectionSummary";
 import { useT } from "@/i18n";
@@ -55,6 +61,9 @@ import type {
   WorkspaceSignalDomain,
   WorkspaceSkill,
   WorkspaceWelcome,
+  Workspace,
+  WorkspacePlanStep,
+  WorkspaceStepApproval,
 } from "@/features/workspace";
 
 const workspaceIconMap = {
@@ -139,6 +148,148 @@ function trackAndNavigateToWorkspaceTarget(
     metadata: options.metadata,
   });
   navigateToWorkspaceTarget(navigate, target);
+}
+
+type TaskCompleteWriteUiStatus =
+  | "idle"
+  | "awaiting_approval"
+  | "approved"
+  | "running"
+  | "success"
+  | "already_completed"
+  | "denied"
+  | "verification_failed"
+  | "timeout"
+  | "failed";
+
+interface TaskCompleteWriteCandidate {
+  step: WorkspacePlanStep;
+  stepApproval: WorkspaceStepApproval;
+  toolResolution: ToolResolutionResult;
+  taskId: string;
+  taskTitle: string;
+  bindingKey: string;
+}
+
+function getTaskCompleteWriteCandidate(
+  workspace: Workspace,
+): TaskCompleteWriteCandidate | null {
+  const candidates = workspace.plan.steps.flatMap((step) => {
+    if (
+      step.domain !== "tasks" ||
+      step.actionType !== "complete" ||
+      !step.targetId?.trim()
+    ) {
+      return [];
+    }
+
+    const toolResolution = workspace.toolResolutions.find(
+      (resolution) => resolution.stepId === step.id,
+    );
+    const stepApproval = workspace.approval.stepApprovals.find(
+      (approval) => approval.stepId === step.id,
+    );
+    const task = workspace.agentContext.tasks.find(
+      (item) => item.id === step.targetId,
+    );
+
+    if (
+      !toolResolution?.resolved ||
+      toolResolution.status !== "resolved" ||
+      toolResolution.toolId !== "tasks.complete" ||
+      toolResolution.tool?.id !== "tasks.complete" ||
+      toolResolution.tool.enabled !== true ||
+      toolResolution.tool.mode !== "write" ||
+      toolResolution.tool.riskLevel !== "medium" ||
+      !stepApproval ||
+      stepApproval.toolId !== "tasks.complete" ||
+      stepApproval.targetId !== step.targetId ||
+      stepApproval.approvalScope !== "single_step" ||
+      stepApproval.riskLevel !== "medium" ||
+      !task?.id ||
+      !task.title
+    ) {
+      return [];
+    }
+
+    return [{
+      step,
+      stepApproval,
+      toolResolution,
+      taskId: task.id,
+      taskTitle: task.title,
+      bindingKey: `${step.id}:${toolResolution.toolId}:${task.id}:${stepApproval.approvalScope}:${stepApproval.riskLevel}`,
+    }];
+  });
+
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
+function approvalMatchesTaskCompleteCandidate(
+  approval: WorkspaceStepApproval | null | undefined,
+  candidate: TaskCompleteWriteCandidate | null,
+) {
+  return Boolean(
+    candidate &&
+      approval &&
+      approval.status === "approved" &&
+      approval.stepId === candidate.step.id &&
+      approval.toolId === "tasks.complete" &&
+      approval.targetId === candidate.taskId &&
+      approval.approvalScope === "single_step" &&
+      approval.riskLevel === "medium",
+  );
+}
+
+function rejectedApprovalMatchesTaskCompleteCandidate(
+  approval: WorkspaceStepApproval | null | undefined,
+  candidate: TaskCompleteWriteCandidate | null,
+) {
+  return Boolean(
+    candidate &&
+      approval &&
+      approval.status === "rejected" &&
+      approval.stepId === candidate.step.id &&
+      approval.toolId === "tasks.complete" &&
+      approval.targetId === candidate.taskId,
+  );
+}
+
+function writeStatusToUiStatus(
+  status: WriteRuntimeStatus,
+  alreadyCompleted?: boolean,
+): TaskCompleteWriteUiStatus {
+  if (status === "success") {
+    return alreadyCompleted ? "already_completed" : "success";
+  }
+  if (status === "rejected" || status === "policy_denied" || status === "approval_required") {
+    return "denied";
+  }
+  if (status === "verification_failed") return "verification_failed";
+  return "failed";
+}
+
+function taskCompleteResultKey(
+  status: TaskCompleteWriteUiStatus,
+): "write_task_result_success" | "write_task_result_already_completed" | "write_task_result_approval_required" | "write_task_result_rejected" | "write_task_result_policy_denied" | "write_task_result_verification_failed" | "write_task_result_timeout" | "write_task_result_failed" | null {
+  switch (status) {
+    case "success":
+      return "write_task_result_success";
+    case "already_completed":
+      return "write_task_result_already_completed";
+    case "awaiting_approval":
+      return "write_task_result_approval_required";
+    case "denied":
+      return "write_task_result_policy_denied";
+    case "verification_failed":
+      return "write_task_result_verification_failed";
+    case "timeout":
+      return "write_task_result_timeout";
+    case "failed":
+      return "write_task_result_failed";
+    default:
+      return null;
+  }
 }
 
 function FocusPlaylistCard() {
@@ -651,20 +802,38 @@ export default function Dashboard() {
   const [showAddHabit, setShowAddHabit] = useState(false);
   const [showDailyStoryDetails, setShowDailyStoryDetails] = useState(false);
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [approvalDialogTarget, setApprovalDialogTarget] =
+    useState<"generic" | "taskComplete" | null>(null);
   const [latestApprovalDecision, setLatestApprovalDecision] =
     useState<ApprovalInteractionResult | null>(null);
+  const [taskCompleteApprovalDecision, setTaskCompleteApprovalDecision] =
+    useState<ApprovalInteractionResult | null>(null);
+  const [taskCompleteRunStatus, setTaskCompleteRunStatus] =
+    useState<TaskCompleteWriteUiStatus>("idle");
+  const [taskCompleteRunResult, setTaskCompleteRunResult] =
+    useState<WriteRuntimeResult | null>(null);
+  const [taskCompleteRefreshFailed, setTaskCompleteRefreshFailed] =
+    useState(false);
   const [readOnlyRunStatus, setReadOnlyRunStatus] =
     useState<ReadOnlyRunState>("idle");
   const [readOnlyRunResult, setReadOnlyRunResult] =
     useState<ReadOnlyRuntimeResult | null>(null);
   const readOnlyRunInFlightRef = useRef(false);
+  const taskCompleteRunInFlightRef = useRef(false);
   const workspace = useWorkspace();
+  const taskCompleteWriteCandidate = useMemo(
+    () => getTaskCompleteWriteCandidate(workspace),
+    [workspace],
+  );
   const pendingStepApproval = useMemo(
     () =>
       workspace.approval.stepApprovals.find(
-        (approval) => approval.status === "pending" && approval.requiresApproval,
+        (approval) =>
+          approval.status === "pending" &&
+          approval.requiresApproval &&
+          approval.stepId !== taskCompleteWriteCandidate?.step.id,
       ) ?? null,
-    [workspace.approval.stepApprovals],
+    [taskCompleteWriteCandidate?.step.id, workspace.approval.stepApprovals],
   );
   const pendingApprovalStep = useMemo(
     () =>
@@ -707,6 +876,62 @@ export default function Dashboard() {
         : null,
     [readOnlyRuntimeStep, workspace.approval.stepApprovals],
   );
+  const approvedTaskCompleteApproval = useMemo(
+    () =>
+      approvalMatchesTaskCompleteCandidate(
+        taskCompleteApprovalDecision?.ok ? taskCompleteApprovalDecision.approval : null,
+        taskCompleteWriteCandidate,
+      )
+        ? taskCompleteApprovalDecision?.approval ?? null
+        : null,
+    [taskCompleteApprovalDecision, taskCompleteWriteCandidate],
+  );
+
+  useEffect(() => {
+    setTaskCompleteApprovalDecision(null);
+    setTaskCompleteRunResult(null);
+    setTaskCompleteRefreshFailed(false);
+    setTaskCompleteRunStatus(taskCompleteWriteCandidate ? "awaiting_approval" : "idle");
+  }, [taskCompleteWriteCandidate?.bindingKey]);
+
+  const handleApprovalDialogDecision = (result: ApprovalInteractionResult) => {
+    if (approvalDialogTarget === "taskComplete") {
+      if (result.ok && result.decision === "approved") {
+        setTaskCompleteApprovalDecision(result);
+        setTaskCompleteRunStatus(
+          approvalMatchesTaskCompleteCandidate(result.approval, taskCompleteWriteCandidate)
+            ? "approved"
+            : "awaiting_approval",
+        );
+        return;
+      }
+
+      if (result.ok && result.decision === "rejected") {
+        setTaskCompleteApprovalDecision(result);
+        setTaskCompleteRunStatus(
+          rejectedApprovalMatchesTaskCompleteCandidate(result.approval, taskCompleteWriteCandidate)
+            ? "denied"
+            : "awaiting_approval",
+        );
+        return;
+      }
+
+      if (result.ok && result.decision === "closed") {
+        return;
+      }
+
+      setTaskCompleteApprovalDecision(result);
+      setTaskCompleteRunStatus("awaiting_approval");
+      return;
+    }
+
+    setLatestApprovalDecision(result);
+  };
+
+  const handleCloseApprovalDialog = () => {
+    setApprovalDialogOpen(false);
+    setApprovalDialogTarget(null);
+  };
 
   const handleRunReadOnlyTool = async () => {
     if (readOnlyRunInFlightRef.current) return;
@@ -735,6 +960,47 @@ export default function Dashboard() {
       setReadOnlyRunResult(result);
     } finally {
       readOnlyRunInFlightRef.current = false;
+    }
+  };
+
+  const handleRunTaskCompleteWrite = async () => {
+    if (taskCompleteRunInFlightRef.current) return;
+    if (!taskCompleteWriteCandidate || !approvedTaskCompleteApproval) return;
+
+    taskCompleteRunInFlightRef.current = true;
+    setTaskCompleteRunStatus("running");
+    setTaskCompleteRunResult(null);
+    setTaskCompleteRefreshFailed(false);
+    try {
+      const result = await runWriteTool({
+        requestId: `write:tasks.complete:${taskCompleteWriteCandidate.step.id}:${taskCompleteWriteCandidate.taskId}:${Date.now()}`,
+        step: taskCompleteWriteCandidate.step,
+        toolResolution: taskCompleteWriteCandidate.toolResolution,
+        approval: approvedTaskCompleteApproval,
+        executionContext: {
+          tasks: workspace.agentContext.tasks,
+          events: workspace.agentContext.events,
+          learningProgress: workspace.agentContext.learningProgress,
+          workspace,
+        },
+      });
+
+      setTaskCompleteRunResult(result);
+      const nextStatus = writeStatusToUiStatus(result.status, result.alreadyCompleted);
+      setTaskCompleteRunStatus(nextStatus);
+
+      if (
+        result.verified &&
+        (nextStatus === "success" || nextStatus === "already_completed")
+      ) {
+        try {
+          await workspace.refresh?.tasks();
+        } catch {
+          setTaskCompleteRefreshFailed(true);
+        }
+      }
+    } finally {
+      taskCompleteRunInFlightRef.current = false;
     }
   };
 
@@ -883,11 +1149,149 @@ export default function Dashboard() {
               <Button
                 type="button"
                 size="sm"
-                onClick={() => setApprovalDialogOpen(true)}
+                onClick={() => {
+                  setApprovalDialogTarget("generic");
+                  setApprovalDialogOpen(true);
+                }}
                 className="shrink-0"
               >
                 {t("approval_review_action")}
               </Button>
+            </div>
+          </section>
+        </WorkspaceRevealSection>
+      )}
+
+      {taskCompleteWriteCandidate && (
+        <WorkspaceRevealSection order={2}>
+          <section className="rounded-xl border border-primary/15 bg-card/45 p-3 sm:p-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0 space-y-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-primary/75">
+                    {t("write_task_boundary_label")}
+                  </p>
+                  <h2 className="mt-1 text-sm font-semibold tracking-tight">
+                    {t("write_task_title")}
+                  </h2>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {t("write_task_description")}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-border/30 bg-background/25 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    {t("write_task_target_label")}
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {taskCompleteWriteCandidate.taskTitle}
+                  </p>
+                </div>
+
+                <div className="grid gap-2 text-xs sm:grid-cols-4">
+                  <div className="rounded-lg border border-border/25 bg-background/25 px-3 py-2">
+                    <p className="font-semibold text-muted-foreground">{t("agent_resolved_tool")}</p>
+                    <p className="mt-1 font-medium text-foreground">tasks.complete</p>
+                  </div>
+                  <div className="rounded-lg border border-border/25 bg-background/25 px-3 py-2">
+                    <p className="font-semibold text-muted-foreground">{t("agent_execution_mode")}</p>
+                    <p className="mt-1 font-medium text-foreground">{t("write_task_mode_write")}</p>
+                  </div>
+                  <div className="rounded-lg border border-border/25 bg-background/25 px-3 py-2">
+                    <p className="font-semibold text-muted-foreground">{t("approval_risk_level")}</p>
+                    <p className="mt-1 font-medium text-foreground">{t("write_task_risk_medium")}</p>
+                  </div>
+                  <div className="rounded-lg border border-border/25 bg-background/25 px-3 py-2">
+                    <p className="font-semibold text-muted-foreground">{t("approval_scope")}</p>
+                    <p className="mt-1 font-medium text-foreground">{t("write_task_scope_this_task")}</p>
+                  </div>
+                </div>
+
+                {taskCompleteRunStatus === "approved" && (
+                  <p className="text-xs font-medium text-primary">
+                    {t("write_task_approved_ready")}
+                  </p>
+                )}
+
+                {taskCompleteRunStatus === "running" && (
+                  <p className="text-xs font-medium text-primary" aria-live="polite">
+                    {t("write_task_running_state")}
+                  </p>
+                )}
+
+                {taskCompleteRunStatus === "denied" && !taskCompleteRunResult && (
+                  <p className="text-xs font-medium text-muted-foreground" aria-live="polite">
+                    {t(
+                      taskCompleteApprovalDecision?.ok &&
+                        taskCompleteApprovalDecision.decision === "rejected"
+                        ? "write_task_result_rejected"
+                        : "write_task_result_policy_denied",
+                    )}
+                  </p>
+                )}
+
+                {taskCompleteRunResult && (
+                  <div
+                    className="rounded-lg border border-primary/15 bg-primary/10 px-3 py-2"
+                    aria-live="polite"
+                  >
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-primary/75">
+                      {t("agent_result_label")}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-foreground">
+                      {t(
+                        taskCompleteResultKey(taskCompleteRunStatus) ??
+                          "write_task_result_failed",
+                      )}
+                    </p>
+                    {(taskCompleteRunStatus === "success" ||
+                      taskCompleteRunStatus === "already_completed") && (
+                      <div className="mt-3 rounded-lg border border-border/30 bg-background/20 px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                          {t("reflection_section_label")}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          {taskCompleteRunStatus === "already_completed"
+                            ? t("write_task_reflection_already_completed")
+                            : t("write_task_reflection_verified")}
+                        </p>
+                      </div>
+                    )}
+                    {taskCompleteRefreshFailed && (
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                        {t("write_task_refresh_failed")}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {approvedTaskCompleteApproval ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void handleRunTaskCompleteWrite()}
+                  disabled={taskCompleteRunStatus === "running" || Boolean(taskCompleteRunResult)}
+                  className="shrink-0"
+                >
+                  {taskCompleteRunStatus === "running"
+                    ? t("agent_run_running")
+                    : t("write_task_complete_button")}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    setApprovalDialogTarget("taskComplete");
+                    setApprovalDialogOpen(true);
+                  }}
+                  disabled={taskCompleteRunStatus === "running"}
+                  className="shrink-0"
+                >
+                  {t("approval_review_action")}
+                </Button>
+              )}
             </div>
           </section>
         </WorkspaceRevealSection>
@@ -1166,11 +1570,23 @@ export default function Dashboard() {
       </div>
       <StepApprovalDialog
         open={approvalDialogOpen}
-        step={pendingApprovalStep}
-        stepApproval={pendingStepApproval}
-        tool={approvalPresentationTool}
-        onClose={() => setApprovalDialogOpen(false)}
-        onDecision={setLatestApprovalDecision}
+        step={
+          approvalDialogTarget === "taskComplete"
+            ? taskCompleteWriteCandidate?.step ?? null
+            : pendingApprovalStep
+        }
+        stepApproval={
+          approvalDialogTarget === "taskComplete"
+            ? taskCompleteWriteCandidate?.stepApproval ?? null
+            : pendingStepApproval
+        }
+        tool={
+          approvalDialogTarget === "taskComplete"
+            ? taskCompleteWriteCandidate?.toolResolution.tool ?? null
+            : approvalPresentationTool
+        }
+        onClose={handleCloseApprovalDialog}
+        onDecision={handleApprovalDialogDecision}
       />
     </WorkspaceReveal>
   );

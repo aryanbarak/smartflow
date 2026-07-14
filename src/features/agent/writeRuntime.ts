@@ -78,7 +78,7 @@ export interface WriteRuntimeResult {
 }
 
 export interface WriteRuntimeDependencies {
-  getAuthenticatedUserId(): string | null | undefined;
+  getAuthenticatedUserId(): string | null | undefined | Promise<string | null | undefined>;
   getToolById(toolId: string): AgentToolDefinition | undefined;
   getWriteHandlerByToolId(toolId: string): AgentWriteToolHandler | undefined;
   appendExecutionAuditRecord(record: ExecutionAuditRecord): ExecutionAuditRecord;
@@ -89,13 +89,36 @@ export interface WriteRuntimeDependencies {
 const completedRequestIds = new Set<string>();
 
 const defaultDependencies: WriteRuntimeDependencies = {
-  getAuthenticatedUserId: () => undefined,
+  getAuthenticatedUserId: getStoredSupabaseUserId,
   getToolById,
   getWriteHandlerByToolId,
   appendExecutionAuditRecord,
   processReflection: processReadOnlyReflection,
   now: () => new Date(),
 };
+
+function getStoredSupabaseUserId() {
+  const storage = globalThis.localStorage;
+  if (!storage) return undefined;
+
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+    if (!key?.startsWith("sb-") || !key.endsWith("-auth-token")) continue;
+
+    try {
+      const parsed = JSON.parse(storage.getItem(key) ?? "null") as {
+        user?: { id?: unknown };
+        currentSession?: { user?: { id?: unknown } };
+      } | null;
+      const userId = parsed?.user?.id ?? parsed?.currentSession?.user?.id;
+      if (typeof userId === "string" && userId.trim()) return userId.trim();
+    } catch {
+      return undefined;
+    }
+  }
+
+  return undefined;
+}
 
 function timestamp(currentTime?: Date) {
   return (currentTime ?? new Date()).toISOString();
@@ -291,9 +314,10 @@ function validateApprovalBoundary(request: WriteRuntimeRequest, toolId: Supporte
   if (approval.status === "rejected") return "rejected";
   if (approval.status !== "approved") return "approval_required";
   if (!step?.id || approval.stepId !== step.id) return "approval_required";
+  if (!step.targetId || approval.targetId !== step.targetId) return "approval_required";
   if (approval.toolId !== toolId) return "approval_required";
   if (approval.approvalScope !== "single_step") return "approval_required";
-  if (approval.riskLevel !== "medium" && approval.riskLevel !== "high") return "approval_required";
+  if (approval.riskLevel !== "medium") return "approval_required";
   return null;
 }
 
@@ -364,7 +388,7 @@ export async function runWriteTool(
     return blocked(request, approvalStatus, safeSummaryFor(approvalStatus), startedAt, resolved.toolId);
   }
 
-  const authenticatedUserId = deps.getAuthenticatedUserId();
+  const authenticatedUserId = await deps.getAuthenticatedUserId();
   if (!authenticatedUserId?.trim()) {
     return blocked(request, "failed", "Authenticated runtime user is required.", startedAt, resolved.toolId);
   }

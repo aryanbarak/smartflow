@@ -130,6 +130,18 @@ describe("approvalInteraction", () => {
     expect(result.errorCode).toBe("STEP_MISMATCH");
   });
 
+  it("does not accept mismatched target approval", () => {
+    const result = approveWorkspaceStep({
+      now,
+      step: step({ actionType: "complete", targetId: "task-a" }),
+      stepApproval: stepApproval({ targetId: "task-b" }),
+      tool: tool("tasks.complete"),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errorCode).toBe("TARGET_MISMATCH");
+  });
+
   it("does not accept mismatched resolved tool approval", () => {
     const result = approveWorkspaceStep({
       now,

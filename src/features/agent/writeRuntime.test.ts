@@ -98,6 +98,7 @@ function approval(
 ): WorkspaceStepApproval {
   return {
     stepId: sourceStep.id,
+    targetId: sourceStep.targetId,
     toolId: "tasks.complete",
     status: "approved",
     requiresApproval: true,
@@ -193,13 +194,14 @@ describe("writeRuntime", () => {
     ]);
   });
 
-  it("rejects missing, rejected, wrong-step, and wrong-tool approvals before handler execution", async () => {
+  it("rejects missing, rejected, wrong-step, wrong-target, and wrong-tool approvals before handler execution", async () => {
     const handler = writeHandler();
     const sourceStep = step();
     const cases: Array<[string, WriteRuntimeRequest["approval"], string]> = [
       ["missing", null, "approval_required"],
       ["rejected", approval(sourceStep, { status: "rejected" }), "rejected"],
       ["wrong-step", approval(sourceStep, { stepId: "other-step" }), "approval_required"],
+      ["wrong-target", approval(sourceStep, { targetId: "other-task" }), "approval_required"],
       ["wrong-tool", approval(sourceStep, { toolId: "tasks.create" }), "approval_required"],
     ];
 

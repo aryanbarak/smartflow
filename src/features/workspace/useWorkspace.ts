@@ -31,7 +31,7 @@ export function useWorkspace(): Workspace {
   }
 
   const { events, isLoading: isEventsLoading } = useEvents();
-  const { tasks, isLoading: isTasksLoading } = useTasks();
+  const { tasks, isLoading: isTasksLoading, refresh: refreshTasks } = useTasks();
   const { transactions, isLoading: isFinanceLoading } = useFinance();
   const { sessions, isLoading: isChatLoading } = useChatSessions();
   const habitsQuery = useHabits();
@@ -144,6 +144,7 @@ export function useWorkspace(): Workspace {
     isTasksLoading,
     learnAiActivityQuery.data,
     learnAiActivityQuery.isLoading,
+    refreshTasks,
     sessions,
     tasks,
     transactions,
@@ -156,5 +157,10 @@ export function useWorkspace(): Workspace {
     }
   }, [workspaceState.memoryResult]);
 
-  return workspaceState.workspace;
+  return {
+    ...workspaceState.workspace,
+    refresh: {
+      tasks: refreshTasks,
+    },
+  };
 }

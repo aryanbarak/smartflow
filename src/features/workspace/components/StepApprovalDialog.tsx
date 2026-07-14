@@ -6,7 +6,7 @@ import {
   rejectWorkspaceStep,
   type ApprovalInteractionResult,
 } from "@/features/agent/approvalInteraction";
-import type { AgentToolDefinition } from "@/features/agent";
+import type { AgentToolDefinition } from "@/features/agent/toolTypes";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
 import type {

@@ -16,6 +16,7 @@ export type ApprovalInteractionErrorCode =
   | "MISSING_STEP"
   | "MISSING_APPROVAL"
   | "STEP_MISMATCH"
+  | "TARGET_MISMATCH"
   | "TOOL_MISMATCH"
   | "UNSUPPORTED_SCOPE"
   | "SCOPE_ESCALATION"
@@ -93,6 +94,7 @@ function cloneApproval(
 ): WorkspaceStepApproval {
   return Object.freeze({
     stepId: source.stepId,
+    ...(source.targetId ? { targetId: source.targetId } : {}),
     toolId: source.toolId ?? tool?.id,
     toolName: source.toolName ?? tool?.name,
     toolDescription: source.toolDescription ?? tool?.description,
@@ -130,6 +132,10 @@ function validateInteraction(input: ApprovalInteractionInput) {
 
   if (stepApproval.stepId !== step.id) {
     return failure(input, "STEP_MISMATCH", "Approval must match the exact plan step.");
+  }
+
+  if (stepApproval.targetId && step.targetId && stepApproval.targetId !== step.targetId) {
+    return failure(input, "TARGET_MISMATCH", "Approval must match the exact step target.");
   }
 
   if (stepApproval.toolId && input.tool?.id && stepApproval.toolId !== input.tool.id) {
