@@ -36,6 +36,7 @@ import {
   canComposeAssistantResponse,
   composeAssistantResponse,
   formatAssistantResponse,
+  synthesizeContext,
   getToolById,
   reasonAboutUserMessage,
   resolveToolForStep,
@@ -45,6 +46,8 @@ import {
   type ReadOnlyRuntimeResult,
   type WriteRuntimeResult,
   type ApprovalInteractionResult,
+  type ContextSynthesisWorkspaceContext,
+  type SynthesizedContext,
 } from '@/features/agent'
 import { StepApprovalDialog } from '@/features/workspace/components/StepApprovalDialog'
 import { useWorkspace } from '@/features/workspace'
@@ -52,6 +55,7 @@ import type {
   WorkspacePlanActionType,
   WorkspacePlanStep,
   WorkspaceDecisionProfile,
+  Workspace,
   WorkspaceStepApproval,
 } from '@/features/workspace'
 import type { ToolResolutionResult } from '@/features/agent'
@@ -306,10 +310,52 @@ function proposalToState(result: AgentReasoningResult, t: Translate): ReasoningP
   }
 }
 
+interface ContextTaskSnapshot {
+  completed?: boolean
+  dueDate?: string | null
+  completedAt?: string | null
+}
+
+function dateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function buildContextSynthesisWorkspaceContext(
+  workspace: Workspace,
+  tasks: readonly ContextTaskSnapshot[],
+  now: Date,
+): ContextSynthesisWorkspaceContext {
+  const today = dateKey(now)
+  const weekAgoMs = now.getTime() - 7 * 24 * 60 * 60 * 1000
+  const openTasks = tasks.filter((task) => task.completed !== true)
+  const learningLessons = workspace.agentContext.learningProgress?.lessons ?? []
+
+  return {
+    activeTaskCount: openTasks.length,
+    dueTodayCount: openTasks.filter((task) => task.dueDate === today).length,
+    overdueCount: openTasks.filter((task) => Boolean(task.dueDate) && String(task.dueDate) < today).length,
+    unscheduledTaskCount: openTasks.filter((task) => !task.dueDate).length,
+    completedThisWeekCount: tasks.filter((task) =>
+      task.completedAt ? new Date(task.completedAt).getTime() >= weekAgoMs : false,
+    ).length,
+    todayEventCount: workspace.signals.eventsToday,
+    currentGoalTitle: workspace.goal.title,
+    currentPrimaryDomain: workspace.goal.primaryDomain,
+    learningActiveCount: learningLessons.filter((lesson) =>
+      lesson.completed !== true && (lesson.completionPercentage ?? 0) < 100,
+    ).length,
+    learningProgressSummary: workspace.agentContext.learningProgress?.mode,
+  }
+}
+
 export function resultMessage(
   result: ReadOnlyRuntimeResult | WriteRuntimeResult,
   language: SupportedAiResponseLanguage,
   decisionProfile?: WorkspaceDecisionProfile,
+  synthesizedContext?: SynthesizedContext,
 ) {
   if (canComposeAssistantResponse(result.toolId)) {
     return formatAssistantResponse(composeAssistantResponse({
@@ -320,6 +366,7 @@ export function resultMessage(
       safePreviewItems: 'safePreviewItems' in result ? result.safePreviewItems : [],
       reflection: result.reflection,
       decisionProfile,
+      synthesizedContext,
     }))
   }
 
@@ -719,11 +766,27 @@ export default function ChatPage() {
       runStatus: runResult.success ? 'success' : 'failed',
       readOnlyResult: runResult,
     } : prev)
+    const synthesizedContext = synthesizeContext({
+      toolId: runResult.toolId,
+      executionStatus: runResult.status,
+      safeRuntimeSummary: runResult.safeSummary,
+      safePreviewItems: runResult.safePreviewItems,
+      reflection: runResult.reflection,
+      workspaceContext: buildContextSynthesisWorkspaceContext(workspace, tasks, currentTime),
+      decisionProfile: workspace.decisionProfile,
+      responseLanguage: reasoningProposal.result.responseLanguage,
+      generatedAt: currentTime.toISOString(),
+    })
     appendAssistantResult(
-      resultMessage(runResult, reasoningProposal.result.responseLanguage, workspace.decisionProfile),
+      resultMessage(
+        runResult,
+        reasoningProposal.result.responseLanguage,
+        workspace.decisionProfile,
+        synthesizedContext,
+      ),
       reasoningProposal.result.responseLanguage,
     )
-  }, [appendAssistantResult, reasoningProposal, workspace])
+  }, [appendAssistantResult, reasoningProposal, tasks, workspace])
 
   const handleApprovalDecision = useCallback((decision: ApprovalInteractionResult) => {
     if (!decision.ok || decision.decision === 'closed') return
@@ -766,11 +829,27 @@ export default function ChatPage() {
     if (writeResult.success) {
       void workspace.refresh?.tasks()
     }
+    const synthesizedContext = synthesizeContext({
+      toolId: writeResult.toolId,
+      executionStatus: writeResult.status,
+      safeRuntimeSummary: writeResult.safeSummary,
+      safePreviewItems: [],
+      reflection: writeResult.reflection,
+      workspaceContext: buildContextSynthesisWorkspaceContext(workspace, tasks, currentTime),
+      decisionProfile: workspace.decisionProfile,
+      responseLanguage: reasoningProposal.result.responseLanguage,
+      generatedAt: currentTime.toISOString(),
+    })
     appendAssistantResult(
-      resultMessage(writeResult, reasoningProposal.result.responseLanguage, workspace.decisionProfile),
+      resultMessage(
+        writeResult,
+        reasoningProposal.result.responseLanguage,
+        workspace.decisionProfile,
+        synthesizedContext,
+      ),
       reasoningProposal.result.responseLanguage,
     )
-  }, [appendAssistantResult, reasoningProposal, user?.id, workspace])
+  }, [appendAssistantResult, reasoningProposal, tasks, user?.id, workspace])
 
   const firstName =
     profile?.displayName?.trim()?.split(' ')[0] ||

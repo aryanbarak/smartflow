@@ -193,7 +193,7 @@ describe("ChatPage LLM reasoning UX boundary", () => {
     expect(approvedHtml).toContain("Complete task");
   });
 
-  it("formats supported runtime results through the response composer", () => {
+  it("formats supported runtime results through context synthesis and the response composer", () => {
     const message = resultMessage({
       requestId: "request-1",
       stepId: "step-1",
@@ -207,11 +207,20 @@ describe("ChatPage LLM reasoning UX boundary", () => {
       startedAt: now,
       completedAt: now,
       durationMs: 0,
-    }, "en");
+    }, "en", undefined, {
+      primaryFact: "1 of your 2 open tasks is due today.",
+      supportingFacts: ["1 open task does not have due dates."],
+      safeSuggestion: "You may want to add due dates to those tasks.",
+      evidenceDomains: ["tasks"],
+      confidence: "medium",
+      synthesisVersion: "context-synthesis-v1",
+    });
 
     expect(message).toContain("Here is your task overview.");
-    expect(message).toContain("You currently have 2 active tasks.");
+    expect(message).toContain("1 of your 2 open tasks is due today.");
+    expect(message).toContain("1 open task does not have due dates.");
     expect(message).toContain("- Finish report");
+    expect(message).toContain("You may want to add due dates to those tasks.");
     expect(message).not.toContain("request-1");
   });
 });

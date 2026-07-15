@@ -1,4 +1,5 @@
 export * from "./approvalInteraction";
+export * from "./contextSynthesis";
 export * from "./executionAudit";
 export type * from "./executionAuditTypes";
 export * from "./executionEngine";
