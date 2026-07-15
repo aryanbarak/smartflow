@@ -76,3 +76,18 @@ Manual pass criteria:
 - Approval does not execute.
 - Run buttons are disabled while running.
 - Result copy uses the resolved AI response language.
+
+## Browser QA Regression Retest
+
+These cases cover the live QA failures found after the first deterministic validation pass.
+
+| Test ID | Language | User message | Expected intent | Expected tool | Result |
+|---|---|---|---|---|---|
+| LR-REG-FA-01 | FA | امروز چه کارهایی دارم؟ | inspect_tasks | tasks.list | Pending browser retest |
+| LR-REG-DE-01 | DE | Welche Aufgaben habe ich heute? | inspect_tasks | tasks.list | Pending browser retest |
+| LR-REG-EN-01 | EN | Show me my open tasks. | inspect_tasks | tasks.list | Pending browser retest |
+| LR-REG-FA-02 | FA | امروز چه قرارهایی دارم؟ | inspect_calendar | calendar.list_today | Pending browser retest |
+| LR-REG-DE-02 | DE | Zeig mir die heutigen Termine. | inspect_calendar | calendar.list_today | Pending browser retest |
+| LR-REG-EN-02 | EN | What is on my calendar today? | inspect_calendar | calendar.list_today | Pending browser retest |
+| LR-REG-FP-01 | EN | Why is task management important? | normal chat | none | Pending browser retest |
+| LR-REG-MIX-01 | EN | Check my tasks and complete the most important one. | ask_clarification | none | Pending browser retest |

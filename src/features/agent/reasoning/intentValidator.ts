@@ -178,6 +178,67 @@ function requestLooksMixed(message: string, type: AgentIntentType) {
   return hasReadIntent && hasCompleteIntent;
 }
 
+function messageHasAny(message: string, patterns: RegExp[]) {
+  return patterns.some((pattern) => pattern.test(message));
+}
+
+function getStrongReadDomainEvidence(message: string): AgentIntentDomain | "conflicting" | null {
+  const taskEvidence = messageHasAny(message, [
+    /\b(task|tasks|open tasks|unfinished|to-?do|todos|focus on)\b/i,
+    /\b(aufgabe|aufgaben|offen|offene|offenen|unerledigt|nicht erledigt|fokus|konzentrieren)\b/i,
+    /(\u0648\u0638\u06cc\u0641\u0647|\u0648\u0638\u0627\u06cc\u0641|\u06a9\u0627\u0631\u0647\u0627|\u06a9\u0627\u0631\u0647\u0627\u06cc|\u062a\u0645\u0631\u06a9\u0632|\u062a\u0645\u0627\u0645 \u0646\u0634\u062f\u0647|\u0627\u0646\u062c\u0627\u0645 \u0646\u0634\u062f\u0647)/i,
+  ]);
+  const calendarEvidence = messageHasAny(message, [
+    /\b(calendar|appointment|appointments|event|events|meeting|meetings|schedule)\b/i,
+    /\b(kalender|termin|termine|besprechung|besprechungen|meeting|meetings)\b/i,
+    /(\u062a\u0642\u0648\u06cc\u0645|\u0642\u0631\u0627\u0631|\u0642\u0631\u0627\u0631\u0647\u0627|\u062c\u0644\u0633\u0647|\u062c\u0644\u0633\u0627\u062a)/i,
+  ]);
+  const learningEvidence = messageHasAny(message, [
+    /\b(learn|learning|lesson|lessons|study|studying)\b/i,
+    /\b(lernen|lerne|lernfortschritt|n\u00e4chstes lernen|naechstes lernen)\b/i,
+    /(\u06cc\u0627\u062f\u06af\u06cc\u0631\u06cc|\u062f\u0631\u0633|\u0622\u0645\u0648\u0632\u0634|\u06cc\u0627\u062f \u0628\u06af\u06cc\u0631)/i,
+  ]);
+  const workspaceEvidence = messageHasAny(message, [
+    /\b(workspace|current plan|summarize my workspace)\b/i,
+    /\b(workspace|aktueller plan|arbeitsbereich)\b/i,
+    /(\u0628\u0631\u0646\u0627\u0645\u0647 \u0641\u0639\u0644\u06cc|workspace)/i,
+  ]);
+
+  const matches = [
+    taskEvidence ? "tasks" : null,
+    calendarEvidence ? "calendar" : null,
+    learningEvidence ? "learning" : null,
+    workspaceEvidence ? "workspace" : null,
+  ].filter((domain): domain is AgentIntentDomain => domain !== null);
+
+  const uniqueMatches = Array.from(new Set(matches));
+  if (uniqueMatches.length === 0) return null;
+  if (uniqueMatches.length > 1) return "conflicting";
+  return uniqueMatches[0];
+}
+
+function normalizeReadIntentFromEvidence(
+  type: AgentIntentType,
+  domainEvidence: AgentIntentDomain | "conflicting" | null,
+): AgentIntentType {
+  if (!domainEvidence || domainEvidence === "conflicting" || type === "complete_task" || type === "unsupported") {
+    return type;
+  }
+  if (
+    type === "ask_clarification" ||
+    type === "inspect_tasks" ||
+    type === "inspect_calendar" ||
+    type === "inspect_learning" ||
+    type === "inspect_workspace"
+  ) {
+    if (domainEvidence === "tasks") return "inspect_tasks";
+    if (domainEvidence === "calendar") return "inspect_calendar";
+    if (domainEvidence === "learning") return "inspect_learning";
+    if (domainEvidence === "workspace") return "inspect_workspace";
+  }
+  return type;
+}
+
 export function validateAgentIntentProposal(input: {
   rawProposal: unknown;
   userMessage: string;
@@ -205,8 +266,11 @@ export function validateAgentIntentProposal(input: {
     });
   }
 
-  const type = safeString(input.rawProposal.type) as AgentIntentType;
-  if (!supportedIntentTypes.includes(type)) {
+  const initialType = safeString(input.rawProposal.type) as AgentIntentType;
+  const domainEvidence = getStrongReadDomainEvidence(input.userMessage);
+  const type = normalizeReadIntentFromEvidence(initialType, domainEvidence);
+  const normalizedByEvidence = type !== initialType;
+  if (!supportedIntentTypes.includes(initialType) || !supportedIntentTypes.includes(type)) {
     return createSafeProposal("unsupported", {
       userMessage: input.userMessage,
       language: input.language,
@@ -236,6 +300,16 @@ export function validateAgentIntentProposal(input: {
     });
   }
 
+  if (domainEvidence === "conflicting") {
+    return createSafeProposal("ask_clarification", {
+      userMessage: input.userMessage,
+      language: input.language,
+      now,
+      question: textFor(input.language, "clarify"),
+      reason: "Conflicting strong domain evidence requires clarification.",
+    });
+  }
+
   if (type === "ask_clarification") {
     return createSafeProposal("ask_clarification", {
       userMessage: input.userMessage,
@@ -258,7 +332,7 @@ export function validateAgentIntentProposal(input: {
 
   const expectedToolId = intentToolMap[type as keyof typeof intentToolMap];
   const proposedToolId = safeString(input.rawProposal.toolId);
-  if (proposedToolId && proposedToolId !== expectedToolId) {
+  if (proposedToolId && proposedToolId !== expectedToolId && !normalizedByEvidence) {
     return createSafeProposal("unsupported", {
       userMessage: input.userMessage,
       language: input.language,
@@ -277,7 +351,7 @@ export function validateAgentIntentProposal(input: {
       reason: "Unsupported domain was rejected.",
     });
   }
-  if (proposedDomain && expectedDomain && proposedDomain !== expectedDomain) {
+  if (proposedDomain && expectedDomain && proposedDomain !== expectedDomain && !normalizedByEvidence) {
     return createSafeProposal("unsupported", {
       userMessage: input.userMessage,
       language: input.language,

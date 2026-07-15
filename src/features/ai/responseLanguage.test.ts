@@ -7,6 +7,13 @@ import {
   resolveAiResponseLanguage,
 } from "./responseLanguage";
 
+const PERSIAN_REVIEW_TASKS =
+  "\u0644\u0637\u0641\u0627 \u06a9\u0627\u0631\u0647\u0627\u06cc \u0627\u0645\u0631\u0648\u0632 \u0631\u0627 \u0628\u0631\u0631\u0633\u06cc \u06a9\u0646";
+const PERSIAN_TECHNICAL =
+  "\u0644\u0637\u0641\u0627 `tasks.complete` \u0631\u0627 \u062a\u0648\u0636\u06cc\u062d \u0628\u062f\u0647 \u0648 URL https://example.com \u0631\u0627 \u062a\u063a\u06cc\u06cc\u0631 \u0646\u062f\u0647";
+const PERSIAN_ANSWER_REQUEST =
+  "\u0644\u0637\u0641\u0627 \u0641\u0627\u0631\u0633\u06cc \u062c\u0648\u0627\u0628 \u0628\u062f\u0647";
+
 describe("AI response language resolution", () => {
   it("uses explicit configured response languages before interface language or detection", () => {
     expect(resolveAiResponseLanguage({
@@ -18,7 +25,7 @@ describe("AI response language resolution", () => {
     expect(resolveAiResponseLanguage({
       configuredResponseLanguage: "en",
       interfaceLanguage: "fa",
-      latestUserMessage: "لطفا فارسی جواب بده",
+      latestUserMessage: PERSIAN_ANSWER_REQUEST,
     })).toBe("en");
 
     expect(resolveAiResponseLanguage({
@@ -32,13 +39,13 @@ describe("AI response language resolution", () => {
     expect(resolveAiResponseLanguage({
       configuredResponseLanguage: "auto",
       interfaceLanguage: "en",
-      latestUserMessage: "لطفا کارهای امروز را بررسی کن",
+      latestUserMessage: PERSIAN_REVIEW_TASKS,
     })).toBe("fa");
 
     expect(resolveAiResponseLanguage({
       configuredResponseLanguage: "auto",
       interfaceLanguage: "en",
-      latestUserMessage: "Kannst du bitte meine Termine für heute planen?",
+      latestUserMessage: "Kannst du bitte meine Termine f\u00fcr heute planen?",
     })).toBe("de");
 
     expect(resolveAiResponseLanguage({
@@ -49,7 +56,7 @@ describe("AI response language resolution", () => {
   });
 
   it("uses the dominant natural-language portion for mixed technical input", () => {
-    expect(detectAiResponseLanguage("لطفا `tasks.complete` را توضیح بده و URL https://example.com را تغییر نده")).toBe("fa");
+    expect(detectAiResponseLanguage(PERSIAN_TECHNICAL)).toBe("fa");
     expect(detectAiResponseLanguage("Please explain `tasks.complete` and keep SmartFlow unchanged.")).toBe("en");
   });
 
@@ -83,7 +90,7 @@ describe("AI response language resolution", () => {
   it("builds explicit prompt instructions and response directions", () => {
     expect(getAiResponseLanguageInstruction("en")).toContain("Respond in English.");
     expect(getAiResponseLanguageInstruction("de")).toContain("Antworte auf Deutsch.");
-    expect(getAiResponseLanguageInstruction("fa")).toContain("به زبان فارسی پاسخ بده.");
+    expect(getAiResponseLanguageInstruction("fa")).toContain("\u0641\u0627\u0631\u0633\u06cc");
     expect(getAiResponseLanguageInstruction("fa")).not.toContain("only communicate in English");
 
     expect(getAiResponseDirection("fa")).toBe("rtl");

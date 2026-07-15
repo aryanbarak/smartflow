@@ -43,6 +43,7 @@ import {
   getAiResponseLanguageInstruction,
   getStoredAiResponseLanguage,
   resolveAiResponseLanguage,
+  withAiResponseLanguageInstruction,
   type SupportedAiResponseLanguage,
 } from "@/features/ai/responseLanguage";
 
@@ -62,6 +63,23 @@ function MdLi({ children }: Readonly<{ children: React.ReactNode }>) {
   return <li>{children}</li>;
 }
 const TASK_MD_COMPONENTS = { p: MdP, ul: MdUl, li: MdLi } as const;
+
+export function buildTaskAssistantRequestBody(input: {
+  context: string;
+  question: string;
+  sessionId: string;
+  responseLanguage: SupportedAiResponseLanguage;
+}) {
+  const responseLanguageInstruction = getAiResponseLanguageInstruction(input.responseLanguage);
+  const taskMessage = `${input.context}\nUser question: ${input.question}`;
+
+  return {
+    message: withAiResponseLanguageInstruction(taskMessage, input.responseLanguage),
+    session_id: input.sessionId,
+    responseLanguage: input.responseLanguage,
+    responseLanguageInstruction,
+  };
+}
 
 export default function TasksPage() {
   const { tasks, isLoading, error, addTask, updateTask, toggleTaskCompleted, deleteTask } = useTasks();
@@ -201,16 +219,15 @@ export default function TasksPage() {
       if (!sessionId) throw new Error('Failed to create session');
       setTaskChatSessionId(sessionId);
       const context = buildTaskContext();
-      const responseLanguageInstruction = getAiResponseLanguageInstruction(responseLanguage);
       const res = await fetch(`${workerUrl}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession.access_token}` },
-        body: JSON.stringify({
-          message: `${context}\nUser question: ${q}`,
-          session_id: sessionId,
+        body: JSON.stringify(buildTaskAssistantRequestBody({
+          context,
+          question: q,
+          sessionId,
           responseLanguage,
-          responseLanguageInstruction,
-        }),
+        })),
       });
       if (!res.ok) throw new Error(`Worker ${res.status}`);
       const { reply } = await res.json() as { reply: string };

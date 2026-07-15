@@ -164,6 +164,15 @@ export function getAiResponseDirection(language: SupportedAiResponseLanguage): R
 }
 
 export function getAiResponseLanguageInstruction(language: SupportedAiResponseLanguage): string {
+  if (language === "fa") {
+    return [
+      "\u0628\u0647 \u0632\u0628\u0627\u0646 \u0641\u0627\u0631\u0633\u06cc \u067e\u0627\u0633\u062e \u0628\u062f\u0647.",
+      "Preserve code, product names, task titles, URLs, and technical identifiers as needed.",
+      "You can communicate in English, German, and Persian.",
+      "Do not change the application's interface language; this instruction applies only to AI-generated content.",
+    ].join(" ");
+  }
+
   const responseLine: Record<SupportedAiResponseLanguage, string> = {
     en: "Respond in English.",
     de: "Antworte auf Deutsch.",

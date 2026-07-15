@@ -47,9 +47,9 @@ function validate(rawProposal: unknown, userMessage = "What tasks do I have?") {
 describe("intentValidator", () => {
   it("validates inspect intent mappings", () => {
     expect(validate(proposal({ type: "inspect_tasks", toolId: "tasks.list" })).toolId).toBe("tasks.list");
-    expect(validate(proposal({ type: "inspect_calendar", requestedDomain: "calendar", toolId: "calendar.list_today" })).toolId).toBe("calendar.list_today");
-    expect(validate(proposal({ type: "inspect_learning", requestedDomain: "learning", toolId: "learning.get_progress" })).toolId).toBe("learning.get_progress");
-    expect(validate(proposal({ type: "inspect_workspace", requestedDomain: "workspace", toolId: "workspace.get_context" })).toolId).toBe("workspace.get_context");
+    expect(validate(proposal({ type: "inspect_calendar", requestedDomain: "calendar", toolId: "calendar.list_today" }), "What is on my calendar today?").toolId).toBe("calendar.list_today");
+    expect(validate(proposal({ type: "inspect_learning", requestedDomain: "learning", toolId: "learning.get_progress" }), "Show my learning progress.").toolId).toBe("learning.get_progress");
+    expect(validate(proposal({ type: "inspect_workspace", requestedDomain: "workspace", toolId: "workspace.get_context" }), "Summarize my workspace.").toolId).toBe("workspace.get_context");
   });
 
   it("rejects unknown intent and invented tool id", () => {

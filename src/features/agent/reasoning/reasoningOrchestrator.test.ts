@@ -57,6 +57,22 @@ function caller(rawText: string): AgentLlmReasoningCaller {
   return vi.fn(async () => ({ rawText }));
 }
 
+function rawClarification(userMessage: string) {
+  return JSON.stringify({
+    id: "intent-clarify-1",
+    type: "ask_clarification",
+    confidence: "medium",
+    userMessage,
+    requiresTool: false,
+    requiresApproval: false,
+    clarificationQuestion: "Which item do you mean?",
+    reasons: ["Model was unsure."],
+    language: "en",
+    generatedAt: now.toISOString(),
+    schemaVersion: 1,
+  });
+}
+
 describe("reasoningOrchestrator", () => {
   const phrasingCases = [
     ["en", "What tasks do I have today?", "inspect_tasks"],
@@ -84,6 +100,76 @@ describe("reasoningOrchestrator", () => {
 
     expect(result.proposal.type).toBe(intent);
     expect(result.responseLanguage).toBe(language);
+  });
+
+  it("corrects the Persian task baseline when the model overweights today as calendar", async () => {
+    const result = await reasonAboutUserMessage({
+      userMessage: "امروز چه کارهایی دارم؟",
+      safeContext,
+      configuredResponseLanguage: "auto",
+      interfaceLanguage: "en",
+      now,
+    }, { callLlmReasoning: caller(rawIntent("inspect_calendar")) });
+
+    expect(result.proposal.type).toBe("inspect_tasks");
+    expect(result.toolId).toBe("tasks.list");
+    expect(result.proposal.requestedDomain).toBe("tasks");
+  });
+
+  it("corrects the German task baseline when the model asks unnecessary clarification", async () => {
+    const result = await reasonAboutUserMessage({
+      userMessage: "Welche Aufgaben habe ich heute?",
+      safeContext,
+      configuredResponseLanguage: "auto",
+      interfaceLanguage: "en",
+      now,
+    }, { callLlmReasoning: caller(rawClarification("Welche Aufgaben habe ich heute?")) });
+
+    expect(result.proposal.type).toBe("inspect_tasks");
+    expect(result.toolId).toBe("tasks.list");
+    expect(result.responseLanguage).toBe("de");
+  });
+
+  it("corrects the English task baseline when the model asks unnecessary clarification", async () => {
+    const result = await reasonAboutUserMessage({
+      userMessage: "Show me my open tasks.",
+      safeContext,
+      configuredResponseLanguage: "auto",
+      interfaceLanguage: "en",
+      now,
+    }, { callLlmReasoning: caller(rawClarification("Show me my open tasks.")) });
+
+    expect(result.proposal.type).toBe("inspect_tasks");
+    expect(result.toolId).toBe("tasks.list");
+    expect(result.responseLanguage).toBe("en");
+  });
+
+  it("keeps calendar phrases on calendar even when they mention today", async () => {
+    const fa = await reasonAboutUserMessage({
+      userMessage: "امروز چه قرارهایی دارم؟",
+      safeContext,
+      configuredResponseLanguage: "auto",
+      interfaceLanguage: "en",
+      now,
+    }, { callLlmReasoning: caller(rawClarification("امروز چه قرارهایی دارم؟")) });
+    const de = await reasonAboutUserMessage({
+      userMessage: "Zeig mir die heutigen Termine.",
+      safeContext,
+      configuredResponseLanguage: "auto",
+      interfaceLanguage: "en",
+      now,
+    }, { callLlmReasoning: caller(rawClarification("Zeig mir die heutigen Termine.")) });
+    const en = await reasonAboutUserMessage({
+      userMessage: "What is on my calendar today?",
+      safeContext,
+      configuredResponseLanguage: "auto",
+      interfaceLanguage: "en",
+      now,
+    }, { callLlmReasoning: caller(rawClarification("What is on my calendar today?")) });
+
+    expect(fa.proposal.type).toBe("inspect_calendar");
+    expect(de.proposal.type).toBe("inspect_calendar");
+    expect(en.proposal.type).toBe("inspect_calendar");
   });
 
   it("returns a validated inspect_tasks intent without executing or approving", async () => {
