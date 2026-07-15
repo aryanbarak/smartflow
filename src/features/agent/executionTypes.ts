@@ -18,6 +18,7 @@ export type ExecutionStatus =
   | "tool_not_found"
   | "handler_not_found"
   | "invalid_input"
+  | "verification_failed"
   | "timeout"
   | "failed";
 

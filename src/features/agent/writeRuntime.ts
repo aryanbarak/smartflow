@@ -41,6 +41,7 @@ export type WriteRuntimeStatus =
   | "handler_not_found"
   | "duplicate_request"
   | "verification_failed"
+  | "timeout"
   | "failed";
 
 export interface WriteRuntimeRequest {
@@ -247,6 +248,8 @@ function executionStatusFromHandler(
       return "success";
     case "invalid_input":
       return "invalid_input";
+    case "verification_failed":
+      return "verification_failed";
     default:
       return "failed";
   }
@@ -271,10 +274,73 @@ function safeSummaryFor(
       : "Task was marked complete.";
   }
   if (status === "verification_failed") return "Task completion could not be verified.";
+  if (status === "timeout") return "Write action timed out.";
   if (status === "duplicate_request") return "Duplicate write request was rejected.";
   if (status === "unsupported_tool") return "Write runtime does not support this tool.";
   if (status === "approval_required" || status === "rejected") return "Write action requires explicit approval.";
   return "Write action was blocked.";
+}
+
+function timeoutResult(toolId: SupportedWriteToolId): AgentWriteToolExecutionResult {
+  return {
+    status: "failed",
+    success: false,
+    error: executionError(
+      "WRITE_TIMEOUT",
+      `${toolId} did not finish within the allowed time.`,
+      false,
+    ),
+    auditMetadata: {
+      verified: false,
+      resultShape: "object",
+      redacted: true,
+    },
+  };
+}
+
+function executeWithTimeout(
+  handler: AgentWriteToolHandler,
+  input: Record<string, unknown>,
+  context: Parameters<AgentWriteToolHandler["execute"]>[1],
+): Promise<AgentWriteToolExecutionResult & { timedOut?: boolean }> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const timer = globalThis.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      resolve({
+        ...timeoutResult(handler.toolId as SupportedWriteToolId),
+        timedOut: true,
+      });
+    }, handler.timeoutMs);
+
+    handler.execute(input, context)
+      .then((result) => {
+        if (settled) return;
+        settled = true;
+        globalThis.clearTimeout(timer);
+        resolve(result);
+      })
+      .catch((caught) => {
+        if (settled) return;
+        settled = true;
+        globalThis.clearTimeout(timer);
+        resolve({
+          status: "failed",
+          success: false,
+          error: executionError(
+            "WRITE_HANDLER_FAILED",
+            "Write handler failed.",
+            false,
+          ),
+          auditMetadata: {
+            verified: false,
+            resultShape: "object",
+            redacted: true,
+          },
+        });
+      });
+  });
 }
 
 function executionResultFor(
@@ -488,13 +554,17 @@ export async function runWriteTool(
     };
   }
 
-  const handlerResult = await handler.execute(handlerInput, {
+  const handlerResult = await executeWithTimeout(handler, handlerInput, {
     ...request.executionContext,
     currentTime: request.executionContext?.currentTime ?? startedAt,
   });
   const completedAt = timestamp(deps.now());
-  const executionStatus = executionStatusFromHandler(handlerResult);
-  const writeStatus = writeStatusFromHandler(handlerResult);
+  const executionStatus: ExecutionStatus = handlerResult.timedOut
+    ? "timeout"
+    : executionStatusFromHandler(handlerResult);
+  const writeStatus: WriteRuntimeStatus = handlerResult.timedOut
+    ? "timeout"
+    : writeStatusFromHandler(handlerResult);
   const terminal = appendAuditSafely(
     deps,
     createAuditRecord(request, executionStatus, startedAt, {

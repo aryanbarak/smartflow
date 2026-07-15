@@ -118,6 +118,15 @@ function assessToolData(result: ExecutionResult): ToolDataAssessment {
         empty: !hasContext,
       };
     }
+    case "tasks.complete": {
+      const alreadyCompleted = isObject(result.data) && result.data.alreadyCompleted === true;
+      const verified = isObject(result.data) && result.data.verified === true;
+      return {
+        itemCount: alreadyCompleted || !verified ? 0 : 1,
+        hasUsefulData: verified && !alreadyCompleted,
+        empty: alreadyCompleted || !verified,
+      };
+    }
     default:
       return {
         hasUsefulData: false,
@@ -244,6 +253,10 @@ function summaryFor(result: ExecutionResult, outcome: AgentReflectionOutcome, as
       return assessment.empty
         ? "No workspace context was available."
         : "Workspace context was gathered.";
+    case "tasks.complete":
+      return assessment.empty
+        ? "Task was already completed. No new change was needed."
+        : "Task completion was verified.";
     default:
       return "Read-only information was gathered.";
   }
@@ -269,6 +282,8 @@ function followUpFor(result: ExecutionResult, outcome: AgentReflectionOutcome, a
         : "Continue the most recent unfinished learning item.";
     case "workspace.get_context":
       return "Use the loaded context to choose the next read-only step.";
+    case "tasks.complete":
+      return assessment.empty ? undefined : "Refresh the task view before choosing the next action.";
     default:
       return undefined;
   }
@@ -321,12 +336,14 @@ export function reflectOnExecution(input: AgentReflectionInput): AgentReflection
   const relevanceLevel = relevance(input.step, input.goal, domain);
   const usefulness = usefulnessFor(outcome, assessment, relevanceLevel);
   const goalProgress = progressFor(outcome, usefulness, relevanceLevel);
-  const retainAsMemoryEvidence = shouldRetain(
-    validCorrelation,
-    outcome,
-    usefulness,
-    goalProgress,
-  );
+  const retainAsMemoryEvidence =
+    !(input.executionResult.toolId === "tasks.complete" && assessment.empty) &&
+    shouldRetain(
+      validCorrelation,
+      outcome,
+      usefulness,
+      goalProgress,
+    );
 
   return {
     id: stableReflectionId(input.executionResult.requestId, input.step.id, generatedAt),

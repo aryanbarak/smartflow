@@ -188,10 +188,27 @@ describe("writeRuntime", () => {
       userId: "user-1",
       taskId: "task-1",
     }, expect.any(Object));
-    expect(getExecutionAuditRecordsByRequestId("write:success").map((record) => record.status)).toEqual([
+    const records = getExecutionAuditRecordsByRequestId("write:success");
+    expect(records.map((record) => record.status)).toEqual([
       "started",
       "success",
     ]);
+    expect(records).toHaveLength(2);
+    expect(records[0]).toMatchObject({
+      requestId: "write:success",
+      stepId: "step:complete-task",
+      toolId: "tasks.complete",
+    });
+    expect(records[1]).toMatchObject({
+      requestId: "write:success",
+      stepId: "step:complete-task",
+      toolId: "tasks.complete",
+      status: "success",
+    });
+    const serializedAudit = JSON.stringify(records);
+    expect(serializedAudit).not.toContain("user-1");
+    expect(serializedAudit).not.toContain("Sensitive");
+    expect(serializedAudit).not.toContain("stack");
   });
 
   it("rejects missing, rejected, wrong-step, wrong-target, and wrong-tool approvals before handler execution", async () => {
@@ -318,6 +335,53 @@ describe("writeRuntime", () => {
     expect(handler.execute).toHaveBeenCalledTimes(1);
   });
 
+  it("rejects concurrent duplicate request ids before a second write handler invocation", async () => {
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const handler = writeHandler({
+      execute: vi.fn(async () => {
+        await pending;
+        return {
+          status: "success",
+          success: true,
+          data: {
+            taskId: "task-1",
+            completed: true,
+            completedAt: now.toISOString(),
+            alreadyCompleted: false,
+            verified: true,
+          },
+          auditMetadata: {
+            taskId: "task-1",
+            alreadyCompleted: false,
+            verified: true,
+            resultShape: "object",
+            redacted: true,
+          },
+        };
+      }),
+    });
+    const sourceRequest = request({ requestId: "write:duplicate-in-flight" });
+
+    const first = runWriteTool(sourceRequest, {
+      getAuthenticatedUserId: () => "user-1",
+      getWriteHandlerByToolId: () => handler,
+      now: () => now,
+    });
+    const second = await runWriteTool(sourceRequest, {
+      getAuthenticatedUserId: () => "user-1",
+      getWriteHandlerByToolId: () => handler,
+      now: () => now,
+    });
+    release();
+
+    expect((await first).status).toBe("success");
+    expect(second.status).toBe("duplicate_request");
+    expect(handler.execute).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps the authenticated user boundary inside runtime dependencies", async () => {
     const handler = writeHandler();
     await runWriteTool(request({
@@ -368,6 +432,34 @@ describe("writeRuntime", () => {
     expect(result.status).toBe("verification_failed");
     expect(result.success).toBe(false);
     expect(result.verified).toBe(false);
+    expect(getExecutionAuditRecordsByRequestId("write:verification").map((record) => record.status)).toEqual([
+      "started",
+      "verification_failed",
+    ]);
+  });
+
+  it("times out a slow write handler without retrying or leaking raw errors", async () => {
+    vi.useFakeTimers();
+    const handler = writeHandler({
+      timeoutMs: 50,
+      execute: vi.fn(() => new Promise(() => undefined)),
+    });
+    const resultPromise = runWriteTool(request({ requestId: "write:timeout" }), {
+      getAuthenticatedUserId: () => "user-1",
+      getWriteHandlerByToolId: () => handler,
+      now: () => now,
+    });
+
+    await vi.advanceTimersByTimeAsync(51);
+    const result = await resultPromise;
+    vi.useRealTimers();
+
+    expect(result.status).toBe("timeout");
+    expect(result.success).toBe(false);
+    expect(result.verified).toBe(false);
+    expect(handler.execute).toHaveBeenCalledTimes(1);
+    expect(result.safeSummary).toBe("Write action timed out.");
+    expect(JSON.stringify(getExecutionAuditRecordsByRequestId("write:timeout"))).not.toContain("user-1");
   });
 
   it("isolates audit and reflection failures", async () => {

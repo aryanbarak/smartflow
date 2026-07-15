@@ -356,6 +356,55 @@ describe("reflectionEngine", () => {
     expect(failed.evidence).toEqual([]);
   });
 
+  it("reflects a verified tasks.complete write without exposing task payloads", () => {
+    const sourceStep = step("tasks", {
+      id: "step:complete-task",
+      actionType: "complete",
+      targetId: "task-1",
+    });
+    const result = execution(sourceStep, "tasks.complete", "success", {
+      taskId: "task-1",
+      completed: true,
+      completedAt: now.toISOString(),
+      alreadyCompleted: false,
+      verified: true,
+      title: "Private task title",
+    });
+    const reflection = reflect(sourceStep, goal("tasks"), result);
+
+    expect(reflection.outcome).toBe("successful");
+    expect(reflection.summary).toBe("Task completion was verified.");
+    expect(reflection.retainAsMemoryEvidence).toBe(true);
+    expect(reflection.evidence).toEqual([expect.objectContaining({
+      toolId: "tasks.complete",
+      domain: "tasks",
+      itemCount: 1,
+    })]);
+    expect(JSON.stringify(reflection)).not.toContain("Private task title");
+  });
+
+  it("reflects already-completed tasks.complete as no-change and does not retain positive completion evidence", () => {
+    const sourceStep = step("tasks", {
+      id: "step:complete-task",
+      actionType: "complete",
+      targetId: "task-1",
+    });
+    const result = execution(sourceStep, "tasks.complete", "success", {
+      taskId: "task-1",
+      completed: true,
+      completedAt: now.toISOString(),
+      alreadyCompleted: true,
+      verified: true,
+    });
+    const reflection = reflect(sourceStep, goal("tasks"), result);
+
+    expect(reflection.outcome).toBe("empty");
+    expect(reflection.summary).toBe("Task was already completed. No new change was needed.");
+    expect(reflection.retainAsMemoryEvidence).toBe(false);
+    expect(reflection.evidence).toEqual([]);
+    expect(reflection.suggestedFollowUp).toBeUndefined();
+  });
+
   it("does not mutate input and is deterministic", () => {
     const sourceStep = step("tasks");
     const sourceGoal = goal("tasks");
