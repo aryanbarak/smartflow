@@ -12,6 +12,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 
 import {
   ReasoningProposalCard,
+  resultMessage,
   shouldUseReasoningForMessage,
 } from "./ChatPage";
 import { getToolById } from "@/features/agent";
@@ -117,11 +118,14 @@ describe("ChatPage LLM reasoning UX boundary", () => {
     expect(shouldUseReasoningForMessage("Explain how calendars work.")).toBe(false);
     expect(shouldUseReasoningForMessage("What is spaced repetition?")).toBe(false);
     expect(shouldUseReasoningForMessage("Tell me about productivity systems.")).toBe(false);
+    expect(shouldUseReasoningForMessage("درباره سیستم‌های بهره‌وری توضیح بده.")).toBe(false);
   });
 
   it("routes natural supported action phrasing into intent mode", () => {
     expect(shouldUseReasoningForMessage("What tasks do I have today?")).toBe(true);
     expect(shouldUseReasoningForMessage("Welche Aufgaben habe ich heute?")).toBe(true);
+    expect(shouldUseReasoningForMessage("امروز چه کارهایی دارم؟")).toBe(true);
+    expect(shouldUseReasoningForMessage("امروز چه کارهایی دارم و به فارسی جواب بده")).toBe(true);
     expect(shouldUseReasoningForMessage("امروز چه کارهایی دارم؟")).toBe(true);
     expect(shouldUseReasoningForMessage("What is on my calendar today?")).toBe(true);
   });
@@ -187,5 +191,27 @@ describe("ChatPage LLM reasoning UX boundary", () => {
     expect(pendingHtml).toContain("Review approval");
     expect(pendingHtml).not.toContain(">Complete task</button>");
     expect(approvedHtml).toContain("Complete task");
+  });
+
+  it("formats supported runtime results through the response composer", () => {
+    const message = resultMessage({
+      requestId: "request-1",
+      stepId: "step-1",
+      toolId: "tasks.list",
+      status: "success",
+      success: true,
+      memoryEvidenceRetained: false,
+      safeSummary: "2 active tasks found.",
+      safePreviewItems: ["Finish report", "Review calendar"],
+      reasons: [],
+      startedAt: now,
+      completedAt: now,
+      durationMs: 0,
+    }, "en");
+
+    expect(message).toContain("Here is your task overview.");
+    expect(message).toContain("You currently have 2 active tasks.");
+    expect(message).toContain("- Finish report");
+    expect(message).not.toContain("request-1");
   });
 });

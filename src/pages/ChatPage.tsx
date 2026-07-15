@@ -33,6 +33,9 @@ import { useChatSessions } from '@/hooks/useChatSessions'
 import { useAppearance } from '@/features/settings/appearanceStore'
 import {
   createLlmReasoningCaller,
+  canComposeAssistantResponse,
+  composeAssistantResponse,
+  formatAssistantResponse,
   getToolById,
   reasonAboutUserMessage,
   resolveToolForStep,
@@ -48,6 +51,7 @@ import { useWorkspace } from '@/features/workspace'
 import type {
   WorkspacePlanActionType,
   WorkspacePlanStep,
+  WorkspaceDecisionProfile,
   WorkspaceStepApproval,
 } from '@/features/workspace'
 import type { ToolResolutionResult } from '@/features/agent'
@@ -160,6 +164,12 @@ const readIntentAction: Record<string, WorkspacePlanActionType> = {
 export function shouldUseReasoningForMessage(message: string) {
   const text = message.trim().toLowerCase()
   if (!text) return false
+  const realPersianOrdinaryConversation =
+    /(\u0686\u0631\u0627|\u062a\u0648\u0636\u06cc\u062d\s+\u0628\u062f\u0647|\u062f\u0631\u0628\u0627\u0631\u0647)/i.test(text) ||
+    /\u0686\u06cc\u0633\u062a/i.test(text) &&
+      !/(\u0628\u0631\u0646\u0627\u0645\u0647\s+\u0641\u0639\u0644\u06cc|\u062a\u0645\u0631\u06a9\u0632\s+\u0645\u0646|workspace|\u062a\u0642\u0648\u06cc\u0645|\u0648\u0638\u06cc\u0641\u0647|\u06a9\u0627\u0631)/i.test(text)
+  const realPersianReasoningIntent =
+    /(\u06cc\u0627\u062f\u06af\u06cc\u0631\u06cc|\u062f\u0631\u0633|\u062a\u0642\u0648\u06cc\u0645|\u0642\u0631\u0627\u0631|\u062c\u0644\u0633\u0647|\u0648\u0638\u06cc\u0641\u0647|\u0648\u0638\u06cc\u0641\u0647[\u200c\s-]?\u0647\u0627|\u06a9\u0627\u0631\u0647\u0627|\u06a9\u0627\u0631|\u062a\u0645\u0631\u06a9\u0632|\u0628\u0631\u0646\u0627\u0645\u0647\s+\u0641\u0639\u0644\u06cc|\u06a9\u0627\u0645\u0644\s+\u06a9\u0646|\u0627\u0646\u062c\u0627\u0645[\u200c\s-]?\u0634\u062f\u0647|\u062a\u0645\u0627\u0645\s+\u0646\u0634\u062f\u0647)/i.test(text)
 
   const ordinaryConversation =
     /\b(why is|explain|tell me about|warum ist|erkläre|erklaere|erzähl|erzaehl)\b/i.test(text) ||
@@ -167,7 +177,8 @@ export function shouldUseReasoningForMessage(message: string) {
     /(چرا|توضیح بده|درباره)/i.test(text) ||
     /چیست/i.test(text) && !/(برنامه فعلی|تمرکز من|workspace|تقویم|وظیفه|کار)/i.test(text)
 
-  if (ordinaryConversation) return false
+  if (ordinaryConversation || realPersianOrdinaryConversation) return false
+  if (realPersianReasoningIntent) return true
 
   return (
     /\b(task|tasks|todo|todos|unfinished|open tasks|focus on|complete|done|calendar|appointments|meetings|learning|lesson|workspace|current plan)\b/i.test(text) ||
@@ -295,7 +306,23 @@ function proposalToState(result: AgentReasoningResult, t: Translate): ReasoningP
   }
 }
 
-function resultMessage(result: ReadOnlyRuntimeResult | WriteRuntimeResult) {
+export function resultMessage(
+  result: ReadOnlyRuntimeResult | WriteRuntimeResult,
+  language: SupportedAiResponseLanguage,
+  decisionProfile?: WorkspaceDecisionProfile,
+) {
+  if (canComposeAssistantResponse(result.toolId)) {
+    return formatAssistantResponse(composeAssistantResponse({
+      toolId: result.toolId,
+      language,
+      success: result.success,
+      safeSummary: result.safeSummary,
+      safePreviewItems: 'safePreviewItems' in result ? result.safePreviewItems : [],
+      reflection: result.reflection,
+      decisionProfile,
+    }))
+  }
+
   const items = 'safePreviewItems' in result ? result.safePreviewItems : []
   if (!items.length) return result.safeSummary
   return `${result.safeSummary}\n\n${items.map((item) => `- ${item}`).join('\n')}`
@@ -652,14 +679,14 @@ export default function ChatPage() {
     }
   }
 
-  const appendAssistantResult = useCallback((content: string) => {
+  const appendAssistantResult = useCallback((content: string, language?: SupportedAiResponseLanguage) => {
     setMessages(prev => [
       ...prev,
       {
         id: `a-${Date.now()}`,
         role: 'assistant',
         content,
-        language: resolveAiResponseLanguage({
+        language: language ?? resolveAiResponseLanguage({
           configuredResponseLanguage: getStoredAiResponseLanguage(),
           interfaceLanguage,
         }),
@@ -692,7 +719,10 @@ export default function ChatPage() {
       runStatus: runResult.success ? 'success' : 'failed',
       readOnlyResult: runResult,
     } : prev)
-    appendAssistantResult(resultMessage(runResult))
+    appendAssistantResult(
+      resultMessage(runResult, reasoningProposal.result.responseLanguage, workspace.decisionProfile),
+      reasoningProposal.result.responseLanguage,
+    )
   }, [appendAssistantResult, reasoningProposal, workspace])
 
   const handleApprovalDecision = useCallback((decision: ApprovalInteractionResult) => {
@@ -736,7 +766,10 @@ export default function ChatPage() {
     if (writeResult.success) {
       void workspace.refresh?.tasks()
     }
-    appendAssistantResult(resultMessage(writeResult))
+    appendAssistantResult(
+      resultMessage(writeResult, reasoningProposal.result.responseLanguage, workspace.decisionProfile),
+      reasoningProposal.result.responseLanguage,
+    )
   }, [appendAssistantResult, reasoningProposal, user?.id, workspace])
 
   const firstName =

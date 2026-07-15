@@ -1,0 +1,141 @@
+import { describe, expect, it } from "vitest";
+import {
+  canComposeAssistantResponse,
+  composeAssistantResponse,
+  formatAssistantResponse,
+  type ResponseComposerInput,
+} from "./responseComposer";
+
+function input(overrides: Partial<ResponseComposerInput>): ResponseComposerInput {
+  return {
+    toolId: "tasks.list",
+    language: "en",
+    success: true,
+    safeSummary: "2 active tasks found.",
+    safePreviewItems: ["Finish report", "Review calendar"],
+    ...overrides,
+  };
+}
+
+describe("responseComposer", () => {
+  it("composes a natural tasks.list response from safe preview data", () => {
+    const response = composeAssistantResponse(input({}));
+
+    expect(response.headline).toBe("Here is your task overview.");
+    expect(response.summary).toBe("You currently have 2 active tasks.");
+    expect(response.details).toEqual(["Finish report", "Review calendar"]);
+    expect(formatAssistantResponse(response)).toContain("- Finish report");
+  });
+
+  it("composes calendar, learning, workspace, and tasks.complete responses", () => {
+    expect(composeAssistantResponse(input({
+      toolId: "calendar.list_today",
+      safeSummary: "No events today.",
+      safePreviewItems: [],
+    })).summary).toBe("Your calendar is clear today.");
+
+    expect(composeAssistantResponse(input({
+      toolId: "learning.get_progress",
+      safeSummary: "3 learning items found.",
+      safePreviewItems: ["Sorting Algorithms"],
+    })).summary).toBe("I found 3 learning items.");
+
+    expect(composeAssistantResponse(input({
+      toolId: "workspace.get_context",
+      safeSummary: "Workspace context loaded.",
+      safePreviewItems: [],
+    })).headline).toBe("Here is the workspace context I verified.");
+
+    expect(composeAssistantResponse(input({
+      toolId: "tasks.complete",
+      safeSummary: "Task was marked complete.",
+      safePreviewItems: [],
+    })).summary).toBe("The task is marked complete.");
+
+    expect(composeAssistantResponse(input({
+      toolId: "tasks.complete",
+      safeSummary: "Task was already complete.",
+      safePreviewItems: [],
+    })).summary).toBe("The task was already complete, so I did not change it again.");
+  });
+
+  it("keeps unsupported tools on the safe fallback path", () => {
+    expect(canComposeAssistantResponse("documents.search")).toBe(false);
+    const response = composeAssistantResponse(input({
+      toolId: "documents.search",
+      safeSummary: "The read-only action completed.",
+      safePreviewItems: ["Hidden item"],
+    }));
+
+    expect(response.headline).toBe("The action completed safely.");
+    expect(response.summary).toBe("The read-only action completed.");
+    expect(response.details).toEqual([]);
+  });
+
+  it("handles empty natural results without inventing facts", () => {
+    const response = composeAssistantResponse(input({
+      safeSummary: "No active tasks found.",
+      safePreviewItems: [],
+    }));
+
+    expect(response.summary).toBe("You do not have active tasks right now.");
+    expect(response.details).toEqual([]);
+    expect(formatAssistantResponse(response)).not.toContain("- ");
+  });
+
+  it("switches deterministic copy by language", () => {
+    const german = composeAssistantResponse(input({ language: "de" }));
+    const farsi = composeAssistantResponse(input({ language: "fa" }));
+
+    expect(german.headline).toBe("Hier ist deine Aufgabenubersicht.");
+    expect(german.summary).toContain("aktive Aufgaben");
+    expect(farsi.headline).toContain("\u06a9\u0627\u0631\u0647\u0627");
+    expect(farsi.summary).toContain("2");
+  });
+
+  it("does not invent absent preview titles or mutate runtime results", () => {
+    const runtimeItems = ["Only verified title"];
+    const runtimeInput = input({
+      safePreviewItems: runtimeItems,
+      safeSummary: "1 active task found.",
+    });
+
+    const response = composeAssistantResponse(runtimeInput);
+
+    expect(response.details).toEqual(["Only verified title"]);
+    expect(formatAssistantResponse(response)).not.toContain("Another title");
+    expect(runtimeItems).toEqual(["Only verified title"]);
+    expect(runtimeInput.safeSummary).toBe("1 active task found.");
+  });
+
+  it("scrubs internal fields and uses reflection only for optional wording", () => {
+    const response = composeAssistantResponse(input({
+      safeSummary: "requestId: req-123 1 active task found.",
+      safePreviewItems: ["stepId: step-1 Finish report", "Keep this title"],
+      reflection: {
+        id: "reflection-1",
+        requestId: "req-123",
+        stepId: "step-1",
+        goalId: "goal-1",
+        toolId: "tasks.list",
+        outcome: "successful",
+        usefulness: "medium",
+        goalProgress: "informed",
+        stepAssessment: "information_gathered",
+        confidence: "high",
+        summary: "Safe reflection summary",
+        evidence: [],
+        suggestedFollowUp: "Start with the first active task.",
+        retainAsMemoryEvidence: true,
+        generatedAt: "2026-07-15T10:00:00.000Z",
+        reflectionVersion: "reflection-engine-v1",
+      },
+    }));
+
+    expect(response.summary).toBe("You currently have 1 active task.");
+    expect(response.details).toEqual(["Finish report", "Keep this title"]);
+    expect(response.optionalSuggestion).toBe("Start with the first active task.");
+    expect(formatAssistantResponse(response)).not.toContain("req-123");
+    expect(formatAssistantResponse(response)).not.toContain("step-1");
+  });
+});
