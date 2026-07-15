@@ -162,7 +162,20 @@ function findTaskTarget(
 }
 
 function requestLooksUnsupported(message: string) {
-  return /\b(create|update|delete|send|pay|share|invite|add|remove)\b/i.test(message);
+  return (
+    /\b(create|update|delete|send|pay|share|invite|add|remove|move|reschedule)\b/i.test(message) ||
+    /\b(erstelle|loesche|lösche|verschiebe|sende|bezahle|teile|entferne|hinzufuegen|hinzufügen)\b/i.test(message) ||
+    /(بساز|ایجاد کن|حذف کن|منتقل کن|بفرست|ارسال کن|دعوت کن|اضافه کن|پاک کن)/i.test(message)
+  );
+}
+
+function requestLooksMixed(message: string, type: AgentIntentType) {
+  if (type === "complete_task") return false;
+  const hasReadIntent =
+    /\b(check|show|inspect|list|summarize|continue|what|which|zeig|zeige|pruefe|prüfe|fasse|setze|نشان بده|بررسی کن|خلاصه کن|ادامه بده)\b/i.test(message);
+  const hasCompleteIntent =
+    /\b(complete|finish|mark .* done|done|erledige|abschliessen|abschließen|markiere|کامل کن|تمام کن|انجام‌شده)\b/i.test(message);
+  return hasReadIntent && hasCompleteIntent;
 }
 
 export function validateAgentIntentProposal(input: {
@@ -230,6 +243,16 @@ export function validateAgentIntentProposal(input: {
       now,
       question: safeString(input.rawProposal.clarificationQuestion) || textFor(input.language, "clarify"),
       reason: "Clarification requested.",
+    });
+  }
+
+  if (requestLooksMixed(input.userMessage, type)) {
+    return createSafeProposal("ask_clarification", {
+      userMessage: input.userMessage,
+      language: input.language,
+      now,
+      question: textFor(input.language, "clarify"),
+      reason: "Mixed read/write request requires clarification before any action.",
     });
   }
 

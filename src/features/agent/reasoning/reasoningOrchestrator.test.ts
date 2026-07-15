@@ -58,6 +58,34 @@ function caller(rawText: string): AgentLlmReasoningCaller {
 }
 
 describe("reasoningOrchestrator", () => {
+  const phrasingCases = [
+    ["en", "What tasks do I have today?", "inspect_tasks"],
+    ["en", "Show today's appointments.", "inspect_calendar"],
+    ["en", "Continue my learning.", "inspect_learning"],
+    ["en", "What is my current plan?", "inspect_workspace"],
+    ["de", "Welche Aufgaben habe ich heute?", "inspect_tasks"],
+    ["de", "Zeig mir die heutigen Termine.", "inspect_calendar"],
+    ["de", "Setze mein Lernen fort.", "inspect_learning"],
+    ["de", "Was ist mein aktueller Plan?", "inspect_workspace"],
+    ["fa", "امروز چه کارهایی دارم؟", "inspect_tasks"],
+    ["fa", "قرارهای امروز را نشان بده.", "inspect_calendar"],
+    ["fa", "درس من را ادامه بده.", "inspect_learning"],
+    ["fa", "برنامه فعلی من چیست؟", "inspect_workspace"],
+  ] as const;
+
+  it.each(phrasingCases)("validates multilingual phrasing for %s: %s", async (language, userMessage, intent) => {
+    const result = await reasonAboutUserMessage({
+      userMessage,
+      safeContext,
+      configuredResponseLanguage: "auto",
+      interfaceLanguage: "en",
+      now,
+    }, { callLlmReasoning: caller(rawIntent(intent)) });
+
+    expect(result.proposal.type).toBe(intent);
+    expect(result.responseLanguage).toBe(language);
+  });
+
   it("returns a validated inspect_tasks intent without executing or approving", async () => {
     const callLlmReasoning = caller(rawIntent("inspect_tasks"));
     const result = await reasonAboutUserMessage({

@@ -68,6 +68,14 @@ describe("intentValidator", () => {
     expect(validate(proposal({ type: "inspect_tasks" }), "Create a task").proposal.type).toBe("unsupported");
     expect(validate(proposal({ type: "inspect_tasks" }), "Update the task").proposal.type).toBe("unsupported");
     expect(validate(proposal({ type: "inspect_tasks" }), "Delete this task").proposal.type).toBe("unsupported");
+    expect(validate(proposal({ type: "inspect_calendar", requestedDomain: "calendar", toolId: "calendar.list_today" }), "Verschiebe meinen Termin auf 15 Uhr.").proposal.type).toBe("unsupported");
+    expect(validate(proposal({ type: "inspect_tasks" }), "برای فردا یک وظیفه بساز.").proposal.type).toBe("unsupported");
+  });
+
+  it("rejects mixed read and completion requests instead of partially executing", () => {
+    expect(validate(proposal({ type: "inspect_tasks" }), "Check my tasks and complete the most important one.").proposal.type).toBe("ask_clarification");
+    expect(validate(proposal({ type: "inspect_calendar", requestedDomain: "calendar", toolId: "calendar.list_today" }), "Show my calendar and create a focus block.").proposal.type).toBe("unsupported");
+    expect(validate(proposal({ type: "inspect_learning", requestedDomain: "learning", toolId: "learning.get_progress" }), "Continue learning and finish the related task.").proposal.type).toBe("ask_clarification");
   });
 
   it("asks clarification for low confidence", () => {
@@ -131,5 +139,25 @@ describe("intentValidator", () => {
     });
 
     expect(result.proposal.clarificationQuestion).toContain("Kannst");
+  });
+
+  it("returns language-correct clarification for low-confidence auto outputs", () => {
+    const fa = validateAgentIntentProposal({
+      rawProposal: proposal({ confidence: "low" }),
+      userMessage: "منظورت کدام وظیفه است؟",
+      safeContext: context,
+      language: "fa",
+      now,
+    });
+    const en = validateAgentIntentProposal({
+      rawProposal: proposal({ confidence: "low" }),
+      userMessage: "Which task?",
+      safeContext: context,
+      language: "en",
+      now,
+    });
+
+    expect(fa.proposal.clarificationQuestion).toContain("می");
+    expect(en.proposal.clarificationQuestion).toContain("clarify");
   });
 });

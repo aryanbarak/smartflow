@@ -157,8 +157,23 @@ const readIntentAction: Record<string, WorkspacePlanActionType> = {
   inspect_workspace: 'inspect',
 }
 
-function isWorkspaceActionMessage(message: string) {
-  return /\b(task|tasks|calendar|learning|lesson|workspace|complete|done|todo|kalender|aufgabe|lernen|یادگیری|کار|تقویم)\b/i.test(message)
+export function shouldUseReasoningForMessage(message: string) {
+  const text = message.trim().toLowerCase()
+  if (!text) return false
+
+  const ordinaryConversation =
+    /\b(why is|explain|tell me about|warum ist|erkläre|erklaere|erzähl|erzaehl)\b/i.test(text) ||
+    /\bwhat is\b/i.test(text) && !/\b(on my calendar|my current plan|my focus|my workspace|my tasks)\b/i.test(text) ||
+    /(چرا|توضیح بده|درباره)/i.test(text) ||
+    /چیست/i.test(text) && !/(برنامه فعلی|تمرکز من|workspace|تقویم|وظیفه|کار)/i.test(text)
+
+  if (ordinaryConversation) return false
+
+  return (
+    /\b(task|tasks|todo|todos|unfinished|open tasks|focus on|complete|done|calendar|appointments|meetings|learning|lesson|workspace|current plan)\b/i.test(text) ||
+    /\b(kalender|termin|termine|besprechung|besprechungen|aufgabe|aufgaben|offenen aufgaben|nicht erledigt|lernen|lernfortschritt|fokus|aktueller plan|erledige|markiere)\b/i.test(text) ||
+    /(یادگیری|درس|تقویم|قرار|جلسه|وظیفه|وظیفه‌ها|کارها|کار|تمرکز|برنامه فعلی|کامل کن|انجام‌شده|تمام نشده)/i.test(text)
+  )
 }
 
 function intentTitleKey(type: AgentReasoningResult['proposal']['type']): TranslationKey {
@@ -286,7 +301,7 @@ function resultMessage(result: ReadOnlyRuntimeResult | WriteRuntimeResult) {
   return `${result.safeSummary}\n\n${items.map((item) => `- ${item}`).join('\n')}`
 }
 
-function ReasoningProposalCard({
+export function ReasoningProposalCard({
   proposal,
   onRunReadOnly,
   onReviewApproval,
@@ -300,6 +315,8 @@ function ReasoningProposalCard({
   const { t } = useT()
   const { result, resolution, approval, runStatus } = proposal
   const toolId = resolution?.toolId ?? result.proposal.toolId
+  const toolLabel = resolution?.tool?.name ?? toolId ?? t('agent_intent_no_runtime')
+  const modeLabel = result.proposal.requiresApproval ? t('agent_intent_mode_write') : t('agent_intent_mode_read')
   const isRunning = runStatus === 'running'
   const isCompleteTask = result.proposal.type === 'complete_task'
   const isApproved = approval?.status === 'approved'
@@ -335,13 +352,13 @@ function ReasoningProposalCard({
           <dt className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             {t('agent_intent_tool')}
           </dt>
-          <dd className="mt-1 font-medium">{toolId ?? t('agent_intent_no_runtime')}</dd>
+          <dd className="mt-1 font-medium">{toolLabel}</dd>
         </div>
         <div className="rounded-lg border border-border/25 bg-background/30 px-2.5 py-2">
           <dt className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {t('agent_intent_confidence')}
+            {t('agent_intent_mode')}
           </dt>
-          <dd className="mt-1 font-medium">{result.proposal.confidence}</dd>
+          <dd className="mt-1 font-medium">{modeLabel}</dd>
         </div>
         {result.proposal.target?.taskTitleHint && (
           <div className="rounded-lg border border-border/25 bg-background/30 px-2.5 py-2">
@@ -549,7 +566,7 @@ export default function ChatPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (session === null) throw new Error('No session')
 
-      if (isWorkspaceActionMessage(text)) {
+      if (shouldUseReasoningForMessage(text)) {
         const result = await reasonAboutUserMessage({
           userMessage: text,
           configuredResponseLanguage: getStoredAiResponseLanguage(),
