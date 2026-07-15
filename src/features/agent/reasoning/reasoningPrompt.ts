@@ -1,0 +1,91 @@
+import { getAiResponseLanguageInstruction } from "@/features/ai/responseLanguage";
+import type {
+  AgentReasoningPromptInput,
+  AgentReasoningSafeContext,
+} from "./reasoningTypes";
+
+const MAX_SAFE_ITEMS = 12;
+
+function safeString(value: unknown, fallback = "") {
+  return typeof value === "string" ? value.slice(0, 160) : fallback;
+}
+
+function safeTasks(context: AgentReasoningSafeContext) {
+  return context.tasks.slice(0, MAX_SAFE_ITEMS).map((task) => ({
+    id: safeString(task.id),
+    title: safeString(task.title, "Untitled task"),
+    completed: task.completed === true || task.status === "completed",
+    status: safeString(task.status),
+    dueDate: safeString(task.dueDate),
+  }));
+}
+
+function safeEvents(context: AgentReasoningSafeContext) {
+  return context.events.slice(0, MAX_SAFE_ITEMS).map((event) => ({
+    id: safeString(event.id),
+    title: safeString(event.title, "Untitled event"),
+    start: safeString(event.dateTimeStart ?? event.start),
+  }));
+}
+
+function safeLearning(context: AgentReasoningSafeContext) {
+  const progress = context.learningProgress;
+  return {
+    totalQuestions: progress?.totalQuestions,
+    mode: safeString(progress?.mode),
+    lessons: (progress?.lessons ?? []).slice(0, MAX_SAFE_ITEMS).map((lesson) => ({
+      id: safeString(lesson.id),
+      title: safeString(lesson.title, "Untitled lesson"),
+      completionPercentage: lesson.completionPercentage,
+      completed: lesson.completed === true,
+    })),
+  };
+}
+
+function safeWorkspace(context: AgentReasoningSafeContext) {
+  const workspace = context.workspace;
+  if (!workspace) return null;
+  return {
+    goal: {
+      title: safeString(workspace.goal.title),
+      summary: safeString(workspace.goal.summary),
+      primaryDomain: workspace.goal.primaryDomain,
+    },
+    plan: {
+      title: safeString(workspace.plan.title),
+      summary: safeString(workspace.plan.summary),
+      stepCount: workspace.plan.steps.length,
+    },
+    signals: workspace.signalFeed.slice(0, MAX_SAFE_ITEMS).map((signal) => ({
+      id: signal.id,
+      domain: signal.domain,
+      label: signal.label,
+      severity: signal.severity,
+      count: signal.count,
+    })),
+  };
+}
+
+export function buildReasoningPrompt(input: AgentReasoningPromptInput) {
+  const safeContext = {
+    tasks: safeTasks(input.safeContext),
+    events: safeEvents(input.safeContext),
+    learning: safeLearning(input.safeContext),
+    workspace: safeWorkspace(input.safeContext),
+  };
+
+  return [
+    "You are Flow AI's reasoning layer. Return JSON only.",
+    "You propose one intent only. You never execute tools. You never approve actions.",
+    "You never invent tool IDs. You never provide userId. You never claim actions completed before verified runtime success.",
+    "Supported intents: inspect_tasks, inspect_calendar, inspect_learning, inspect_workspace, complete_task, ask_clarification, unsupported.",
+    "Allowed mappings: inspect_tasks->tasks.list, inspect_calendar->calendar.list_today, inspect_learning->learning.get_progress, inspect_workspace->workspace.get_context, complete_task->tasks.complete.",
+    "Unsupported requests include create/update/delete tasks, send messages, create events, finance mutations, or arbitrary automation.",
+    "Ask clarification when the target is ambiguous, when multiple tasks match, when no exact task is selected, when confidence is low, or when actions are mixed.",
+    getAiResponseLanguageInstruction(input.responseLanguage),
+    "Do not include task notes, document bodies, chat history, raw memory, audit history, policy internals, secrets, Supabase details, or userId.",
+    "Output schema fields: id,type,confidence,userMessage,target,requestedDomain,toolId,requiresTool,requiresApproval,clarificationQuestion,reasons,language,generatedAt,schemaVersion.",
+    `Current safe context JSON: ${JSON.stringify(safeContext)}`,
+    `User message: ${input.userMessage}`,
+  ].join("\n");
+}

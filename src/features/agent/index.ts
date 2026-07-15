@@ -13,6 +13,7 @@ export * from "./readOnlyResultPresenter";
 export * from "./reflectionEngine";
 export * from "./reflectionIntegration";
 export type * from "./reflectionTypes";
+export * from "./reasoning";
 export * from "./tasksListVerticalSlice";
 export * from "./writeHandlers";
 export * from "./writeRuntime";

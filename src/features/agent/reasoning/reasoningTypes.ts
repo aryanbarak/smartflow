@@ -1,0 +1,98 @@
+import type { AiResponseLanguage } from "@/features/ai/responseLanguage";
+import type {
+  ExecutionContextEvent,
+  ExecutionContextTask,
+  ExecutionLearningProgressSnapshot,
+} from "../executionTypes";
+import type { Workspace } from "@/features/workspace/workspaceTypes";
+
+export const AGENT_INTENT_SCHEMA_VERSION = 1 as const;
+
+export type AgentIntentType =
+  | "inspect_tasks"
+  | "inspect_calendar"
+  | "inspect_learning"
+  | "inspect_workspace"
+  | "complete_task"
+  | "ask_clarification"
+  | "unsupported";
+
+export type AgentIntentConfidence = "low" | "medium" | "high";
+export type AgentIntentDomain =
+  | "tasks"
+  | "calendar"
+  | "learning"
+  | "workspace";
+
+export interface AgentIntentTarget {
+  taskId?: string;
+  taskReference?: string;
+  taskTitleHint?: string;
+}
+
+export interface AgentIntentProposal {
+  id: string;
+  type: AgentIntentType;
+  confidence: AgentIntentConfidence;
+  userMessage: string;
+  target?: AgentIntentTarget;
+  requestedDomain?: AgentIntentDomain;
+  toolId?: string;
+  requiresTool: boolean;
+  requiresApproval: boolean;
+  clarificationQuestion?: string;
+  reasons: string[];
+  language: Exclude<AiResponseLanguage, "auto">;
+  generatedAt: string;
+  schemaVersion: typeof AGENT_INTENT_SCHEMA_VERSION;
+}
+
+export interface AgentReasoningSafeContext {
+  tasks: ExecutionContextTask[];
+  events: ExecutionContextEvent[];
+  learningProgress: ExecutionLearningProgressSnapshot | null;
+  workspace?: Pick<Workspace, "goal" | "plan" | "signalFeed"> | null;
+}
+
+export interface AgentReasoningInput {
+  userMessage: string;
+  configuredResponseLanguage?: AiResponseLanguage;
+  interfaceLanguage?: string;
+  safeContext: AgentReasoningSafeContext;
+  now?: Date;
+  sessionId?: string;
+}
+
+export interface AgentReasoningPromptInput extends AgentReasoningInput {
+  responseLanguage: Exclude<AiResponseLanguage, "auto">;
+}
+
+export interface AgentLlmReasoningRequest {
+  prompt: string;
+  responseLanguage: Exclude<AiResponseLanguage, "auto">;
+  sessionId?: string;
+}
+
+export interface AgentLlmReasoningResponse {
+  rawText: string;
+}
+
+export type AgentLlmReasoningCaller = (
+  request: AgentLlmReasoningRequest,
+) => Promise<AgentLlmReasoningResponse>;
+
+export interface AgentReasoningValidationResult {
+  proposal: AgentIntentProposal;
+  toolId?: "tasks.list" | "calendar.list_today" | "learning.get_progress" | "workspace.get_context" | "tasks.complete";
+  validationReasons: string[];
+}
+
+export interface AgentReasoningResult extends AgentReasoningValidationResult {
+  responseLanguage: Exclude<AiResponseLanguage, "auto">;
+  promptPreview: {
+    containsTaskNotes: false;
+    containsRawMemory: false;
+    containsAuditPolicy: false;
+    containsUserId: false;
+  };
+}
