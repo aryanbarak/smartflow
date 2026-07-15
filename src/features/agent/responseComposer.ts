@@ -1,4 +1,5 @@
 import type { AgentReflectionResult } from "./reflectionTypes";
+import type { SynthesizedContext } from "./contextSynthesis";
 import type { WorkspaceDecisionProfile } from "../workspace/workspaceTypes";
 
 export const RESPONSE_COMPOSER_VERSION = "response-composer-v1" as const;
@@ -22,6 +23,7 @@ export interface ResponseComposerInput {
   safePreviewItems?: readonly string[];
   reflection?: AgentReflectionResult;
   decisionProfile?: WorkspaceDecisionProfile;
+  synthesizedContext?: SynthesizedContext;
 }
 
 export interface AssistantResponse {
@@ -230,10 +232,26 @@ function summaryFor(input: ResponseComposerInput, copy: ComposerCopy) {
 }
 
 function suggestionFor(input: ResponseComposerInput, copy: ComposerCopy) {
+  const synthesizedSuggestion = sanitizeText(input.synthesizedContext?.safeSuggestion ?? "");
+  if (synthesizedSuggestion) return synthesizedSuggestion;
   const reflected = sanitizeText(input.reflection?.suggestedFollowUp ?? "");
   if (reflected) return reflected;
   if (input.decisionProfile?.lowData && input.success) return LOW_DATA_NOTE[input.language];
   return input.success ? copy.suggestion : undefined;
+}
+
+function detailsFor(input: ResponseComposerInput) {
+  const synthesizedFacts = input.synthesizedContext?.supportingFacts ?? [];
+  return [
+    ...synthesizedFacts.map((fact) => sanitizeText(fact)),
+    ...sanitizeItems(input.safePreviewItems),
+  ].filter(Boolean).slice(0, 6);
+}
+
+function primarySummaryFor(input: ResponseComposerInput, copy: ComposerCopy) {
+  const synthesizedPrimary = sanitizeText(input.synthesizedContext?.primaryFact ?? "");
+  if (input.success && synthesizedPrimary) return synthesizedPrimary;
+  return summaryFor(input, copy);
 }
 
 export function composeAssistantResponse(input: ResponseComposerInput): AssistantResponse {
@@ -253,8 +271,8 @@ export function composeAssistantResponse(input: ResponseComposerInput): Assistan
   const copy = TOOL_COPY[toolId][language];
   return Object.freeze({
     headline: copy.headline,
-    summary: summaryFor(input, copy),
-    details: Object.freeze(sanitizeItems(input.safePreviewItems)) as string[],
+    summary: primarySummaryFor(input, copy),
+    details: Object.freeze(detailsFor(input)) as string[],
     optionalSuggestion: suggestionFor(input, copy),
     language,
     styleVersion: RESPONSE_COMPOSER_VERSION,

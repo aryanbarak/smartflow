@@ -138,4 +138,28 @@ describe("responseComposer", () => {
     expect(formatAssistantResponse(response)).not.toContain("req-123");
     expect(formatAssistantResponse(response)).not.toContain("step-1");
   });
+
+  it("uses synthesized context when present and still works without it", () => {
+    const withoutSynthesis = composeAssistantResponse(input({
+      safeSummary: "6 active tasks found.",
+      safePreviewItems: [],
+    }));
+    const withSynthesis = composeAssistantResponse(input({
+      safeSummary: "6 active tasks found.",
+      safePreviewItems: ["Visible task"],
+      synthesizedContext: {
+        primaryFact: "1 of your 6 open tasks is due today.",
+        supportingFacts: ["3 open tasks do not have due dates."],
+        safeSuggestion: "You may want to add due dates to those tasks.",
+        evidenceDomains: ["tasks"],
+        confidence: "medium",
+        synthesisVersion: "context-synthesis-v1",
+      },
+    }));
+
+    expect(withoutSynthesis.summary).toBe("You currently have 6 active tasks.");
+    expect(withSynthesis.summary).toBe("1 of your 6 open tasks is due today.");
+    expect(withSynthesis.details).toEqual(["3 open tasks do not have due dates.", "Visible task"]);
+    expect(withSynthesis.optionalSuggestion).toBe("You may want to add due dates to those tasks.");
+  });
 });
