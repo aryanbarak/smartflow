@@ -1,6 +1,7 @@
 import type {
   WorkspaceDomainAffinity,
   WorkspaceInteractionFeedback,
+  WorkspaceDecisionProfile,
   WorkspaceMemoryInsights,
   WorkspacePersonalizationConfidence,
   WorkspacePersonalizationModel,
@@ -81,6 +82,7 @@ export function personalizationEngine(
   signals: WorkspaceSignal[],
   memoryInsights?: WorkspaceMemoryInsights,
   interactionFeedback?: WorkspaceInteractionFeedback,
+  decisionProfile?: WorkspaceDecisionProfile,
 ): WorkspacePersonalizationModel {
   const now = input.now ?? new Date();
   const generatedAt = now.toISOString();
@@ -264,6 +266,31 @@ export function personalizationEngine(
     }
     if (interactionFeedback.avoidedDomains.length > 0) {
       evidence.push("Explicit dismissals reduced weak interaction preference.");
+    }
+  }
+
+  if (decisionProfile && !decisionProfile.lowData && !isOnboarding) {
+    const decisionWeight =
+      decisionProfile.decisionConfidence === "high"
+        ? 0.16
+        : decisionProfile.decisionConfidence === "medium"
+          ? 0.1
+          : 0.04;
+
+    for (const domain of decisionProfile.preferredDomains.slice(0, 3)) {
+      addAffinity(domain, 18 * decisionWeight);
+    }
+    for (const domain of decisionProfile.reliableDomains.slice(0, 3)) {
+      addAffinity(domain, 12 * decisionWeight);
+    }
+    for (const domain of decisionProfile.avoidedDomains.slice(0, 2)) {
+      affinity[domain] = clampScore(affinity[domain] - 8 * decisionWeight);
+    }
+    if (
+      decisionProfile.preferredDomains.length > 0 ||
+      decisionProfile.avoidedDomains.length > 0
+    ) {
+      evidence.push("Decision intelligence added weak reflection-based preference evidence.");
     }
   }
 

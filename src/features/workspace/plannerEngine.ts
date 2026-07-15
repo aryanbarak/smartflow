@@ -91,6 +91,24 @@ function confidenceForPlan(
   return input.goal.confidence;
 }
 
+function decisionReasonForPlan(input: WorkspacePlannerEngineInput) {
+  const profile = input.decisionProfile;
+  if (!profile || profile.lowData) return undefined;
+  if (profile.reliableDomains.includes(input.goal.primaryDomain)) {
+    return "Decision intelligence found repeated successful evidence for this plan domain.";
+  }
+  if (
+    profile.avoidedDomains.includes(input.goal.primaryDomain) &&
+    !input.signals.some(
+      (signal) =>
+        signal.domain === input.goal.primaryDomain && signal.severity === "high",
+    )
+  ) {
+    return "Decision intelligence marked recent empty evidence as advisory for this plan domain.";
+  }
+  return undefined;
+}
+
 function step(
   title: string,
   description: string,
@@ -236,8 +254,14 @@ export function plannerEngine(input: WorkspacePlannerEngineInput): WorkspacePlan
       ...input.goal.constraints,
       "Planner V1 proposes steps only.",
       "No tools or workspace data are modified.",
+      ...(input.decisionProfile && !input.decisionProfile.lowData
+        ? ["Decision intelligence may only weakly guide ordering."]
+        : []),
     ],
-    reasons: input.goal.reasons.slice(0, 4),
+    reasons: [
+      ...input.goal.reasons,
+      ...(decisionReasonForPlan(input) ? [decisionReasonForPlan(input)!] : []),
+    ].slice(0, 4),
     generatedAt,
     sourceGoal: input.goal,
     sourceSignalIds: input.goal.sourceSignalIds,

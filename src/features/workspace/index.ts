@@ -1,4 +1,5 @@
 export { approvalEngine } from "./approvalEngine";
+export { decisionIntelligenceEngine } from "./decisionIntelligenceEngine";
 export { memoryEngine } from "./memoryEngine";
 export { goalEngine } from "./goalEngine";
 export { interactionFeedbackEngine } from "./interactionFeedbackEngine";
@@ -33,6 +34,9 @@ export type {
   WorkspaceApprovalOverallStatus,
   WorkspaceApprovalRiskLevel,
   WorkspaceApprovalScope,
+  WorkspaceDecisionConfidence,
+  WorkspaceDecisionIntelligenceInput,
+  WorkspaceDecisionProfile,
   WorkspaceDomainAffinity,
   WorkspaceGoal,
   WorkspaceGoalEngineInput,

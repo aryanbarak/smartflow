@@ -1,5 +1,6 @@
 import type {
   WorkspacePriorityConfidence,
+  WorkspaceDecisionProfile,
   WorkspaceInteractionFeedback,
   WorkspacePriorityModel,
   WorkspacePersonalizationModel,
@@ -31,6 +32,7 @@ function personalizedSignalScore(
   signal: WorkspaceSignal,
   personalization: WorkspacePersonalizationModel,
   interactionFeedback?: WorkspaceInteractionFeedback,
+  decisionProfile?: WorkspaceDecisionProfile,
 ) {
   const feedbackBoost =
     signal.severity === "high"
@@ -40,20 +42,37 @@ function personalizedSignalScore(
     signal.severity === "high"
       ? 0
       : (personalization.domainAffinity[signal.domain] ?? 0) * 0.25;
-  return signal.score + personalizationBoost + feedbackBoost;
+  const decisionBoost =
+    signal.severity === "high" || decisionProfile?.lowData
+      ? 0
+      : decisionProfile?.preferredDomains.includes(signal.domain)
+        ? decisionProfile.decisionConfidence === "high"
+          ? 4
+          : decisionProfile.decisionConfidence === "medium"
+            ? 2
+            : 1
+        : 0;
+  const decisionPenalty =
+    signal.severity === "high" || decisionProfile?.lowData
+      ? 0
+      : decisionProfile?.avoidedDomains.includes(signal.domain)
+        ? 3
+        : 0;
+  return signal.score + personalizationBoost + feedbackBoost + decisionBoost - decisionPenalty;
 }
 
 function sortSignals(
   signals: WorkspaceSignal[],
   personalization: WorkspacePersonalizationModel,
   interactionFeedback?: WorkspaceInteractionFeedback,
+  decisionProfile?: WorkspaceDecisionProfile,
 ) {
   return [...signals].sort((a, b) => {
     const severityDiff = severityWeight(b) - severityWeight(a);
     if (severityDiff !== 0) return severityDiff;
     return (
-      personalizedSignalScore(b, personalization, interactionFeedback) -
-      personalizedSignalScore(a, personalization, interactionFeedback)
+      personalizedSignalScore(b, personalization, interactionFeedback, decisionProfile) -
+      personalizedSignalScore(a, personalization, interactionFeedback, decisionProfile)
     );
   });
 }
@@ -63,6 +82,7 @@ function completeSecondaryDomains(
   primaryDomain: WorkspaceSignalDomain,
   personalization: WorkspacePersonalizationModel,
   interactionFeedback?: WorkspaceInteractionFeedback,
+  decisionProfile?: WorkspaceDecisionProfile,
   highSignalDomains = new Set<WorkspaceSignalDomain>(),
 ) {
   const orderedDomains = [...domains];
@@ -70,6 +90,9 @@ function completeSecondaryDomains(
     if (!orderedDomains.includes(domain)) orderedDomains.push(domain);
   }
   for (const domain of interactionFeedback?.recentInteractionDomains ?? []) {
+    if (!orderedDomains.includes(domain)) orderedDomains.push(domain);
+  }
+  for (const domain of decisionProfile?.preferredDomains ?? []) {
     if (!orderedDomains.includes(domain)) orderedDomains.push(domain);
   }
 
@@ -81,6 +104,14 @@ function completeSecondaryDomains(
       if (highSignalDomains.has(a) && highSignalDomains.has(b)) {
         return orderedDomains.indexOf(a) - orderedDomains.indexOf(b);
       }
+      const reliableDiff =
+        Number(decisionProfile?.reliableDomains.includes(b) ?? false) -
+        Number(decisionProfile?.reliableDomains.includes(a) ?? false);
+      if (reliableDiff !== 0) return reliableDiff;
+      const avoidedDiff =
+        Number(decisionProfile?.avoidedDomains.includes(a) ?? false) -
+        Number(decisionProfile?.avoidedDomains.includes(b) ?? false);
+      if (avoidedDiff !== 0) return avoidedDiff;
       const feedbackDiff =
         (interactionFeedback?.domainEngagement[b] ?? 0) -
         (interactionFeedback?.domainEngagement[a] ?? 0);
@@ -156,8 +187,9 @@ export function priorityEngine(
   signals: WorkspaceSignal[],
   personalization: WorkspacePersonalizationModel,
   interactionFeedback?: WorkspaceInteractionFeedback,
+  decisionProfile?: WorkspaceDecisionProfile,
 ): WorkspacePriorityModel {
-  const orderedSignals = sortSignals(signals, personalization, interactionFeedback);
+  const orderedSignals = sortSignals(signals, personalization, interactionFeedback, decisionProfile);
   const onboardingSignal = orderedSignals.find(
     (signal) => signal.id === "learning:onboarding",
   );
@@ -186,6 +218,7 @@ export function priorityEngine(
           primarySignal.domain,
           personalization,
           interactionFeedback,
+          decisionProfile,
           new Set(
             signalOrder
               .filter((signal) => signal.severity === "high")

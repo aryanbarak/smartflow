@@ -8,6 +8,7 @@ import { resolveToolForStep } from "@/features/agent";
 import { useHabits } from "@/features/habits/useHabits";
 import { useDocuments } from "@/features/documents/useDocuments";
 import { approvalEngine } from "./approvalEngine";
+import { decisionIntelligenceEngine } from "./decisionIntelligenceEngine";
 import { goalEngine } from "./goalEngine";
 import { interactionFeedbackEngine } from "./interactionFeedbackEngine";
 import { memoryEngine } from "./memoryEngine";
@@ -85,13 +86,25 @@ export function useWorkspace(): Workspace {
       memoryResult.updatedMemory,
       engineInput.now,
     );
+    const decisionProfile = decisionIntelligenceEngine({
+      ...engineInput,
+      memory: memoryResult.updatedMemory,
+      interactionFeedback,
+      signals,
+    });
     const personalization = personalizationEngine(
       engineInput,
       signals,
       memoryResult.memoryInsights,
       interactionFeedback,
+      decisionProfile,
     );
-    const priority = priorityEngine(signals, personalization, interactionFeedback);
+    const priority = priorityEngine(
+      signals,
+      personalization,
+      interactionFeedback,
+      decisionProfile,
+    );
     const goal = goalEngine({
       ...engineInput,
       signals,
@@ -99,11 +112,13 @@ export function useWorkspace(): Workspace {
       personalization,
       memoryInsights: memoryResult.memoryInsights,
       interactionFeedback,
+      decisionProfile,
     });
     const plan = plannerEngine({
       ...engineInput,
       goal,
       signals,
+      decisionProfile,
     });
     const toolResolutions = plan.steps.map((step) =>
       resolveToolForStep({
@@ -122,6 +137,7 @@ export function useWorkspace(): Workspace {
         ...engineInput,
         chatSessions,
         signals,
+        decisionProfile,
         personalization,
         priority,
         interactionFeedback,

@@ -97,6 +97,7 @@ export type WorkspaceSignalSeverity = "low" | "medium" | "high";
 export type WorkspacePriorityConfidence = "low" | "medium" | "high";
 export type WorkspacePersonalizationConfidence = "low" | "medium" | "high";
 export type WorkspaceMemoryConfidence = "low" | "medium" | "high";
+export type WorkspaceDecisionConfidence = "low" | "medium" | "high";
 export type WorkspaceUsageWindow = "morning" | "afternoon" | "evening" | "night";
 export type WorkspaceSuggestedActionMemoryStatus =
   | "shown"
@@ -168,6 +169,26 @@ export interface WorkspaceInteractionFeedback {
   confidence: WorkspacePersonalizationConfidence;
   evidence: string[];
   generatedAt: string;
+}
+
+export interface WorkspaceDecisionProfile {
+  version: 1;
+  preferredDomains: WorkspaceSignalDomain[];
+  avoidedDomains: WorkspaceSignalDomain[];
+  reliableDomains: WorkspaceSignalDomain[];
+  recentSuccessDomains: WorkspaceSignalDomain[];
+  recentEmptyDomains: WorkspaceSignalDomain[];
+  decisionConfidence: WorkspaceDecisionConfidence;
+  lowData: boolean;
+}
+
+export interface WorkspaceDecisionIntelligenceInput {
+  now?: Date;
+  memory: WorkspaceMemory;
+  interactionFeedback: WorkspaceInteractionFeedback;
+  signals: WorkspaceSignal[];
+  currentGoal?: WorkspaceGoal;
+  reflectionEvidence?: WorkspaceReflectionEvidence[];
 }
 
 export type WorkspaceGoalStatus =
@@ -441,12 +462,14 @@ export interface WorkspaceGoalEngineInput {
   personalization: WorkspacePersonalizationModel;
   memoryInsights: WorkspaceMemoryInsights;
   interactionFeedback: WorkspaceInteractionFeedback;
+  decisionProfile?: WorkspaceDecisionProfile;
 }
 
 export interface WorkspacePlannerEngineInput {
   now?: Date;
   goal: WorkspaceGoal;
   signals: WorkspaceSignal[];
+  decisionProfile?: WorkspaceDecisionProfile;
 }
 
 export interface WorkspaceApprovalEngineInput {
@@ -458,6 +481,7 @@ export interface WorkspaceApprovalEngineInput {
 export interface WorkspaceEngineInput extends WorkspaceSignalEngineInput {
   chatSessions: WorkspaceChatSignal[];
   signals: WorkspaceSignal[];
+  decisionProfile: WorkspaceDecisionProfile;
   personalization: WorkspacePersonalizationModel;
   priority: WorkspacePriorityModel;
   interactionFeedback: WorkspaceInteractionFeedback;
@@ -544,6 +568,7 @@ export interface Workspace {
   dailyStory: WorkspaceDailyStory;
   recommendationReasons: WorkspaceReason[];
   signalFeed: WorkspaceSignal[];
+  decisionProfile: WorkspaceDecisionProfile;
   personalization: WorkspacePersonalizationModel;
   goal: WorkspaceGoal;
   plan: WorkspacePlan;

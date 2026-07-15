@@ -15,6 +15,15 @@ function confidenceScore(confidence: WorkspacePriorityConfidence) {
   return 0;
 }
 
+function decisionConfidenceScore(input: WorkspaceGoalEngineInput) {
+  const profile = input.decisionProfile;
+  if (!profile || profile.lowData) return 0;
+  if (!profile.reliableDomains.includes(input.priority.primaryDomain)) return 0;
+  if (profile.decisionConfidence === "high") return 1;
+  if (profile.decisionConfidence === "medium") return 0.5;
+  return 0.25;
+}
+
 function signalConfidenceScore(signal?: WorkspaceSignal) {
   if (!signal) return 0;
   if (signal.severity === "high" || signal.score >= 75) return 2;
@@ -72,6 +81,7 @@ function confidenceFor(input: WorkspaceGoalEngineInput, signal?: WorkspaceSignal
     confidenceScore(input.memoryInsights.confidence) +
     confidenceScore(input.personalization.confidence) +
     confidenceScore(input.interactionFeedback.confidence) * 0.5 +
+    decisionConfidenceScore(input) +
     (supportCount > 0 ? 0.5 : 0);
 
   if (score >= 6 && signal?.severity === "high") return "high";
@@ -189,6 +199,9 @@ function constraintsFor(input: WorkspaceGoalEngineInput, signal?: WorkspaceSigna
   ) {
     constraints.push("Do not conflict with calendar commitments.");
   }
+  if (input.decisionProfile && !input.decisionProfile.lowData) {
+    constraints.push("Decision intelligence is advisory and cannot override urgent signals.");
+  }
   constraints.push(`Maximum effort ${MAX_DAILY_GOAL_EFFORT_MINUTES} minutes.`);
 
   return constraints;
@@ -228,7 +241,12 @@ export function goalEngine(input: WorkspaceGoalEngineInput): WorkspaceGoal {
     successCriteria: copy.successCriteria,
     estimatedEffortMinutes: onboarding ? 30 : effortFor(primaryDomain, signal),
     confidence: confidenceFor(input, signal),
-    reasons: input.priority.reasons.slice(0, 4),
+    reasons: [
+      ...input.priority.reasons,
+      ...(input.decisionProfile?.reliableDomains.includes(primaryDomain)
+        ? ["Decision intelligence found repeated successful evidence for this domain."]
+        : []),
+    ].slice(0, 4),
     constraints: constraintsFor(input, signal),
     generatedAt,
     sourceSignalIds: input.priority.orderedSignalIds.slice(0, 5),

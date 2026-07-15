@@ -428,6 +428,7 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
       },
     ], input),
     signalFeed: input.signals,
+    decisionProfile: input.decisionProfile,
     personalization: input.personalization,
     goal: input.goal,
     plan: input.plan,
