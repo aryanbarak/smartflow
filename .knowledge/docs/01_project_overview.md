@@ -17,22 +17,30 @@ The completed Living Workspace and agent foundation now allow SmartFlow to:
 - derive workspace signals,
 - preserve bounded client-side memory,
 - apply interaction feedback and personalization,
+- apply deterministic decision intelligence,
 - choose priorities and goals,
 - plan safe daily steps,
-- resolve safe read-only tools for planned steps,
+- resolve safe read-only and explicitly approved write tools for planned steps,
 - enforce explicit human approval, execution policy, and audit boundaries,
-- execute only explicitly supported read-only tools.
+- execute explicitly supported read-only tools and the first approved write
+  vertical slice: `tasks.complete`.
 
-Current engineering focus: safe execution infrastructure before autonomous
-capabilities. The system remains deterministic, frontend-controlled, and
-privacy-safe while future semantic memory, LLM reasoning, and action execution
-layers are designed.
+Current engineering focus: response quality and safety validation before any
+broader autonomous capability. The system remains bounded, frontend-controlled,
+and privacy-safe while future semantic memory, vector memory, RAG, and
+conversation memory layers are designed.
 
-The latest milestones add a conservative Tool Resolver and a human approval
-interaction boundary. SmartFlow can map safe planned steps to explicit read-only
-tool contracts, then let users approve or reject exact planned steps. Approval
-does not execute tools, substitute tools, escalate scope, or bypass execution
-policy.
+The latest milestones add LLM Reasoning V1, multilingual reasoning-domain
+correction, Write Runtime Boundary V1, Reflection, Context Synthesis, and
+Response Composer V1. SmartFlow can interpret supported requests, validate them
+deterministically, require explicit user approval where needed, execute only
+supported handlers, reflect on verified outcomes, and produce concise natural
+responses without exposing internal metadata.
+
+Approval does not execute tools, substitute tools, escalate scope, or bypass
+execution policy. The LLM proposes only; deterministic validation, approval,
+runtime policy, execution audit, reflection, and response composition remain
+separate boundaries.
 
 ## Live URLs
 
@@ -66,3 +74,6 @@ policy.
 - Calendar uses Supabase primary storage plus localStorage offline fallback.
 - i18n uses a lightweight custom `useT()` hook, with English, German, and Farsi.
 - Workspace intelligence is deterministic before any LLM autonomy is introduced.
+- AI response language is separate from interface language. Fixed response
+  language wins; `auto` follows the latest user message; RTL/LTR is applied only
+  to AI response content.

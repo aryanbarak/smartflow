@@ -80,6 +80,7 @@ describe("responseComposer", () => {
 
     expect(response.summary).toBe("You do not have active tasks right now.");
     expect(response.details).toEqual([]);
+    expect(response.optionalSuggestion).toBeUndefined();
     expect(formatAssistantResponse(response)).not.toContain("- ");
   });
 
@@ -139,6 +140,39 @@ describe("responseComposer", () => {
     expect(formatAssistantResponse(response)).not.toContain("step-1");
   });
 
+  it("does not expose task ids, schema versions, scores, or engine names", () => {
+    const response = composeAssistantResponse(input({
+      safeSummary: "taskId: task-1 schemaVersion: 1 score: 99 1 active task found.",
+      safePreviewItems: ["Reflection Engine taskId: task-2 Visible task"],
+      reflection: {
+        id: "reflection-1",
+        requestId: "req-123",
+        stepId: "step-1",
+        goalId: "goal-1",
+        toolId: "tasks.list",
+        outcome: "successful",
+        usefulness: "medium",
+        goalProgress: "informed",
+        stepAssessment: "information_gathered",
+        confidence: "high",
+        summary: "Safe reflection summary",
+        evidence: [],
+        suggestedFollowUp: "Decision Intelligence suggests nothing internal.",
+        retainAsMemoryEvidence: true,
+        generatedAt: "2026-07-15T10:00:00.000Z",
+        reflectionVersion: "reflection-engine-v1",
+      },
+    }));
+    const rendered = formatAssistantResponse(response);
+
+    expect(rendered).not.toContain("task-1");
+    expect(rendered).not.toContain("task-2");
+    expect(rendered).not.toContain("schemaVersion");
+    expect(rendered).not.toContain("score");
+    expect(rendered).not.toContain("Reflection Engine");
+    expect(rendered).not.toContain("Decision Intelligence");
+  });
+
   it("uses synthesized context when present and still works without it", () => {
     const withoutSynthesis = composeAssistantResponse(input({
       safeSummary: "6 active tasks found.",
@@ -161,5 +195,21 @@ describe("responseComposer", () => {
     expect(withSynthesis.summary).toBe("1 of your 6 open tasks is due today.");
     expect(withSynthesis.details).toEqual(["3 open tasks do not have due dates.", "Visible task"]);
     expect(withSynthesis.optionalSuggestion).toBe("You may want to add due dates to those tasks.");
+  });
+
+  it("does not backfill a suggestion when synthesis was suppressed by contradiction", () => {
+    const response = composeAssistantResponse(input({
+      safeSummary: "0 active tasks found.",
+      safePreviewItems: [],
+      synthesizedContext: {
+        supportingFacts: [],
+        evidenceDomains: [],
+        confidence: "low",
+        synthesisVersion: "context-synthesis-v1",
+      },
+    }));
+
+    expect(response.summary).toBe("You do not have active tasks right now.");
+    expect(response.optionalSuggestion).toBeUndefined();
   });
 });

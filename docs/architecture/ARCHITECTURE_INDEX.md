@@ -33,8 +33,12 @@ Typical documents include:
 # Current Documents
 
 - 01-architecture-baseline.md
+- Root status: ../../PROJECT_STATUS.md
+- Current generated knowledge source: ../../.knowledge/docs/02_architecture.md
 
-Additional architecture documents will be added as the project evolves.
+`01-architecture-baseline.md` captures the early stabilization baseline.
+`PROJECT_STATUS.md` and `.knowledge/docs/02_architecture.md` describe the
+current implemented workspace and agent architecture.
 
 ---
 

@@ -222,6 +222,82 @@ typed results.
 
 Rule: hooks must never be imported into handlers.
 
+### Browser QA Reveals Deterministic Test Gaps
+
+Problem: deterministic tests can pass while live browser behavior still diverges
+through routing, language resolution, UI state, or runtime wiring.
+
+Solution: validate critical agent flows in the browser after automated tests.
+
+Rule: browser QA is required for user-visible reasoning, execution, and response
+behavior.
+
+### Generic Time Markers Must Not Override Stronger Domain Evidence
+
+Problem: words such as `today`, `heute`, and `امروز` can incorrectly bias a
+message toward calendar intent when the rest of the message clearly refers to
+tasks or another domain.
+
+Solution: bounded multilingual domain correction lets strong task, calendar,
+learning, or workspace evidence override generic time markers.
+
+Rule: generic temporal wording is weak evidence. Conflicting strong evidence
+must ask for clarification rather than guessing.
+
+### Interface Language and AI Response Language Are Separate
+
+Problem: tying AI replies to the UI language makes multilingual chat feel wrong
+when the user writes in another language.
+
+Solution: fixed AI response language wins, while `auto` follows the latest user
+message. Interface direction remains independent.
+
+Rule: apply RTL/LTR behavior to AI response content without changing the global
+interface direction unless the user changes the UI language.
+
+### LLM Output Remains Proposal-Only
+
+Problem: treating LLM output as executable intent can bypass deterministic
+safety boundaries.
+
+Solution: LLM Reasoning V1 proposes structured intent only. The deterministic
+validator, tool resolver, approval, runtime, execution policy, and audit remain
+authoritative.
+
+Rule: the LLM cannot approve, execute, supply authenticated user identity, or
+invent executable tools.
+
+### Runtime Result Is Authoritative During Synthesis
+
+Problem: workspace context, memory, or reflection can conflict with the verified
+runtime result.
+
+Solution: Context Synthesis V1 treats runtime output as authoritative and omits
+contradictory context instead of reconciling by guessing.
+
+Rule: final responses should use less information when sources conflict.
+
+### Natural Responses Should Add Meaning, Not Metadata
+
+Problem: raw execution output can expose request IDs, step IDs, policy names,
+audit details, engine names, raw JSON, and internal scores.
+
+Solution: Response Composer V1 converts verified results into concise language,
+bounded details, and optional safe suggestions.
+
+Rule: final user responses should provide less internal information and more
+useful meaning.
+
+### Do Not Add Engines Without a Verified Product Problem
+
+Problem: engine layers can become architecture for its own sake.
+
+Solution: add a new engine only when it solves a validated product or safety
+problem and preserves explicit execution boundaries.
+
+Rule: every new agent layer must have a narrow responsibility and must not blur
+planning, approval, execution, audit, reflection, or response boundaries.
+
 ## Development Workflow That Works
 
 1. Plan feature with a written implementation brief.

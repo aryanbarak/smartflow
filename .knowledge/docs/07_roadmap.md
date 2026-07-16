@@ -44,19 +44,31 @@
 - Workspace Engine V1
 - Signal Engine V1
 - Memory Engine V1
-- Interaction Tracking V1
-- Interaction Feedback Loop V1
+- Workspace Interaction Tracking V1
+- Interaction Feedback Engine V1
+- Decision Intelligence V1
 - Workspace Personalization V1
 - Priority Engine V1
 - Goal Engine V1
 - Planner Engine V1
-- Tool Resolver V1
 - Approval Model V1
 - Approval Interaction Boundary V1
 - Tool Registry V1
+- Tool Resolver V1
 - Execution Policy V1
-- Execution Engine V1 (read-only)
+- Execution Engine V1
 - Execution Audit V1
+- Read-only Runtime Boundary V1
+- Write Runtime Boundary V1
+- Reflection Engine V1
+- Reflection Integration V1
+- Reflection UI V1
+- LLM Reasoning Layer V1
+- multilingual Reasoning UX correction
+- Response Composer V1
+- Context Synthesis V1
+- first safe read-only learning loop
+- first approved write vertical slice: `tasks.complete`
 
 Current deterministic workspace pipeline:
 
@@ -65,64 +77,96 @@ useWorkspace()
 -> signalEngine()
 -> memoryEngine()
 -> interactionFeedbackEngine()
+-> decisionIntelligenceEngine()
 -> personalizationEngine()
 -> priorityEngine()
 -> goalEngine()
 -> plannerEngine()
--> toolResolver()
 -> approvalEngine()
 -> workspaceEngine()
 -> Dashboard
 ```
 
-Current agent stack:
+Current agent reasoning and execution pipeline:
 
 ```text
-Signals
--> Memory
--> Interaction Feedback
--> Personalization
--> Priority
--> Goal
--> Planner
+User Message
+-> AI Response Language Resolution
+-> LLM Reasoning Layer
+-> Structured Intent Proposal
+-> Deterministic Intent Validator
 -> Tool Resolver
--> Approval
--> Approval Interaction Boundary
--> Tool Registry
+-> Approval Model / Approval Interaction
+-> explicit user action
+-> Read-only Runtime or Write Runtime
 -> Execution Policy
--> Execution Engine
+-> Execution Engine / explicit handler
 -> Execution Audit
+-> Reflection Engine
+-> Reflection Integration
+-> safe Memory Evidence
+-> Context Synthesis
+-> Response Composer
+-> Chat UI
 ```
 
 ## Current Phase
 
 SmartFlow is no longer only a productivity dashboard. It is now an AI Personal
-Operating System with a deterministic agent architecture.
+Operating System with a deterministic workspace architecture, proposal-only LLM
+reasoning, explicit approval and execution boundaries, reflection, and
+deterministic response composition.
 
-Current focus: safe execution infrastructure before autonomous capabilities.
+Current focus: Agent Response UX Validation V1.
+
+## Current Validation Status
+
+Latest confirmed automated validation:
+
+- Agent tests: 235 passed
+- Workspace tests: 73 passed
+- ChatPage tests: 5 passed
+- TypeScript: passed
+- Production build: passed
+
+Existing non-failing build warnings:
+
+- large chunk warning
+- empty `vendor-pdfjs` chunk warning
+
+Live browser validation completed:
+
+- TasksPage answers correctly in Persian, German, and English.
+- Flow AI correctly resolves baseline task requests in Persian, German, and
+  English.
+- Calendar distinction remains correct.
+- Explicit execution remains required.
+- No false English-only capability response remains.
 
 ## Next Milestone
 
-Write Tool Execution Readiness
+Agent Response UX Validation V1
 
-Goal: prepare the safety design for user-approved write execution without
-enabling autonomous side effects. This includes narrowing supported write
-contracts, preserving exact-step approval, keeping audit mandatory, and defining
-rollback/failure behavior before any write handler ships.
+Goal: validate that final user-facing responses provide concise meaning without
+exposing internal policy, audit, prompt, memory, engine, request, or raw payload
+details. The response path must preserve runtime facts, resolved response
+language, explicit execution boundaries, and contradiction suppression.
 
 ## Future Milestones
 
-- Write Tool Execution
-- Reflection Engine
-- Semantic Memory
-- Vector Memory
-- RAG
-- LLM Reasoning Layer
-- Execution Planner
-- Cross-device Memory
-- Autonomous Flow AI
-- Live AI-generated recommendations
-- Real multi-session conversation memory
+Not implemented:
+
+- manual multi-step plan execution
+- conversation memory
+- semantic memory
+- vector/RAG memory
+- additional approved write tools
+- calendar write
+- task creation
+- document/email agent capabilities
+- autonomous execution
+- live AI-generated recommendations
+- real multi-session conversation memory
 
 ## In Progress / Blocked
 
@@ -137,5 +181,5 @@ rollback/failure behavior before any write handler ships.
 - Supabase generated types should be regenerated after schema changes.
 - Some older UI strings still need i18n/RTL polish.
 - Right-rail learning/recommendation content still includes static placeholders.
-- Execution is read-only; write execution must wait for stronger rollback and
-  failure-handling design.
+- Additional write tools must wait for separate safety review beyond
+  `tasks.complete`.

@@ -182,7 +182,9 @@ const LOW_DATA_NOTE: Record<AssistantResponseLanguage, string> = {
 };
 
 const INTERNAL_FIELD_PATTERN =
-  /\b(requestId|stepId|policyDecision|auditCorrelation|auditId|access_token|authorization|schema)\b\s*[:=]?\s*[\w:./-]*/gi;
+  /\b(requestId|stepId|taskId|schemaVersion|policyDecision|auditCorrelation|auditId|access_token|authorization|schema|confidence|score|scores)\b\s*[:=]?\s*[\w:./-]*/gi;
+const INTERNAL_NAME_PATTERN =
+  /\b(Reflection Engine|Decision Intelligence|Priority Engine|WorkspaceMemory|Memory Evidence|Execution Audit|Execution Policy|context-synthesis-v1|response-composer-v1)\b/gi;
 
 export function canComposeAssistantResponse(toolId: string | undefined): toolId is ResponseComposerToolId {
   return SUPPORTED_RESPONSE_COMPOSER_TOOL_IDS.includes(toolId as ResponseComposerToolId);
@@ -191,6 +193,7 @@ export function canComposeAssistantResponse(toolId: string | undefined): toolId 
 function sanitizeText(value: string) {
   return value
     .replace(INTERNAL_FIELD_PATTERN, "")
+    .replace(INTERNAL_NAME_PATTERN, "")
     .replace(/[{}[\]"]/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -234,6 +237,17 @@ function summaryFor(input: ResponseComposerInput, copy: ComposerCopy) {
 function suggestionFor(input: ResponseComposerInput, copy: ComposerCopy) {
   const synthesizedSuggestion = sanitizeText(input.synthesizedContext?.safeSuggestion ?? "");
   if (synthesizedSuggestion) return synthesizedSuggestion;
+  if (
+    input.synthesizedContext &&
+    !input.synthesizedContext.primaryFact &&
+    input.synthesizedContext.supportingFacts.length === 0 &&
+    input.synthesizedContext.confidence === "low"
+  ) {
+    return undefined;
+  }
+  if (countFromSummary(sanitizeText(input.safeSummary)) === 0 || /^no\s+/i.test(input.safeSummary)) {
+    return undefined;
+  }
   const reflected = sanitizeText(input.reflection?.suggestedFollowUp ?? "");
   if (reflected) return reflected;
   if (input.decisionProfile?.lowData && input.success) return LOW_DATA_NOTE[input.language];

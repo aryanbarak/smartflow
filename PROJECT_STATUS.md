@@ -1,41 +1,42 @@
 # SmartFlow - Project Status
 
-Last updated: 2026-07-12
+Last updated: 2026-07-16
 
 ---
 
 ## 1. Executive Summary
 
-SmartFlow has completed the core Living Workspace and deterministic agent
-architecture milestones. The product is no longer just a productivity
-dashboard; it is now structured as an AI Personal Operating System with a
-rule-based workspace pipeline, memory, personalization, planning, approval
-interaction boundaries, a tool registry, execution policy, read-only execution,
-and execution audit.
+SmartFlow has moved beyond a static productivity dashboard. It is now an AI
+Personal Operating System with a deterministic workspace pipeline, explicit
+agent safety boundaries, read-only execution, one approved write vertical slice,
+reflection, context synthesis, and deterministic response composition.
 
-The current implementation remains intentionally safe. It does not perform
-autonomous actions, does not execute write tools, does not call backend execution
-services, and does not use Supabase or network calls for agent execution.
+The current system remains intentionally bounded. It does not perform
+autonomous execution, does not run hidden tool chains, does not let the LLM
+approve or execute actions, and does not expose internal policy, audit, memory,
+or engine metadata to users.
 
-Current focus: safe execution infrastructure before autonomous capabilities.
+Current focus: improving the safety and user experience of explicit agent
+responses before expanding write execution.
 
 ---
 
 ## 2. Current Project Phase
 
 Current phase: deterministic AI Personal Operating System foundation complete;
-execution safety infrastructure in progress.
+safe agent response and execution infrastructure in validation.
 
 Engineering posture:
 
-- deterministic before LLM-driven,
-- read-only before write execution,
-- approval-gated before autonomous,
-- approval interaction before execution,
-- tool resolution before approval,
-- client-local memory before semantic/vector memory,
-- presentation-focused Dashboard,
-- explicit tool contracts and policy boundaries.
+- deterministic validation remains authoritative,
+- LLM output is proposal-only,
+- planning never executes,
+- approval is not execution,
+- explicit user action is required before runtime execution,
+- read-only execution remains the default safe path,
+- `tasks.complete` is the only enabled write tool,
+- runtime results are authoritative during response synthesis,
+- Dashboard remains presentation-focused.
 
 ---
 
@@ -56,24 +57,34 @@ Completed workspace and UI milestones:
 - Responsive/mobile layout improvements
 - Nested scroll removal
 
-Completed architecture milestones:
+Completed workspace and agent architecture milestones:
 
 - Workspace Engine V1
 - Signal Engine V1
 - Memory Engine V1
-- Interaction Tracking V1
-- Interaction Feedback Loop V1
+- Workspace Interaction Tracking V1
+- Interaction Feedback Engine V1
+- Decision Intelligence V1
 - Personalization Engine V1
 - Priority Engine V1
 - Goal Engine V1
 - Planner Engine V1
-- Tool Resolver V1
 - Approval Model V1
 - Approval Interaction Boundary V1
 - Tool Registry V1
+- Tool Resolver V1
 - Execution Policy V1
-- Execution Engine V1 (read-only)
+- Execution Engine V1
 - Execution Audit V1
+- Read-only Runtime Boundary V1
+- Write Runtime Boundary V1
+- Reflection Engine V1
+- Reflection Integration V1
+- Reflection UI V1
+- LLM Reasoning Layer V1
+- Multilingual reasoning-domain correction
+- Response Composer V1
+- Context Synthesis V1
 
 ---
 
@@ -88,145 +99,259 @@ useWorkspace()
 -> signalEngine()
 -> memoryEngine()
 -> interactionFeedbackEngine()
+-> decisionIntelligenceEngine()
 -> personalizationEngine()
 -> priorityEngine()
 -> goalEngine()
 -> plannerEngine()
--> toolResolver()
 -> approvalEngine()
 -> workspaceEngine()
 -> Dashboard
 ```
 
-The Dashboard is now primarily a presentation surface for a typed Workspace
-object. Workspace decision-making belongs in the workspace engines, not in
+Execution Audit remains outside the workspace generation pipeline. It observes
+actual execution only.
+
+Decision Intelligence V1 is deterministic, input-only, and read-only. It uses
+validated reflection evidence and bounded interaction feedback to produce a
+domain-level decision profile. It weakly influences medium/low ordering only,
+never overrides urgent signals or onboarding, does not mutate memory, and does
+not execute or initiate autonomous behavior.
+
+The Dashboard is primarily a presentation surface for a typed Workspace object.
+Workspace decision-making belongs in the workspace engines, not in
 `Dashboard.tsx`.
 
 ---
 
-## 5. Current Agent Architecture
+## 5. Agent Reasoning and Execution Architecture
 
-Current agent stack:
+Current agent reasoning and execution pipeline:
 
 ```text
-Signals
-->
-Memory
-->
-Interaction Feedback
-->
-Personalization
-->
-Priority
-->
-Goal
-->
-Planner
-->
-Tool Resolver
-->
-Approval
-->
-Approval Interaction Boundary
-->
-Tool Registry
-->
-Execution Policy
-->
-Execution Engine
-->
-Execution Audit
+User Message
+-> AI Response Language Resolution
+-> LLM Reasoning Layer
+-> Structured Intent Proposal
+-> Deterministic Intent Validator
+-> Tool Resolver
+-> Approval Model / Approval Interaction
+-> explicit user action
+-> Read-only Runtime or Write Runtime
+-> Execution Policy
+-> Execution Engine / explicit handler
+-> Execution Audit
+-> Reflection Engine
+-> Reflection Integration
+-> safe Memory Evidence
+-> Context Synthesis
+-> Response Composer
+-> Chat UI
 ```
 
-The agent stack is deterministic and non-autonomous. It can prepare, rank,
-explain, plan, and safely execute supported read-only tools, but it cannot
-perform write operations.
+The LLM Reasoning Layer supports these intents:
 
-Tool Resolver V1 maps proposed plan steps to explicitly registered read-only
-tools where safe. It resolves only `tasks.list`, `calendar.list_today`,
-`learning.get_progress`, and `workspace.get_context`; it fails closed for write
-actions, ambiguous mappings, disabled tools, and external-effect tools.
+- `inspect_tasks`
+- `inspect_calendar`
+- `inspect_learning`
+- `inspect_workspace`
+- `complete_task`
+- `ask_clarification`
+- `unsupported`
 
-Approval Interaction Boundary V1 captures user intent for an exact planned
-step. It can approve, reject, or close a pending step review, but it does not
-execute tools, mutate audit records, call handlers, substitute resolved tools,
-or broaden approval scope.
+Intent-to-tool mappings:
+
+- `inspect_tasks` -> `tasks.list`
+- `inspect_calendar` -> `calendar.list_today`
+- `inspect_learning` -> `learning.get_progress`
+- `inspect_workspace` -> `workspace.get_context`
+- `complete_task` -> `tasks.complete`
+
+Security boundary:
+
+- the LLM proposes only,
+- deterministic validation always runs,
+- the LLM cannot execute,
+- the LLM cannot approve,
+- the LLM cannot supply authenticated user identity,
+- the LLM cannot invent arbitrary executable tools,
+- unsupported and mixed requests fail closed,
+- ambiguous task targets require clarification,
+- read and write actions still require explicit user interaction.
+
+Multilingual domain correction is bounded. Task markers override generic
+`today` / `heute` / `امروز` markers. Strong task, calendar, learning, and
+workspace evidence is bounded; conflicting strong evidence asks for
+clarification. This is not a general semantic classifier.
 
 ---
 
-## 6. Execution Engine
+## 6. Execution Capabilities
 
-Execution Engine V1 provides policy-enforced read-only tool execution.
-
-Current guarantees:
-
-- explicit handler registry,
-- policy enforced execution,
-- mandatory execution audit,
-- read-only tools only,
-- no write execution,
-- no backend execution,
-- no Supabase execution,
-- no network execution,
-- no autonomous behavior.
-
-Supported handlers:
+Supported read-only executable tools:
 
 - `tasks.list`
 - `calendar.list_today`
 - `learning.get_progress`
 - `workspace.get_context`
 
-Handlers are framework-independent and must not import hooks, UI components,
-routes, Supabase clients, or AI services.
+Supported write executable tools:
+
+- `tasks.complete` only
+
+Write execution guarantees for `tasks.complete`:
+
+- exact step, tool, and target approval binding is required,
+- approval and execution are separate user actions,
+- authenticated user identity is injected by the runtime,
+- task completion is state-idempotent,
+- post-write verification is required,
+- no automatic retry,
+- no chained execution,
+- no autonomous execution,
+- no other write tool is enabled.
+
+Execution handlers are explicit. They remain framework-independent and must not
+import React hooks, UI components, route components, Supabase clients in UI
+surfaces, or LLM logic.
 
 ---
 
-## 7. Current Capabilities
+## 7. AI Language and Response Composition
 
-The current system can:
+SmartFlow separates interface language from AI response language.
 
-- generate a decision-first Living Workspace from existing frontend data,
-- detect low-data users and show an honest Welcome Workspace,
-- preserve bounded client-side workspace continuity metadata,
-- track workspace interactions,
-- feed interaction feedback into deterministic personalization,
-- choose daily priorities and goals,
-- propose deterministic plan steps,
-- resolve safe read-only tools for plan steps,
-- annotate plan steps with approval requirements,
-- capture exact-step user approval or rejection without execution,
-- enforce execution policy before read-only execution,
-- execute supported read-only handlers,
-- keep urgent current signals above memory and personalization,
-- keep Flow AI present through the sidebar identity Orb and right rail,
-- open Smart Academy as a configurable external ecosystem link.
+Supported AI response language values:
+
+- `auto`
+- `en`
+- `de`
+- `fa`
+
+Resolution rules:
+
+- fixed response language wins,
+- `auto` follows the latest user message,
+- unclear detection falls back safely,
+- response RTL/LTR applies to AI response content only,
+- interface direction remains independent.
+
+TasksPage AI and Flow AI Chat have been browser-validated in English, German,
+and Persian.
+
+Response Composer V1 is a deterministic presentation layer that runs after
+verified runtime and reflection output. It supports the five current tools,
+creates a headline, summary, bounded details, and optional safe suggestion. It
+does not call another LLM, does not inspect raw handler payloads, does not alter
+runtime results, does not expose policy/audit/request IDs/raw JSON/internal
+metadata, and preserves the resolved response language.
+
+Context Synthesis V1 composes bounded meaning before final response rendering:
+
+```text
+Verified Runtime Result
++ bounded Workspace snapshot
++ safe Reflection summary
++ bounded Decision profile
+-> Context Synthesis
+-> Response Composer
+-> Chat UI
+```
+
+Supported synthesis domains:
+
+- tasks
+- calendar
+- learning
+- workspace
+
+`tasks.complete` receives only verified safe response facts and currently no
+broad cross-context synthesis.
+
+Context synthesis safeguards:
+
+- runtime result is authoritative,
+- contradictions suppress synthesis rather than guessing,
+- supporting facts are bounded,
+- suggestions are optional and non-executing,
+- no personality, emotional, mastery, motivation, importance, or future-action
+  inference,
+- Decision Intelligence may only produce neutral continuity wording under
+  sufficient evidence,
+- no raw memory, audit, policy, prompt, private note, document body, user ID, or
+  Supabase structure is consumed or exposed.
 
 ---
 
-## 8. Remaining Major Systems
+## 8. Validated User-Visible Flows
 
-Remaining major systems:
+Validated read-only flow:
 
-- Write Tool Execution
-- Reflection Engine
-- Semantic Memory
-- Vector Memory
-- RAG
-- LLM Reasoning Layer
-- Execution Planner
-- Cross-device Memory
-- Autonomous Flow AI
-- Live AI-generated recommendations
-- Real multi-session conversation memory
+```text
+Natural-language request
+-> interpreted intent card
+-> explicit Run
+-> verified result
+-> reflection
+-> optional local memory evidence
+-> synthesized and composed natural response
+```
+
+Validated write flow:
+
+```text
+Exact task-completion request
+-> resolved exact task
+-> Review
+-> Approve
+-> no execution yet
+-> separate Complete Task action
+-> policy
+-> idempotent mutation
+-> persisted-state verification
+-> audit
+-> reflection
+-> safe response
+-> task refresh
+```
+
+Guarantees:
+
+- no action runs on render,
+- no action runs on approval alone,
+- no hidden approve-and-run path exists,
+- ambiguous targets are never guessed.
+
+Latest confirmed validation:
+
+- Agent tests: 235 passed
+- Workspace tests: 73 passed
+- ChatPage tests: 5 passed
+- TypeScript: passed
+- Production build: passed
+
+Existing non-failing build warnings:
+
+- large chunk warning
+- empty `vendor-pdfjs` chunk warning
+
+Live browser validation completed:
+
+- TasksPage answers correctly in Persian, German, and English,
+- Flow AI correctly resolves baseline task requests in Persian, German, and
+  English,
+- calendar distinction remains correct,
+- explicit execution remains required,
+- no false English-only capability response remains.
 
 ---
 
 ## 9. Technical Debt
 
-- Execution is read-only; write execution requires rollback and stronger failure
-  handling before any write handler ships.
-- Workspace memory is localStorage-only and does not sync across devices.
+- `tasks.complete` is the only write slice; additional write tools require
+  separate safety review.
+- Conversation memory is not yet implemented.
+- Semantic memory, vector memory, and RAG are not active.
 - Right-rail learning/recommendation content still includes static placeholders.
 - Some interaction events are only captured where the UI genuinely exposes them.
 - Learn AI and chat-related storage still need pruning policies.
@@ -239,40 +364,30 @@ Remaining major systems:
 
 ## 10. Next Sprint
 
-Recommended next milestone: Write Tool Execution Readiness.
+Current next milestone: Agent Response UX Validation V1.
 
 Primary goals:
 
-- define the smallest safe write-capable tool surface,
-- preserve exact-step approval as mandatory intent capture,
-- keep execution policy and audit mandatory for every write attempt,
-- define rollback and user-visible failure behavior,
-- keep autonomous write execution disabled.
+- validate that final AI responses are useful without exposing internals,
+- verify multilingual responses across English, German, and Persian,
+- ensure runtime facts remain authoritative,
+- ensure contradictory context is omitted rather than guessed,
+- keep suggestions bounded and non-executing.
 
 ---
 
 ## 11. Long-Term Roadmap
 
-Near term:
+Possible future milestones, not implemented:
 
-- Approval Interaction Boundary V1
-- stronger handler test coverage
-- improved live data mapping for right-rail memory surfaces
-
-Mid term:
-
-- Write Tool Execution
-- Reflection Engine
-- Semantic Memory
-- Vector Memory
-- RAG
-- LLM Reasoning Layer
-- Execution Planner
-- Cross-device Memory
-
-Long term:
-
-- Autonomous Flow AI
+- manual multi-step plan execution
+- conversation memory
+- semantic memory
+- vector/RAG memory
+- additional approved write tools
+- calendar write
+- task creation
+- document/email agent capabilities
+- autonomous execution
 - live AI-generated recommendations
 - real multi-session conversation memory
-- user-approved action execution across SmartFlow domains
