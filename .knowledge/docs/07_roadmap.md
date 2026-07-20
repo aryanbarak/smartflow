@@ -117,15 +117,17 @@ Operating System with a deterministic workspace architecture, proposal-only LLM
 reasoning, explicit approval and execution boundaries, reflection, and
 deterministic response composition.
 
-Current focus: Agent Response UX Validation V1.
+Current focus: production-readiness review of the proposal boundary after
+completing controlled browser integration and local real-worker reasoning
+validation. Production deployment itself has not been validated.
 
 ## Current Validation Status
 
 Latest confirmed automated validation:
 
-- Agent tests: 235 passed
-- Workspace tests: 73 passed
-- ChatPage tests: 5 passed
+- Agent tests: 241 passed
+- Workspace tests: 75 passed
+- ChatPage tests: 14 passed
 - TypeScript: passed
 - Production build: passed
 
@@ -134,7 +136,7 @@ Existing non-failing build warnings:
 - large chunk warning
 - empty `vendor-pdfjs` chunk warning
 
-Live browser validation completed:
+Live browser validation completed before the current ARUX matrix:
 
 - TasksPage answers correctly in Persian, German, and English.
 - Flow AI correctly resolves baseline task requests in Persian, German, and
@@ -143,14 +145,45 @@ Live browser validation completed:
 - Explicit execution remains required.
 - No false English-only capability response remains.
 
+Current Agent Response UX Validation V1 status:
+
+- deterministic response and intent tests pass,
+- bounded authentication smoke passes against local Supabase,
+- canonical ARUX evidence exists at
+  `docs/testing/evidence/agent-response-ux-validation-v1.json`,
+- Controlled Authenticated Browser Integration passed all 15 rows,
+- ARUX-11 verifies already-complete state as an idempotent no-op without a
+  duplicate mutation,
+- ARUX-13 and ARUX-15 preserve Persian RTL flow while isolated Latin content
+  computes as LTR,
+- ARUX-14 keeps proposal, composed answer, and runtime summary in German,
+- deterministic browser stubs are not treated as proof of real LLM intent
+  recognition, worker transport, or real multilingual reasoning behavior,
+- the separate local real-worker reasoning matrix passed all 8 rows through
+  `real-gemini` and `local-real-worker`,
+- canonical real-worker evidence exists at
+  `docs/testing/evidence/real-worker-arux-matrix-v1.json`,
+- every accepted real-worker row used exactly one Gemini request and exercised
+  local Supabase Auth, Worker transport, deterministic validation, and resolver
+  output,
+- the real-worker matrix granted no approval, executed no tool, persisted no
+  reasoning request, and contacted no production service,
+- neither matrix is production deployment validation.
+
 ## Next Milestone
 
-Agent Response UX Validation V1
+Perform a production proposal-boundary readiness review without expanding tool
+execution or claiming production validation.
 
-Goal: validate that final user-facing responses provide concise meaning without
-exposing internal policy, audit, prompt, memory, engine, request, or raw payload
-details. The response path must preserve runtime facts, resolved response
-language, explicit execution boundaries, and contradiction suppression.
+Selection criteria:
+
+- preserve explicit approval and execution boundaries,
+- require separate safety review before additional write tools,
+- keep runtime facts authoritative in final responses,
+- keep browser QA mandatory for user-visible agent behavior,
+- disclose proposal source and worker transport in every evidence row.
+- retain fail-closed local/production configuration separation before any
+  deployment validation.
 
 ## Future Milestones
 

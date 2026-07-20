@@ -1,6 +1,6 @@
 # SmartFlow - Project Status
 
-Last updated: 2026-07-16
+Last updated: 2026-07-20
 
 ---
 
@@ -16,8 +16,9 @@ autonomous execution, does not run hidden tool chains, does not let the LLM
 approve or execute actions, and does not expose internal policy, audit, memory,
 or engine metadata to users.
 
-Current focus: improving the safety and user experience of explicit agent
-responses before expanding write execution.
+Current focus: production-readiness review of the proposal boundary after
+completing both controlled browser integration and local real-worker reasoning
+validation. Production deployment itself has not been validated.
 
 ---
 
@@ -85,6 +86,12 @@ Completed workspace and agent architecture milestones:
 - Multilingual reasoning-domain correction
 - Response Composer V1
 - Context Synthesis V1
+
+Completed validation milestone:
+
+- Agent Response UX Validation V1: authenticated controlled browser integration
+  completed with 15/15 PASS rows, and the separate authenticated local
+  real-worker reasoning matrix completed with 8/8 PASS rows through real Gemini.
 
 ---
 
@@ -324,9 +331,9 @@ Guarantees:
 
 Latest confirmed validation:
 
-- Agent tests: 235 passed
-- Workspace tests: 73 passed
-- ChatPage tests: 5 passed
+- Agent tests: 241 passed
+- Workspace tests: 75 passed
+- ChatPage tests: 14 passed
 - TypeScript: passed
 - Production build: passed
 
@@ -335,7 +342,7 @@ Existing non-failing build warnings:
 - large chunk warning
 - empty `vendor-pdfjs` chunk warning
 
-Live browser validation completed:
+Live browser validation completed before the current ARUX matrix:
 
 - TasksPage answers correctly in Persian, German, and English,
 - Flow AI correctly resolves baseline task requests in Persian, German, and
@@ -343,6 +350,30 @@ Live browser validation completed:
 - calendar distinction remains correct,
 - explicit execution remains required,
 - no false English-only capability response remains.
+
+Current Agent Response UX Validation V1 status:
+
+- deterministic response and intent tests pass,
+- bounded authentication smoke passes against local Supabase,
+- canonical ARUX evidence exists at
+  `docs/testing/evidence/agent-response-ux-validation-v1.json`,
+- Controlled Authenticated Browser Integration: `PASS` (15/15 rows),
+- ARUX-11 verifies the already-complete task as an idempotent no-op without a
+  duplicate mutation,
+- ARUX-13 and ARUX-15 preserve Persian RTL flow while isolated Latin content
+  computes as LTR,
+- ARUX-14 keeps proposal, composed answer, and runtime summary in German,
+- the controlled matrix used intercepted deterministic proposals,
+- deterministic browser stubs are not treated as proof of real LLM intent
+  recognition, worker transport, or real multilingual reasoning behavior,
+- the separate local real-worker matrix is `PASS` (8/8), with canonical evidence
+  at `docs/testing/evidence/real-worker-arux-matrix-v1.json`,
+- every accepted real-worker row used one real Gemini request through local
+  `/agent/reason`, local Supabase Auth, deterministic validation, and resolver
+  output,
+- the real-worker matrix granted no approval, executed no tool, persisted no
+  reasoning request, and contacted no production service,
+- neither matrix is production deployment validation.
 
 ---
 
@@ -364,15 +395,17 @@ Live browser validation completed:
 
 ## 10. Next Sprint
 
-Current next milestone: Agent Response UX Validation V1.
+Current next milestone: production proposal-boundary readiness review.
 
-Primary goals:
+Recommended selection criteria:
 
-- validate that final AI responses are useful without exposing internals,
-- verify multilingual responses across English, German, and Persian,
-- ensure runtime facts remain authoritative,
-- ensure contradictory context is omitted rather than guessed,
-- keep suggestions bounded and non-executing.
+- preserve explicit approval and execution boundaries,
+- do not expand write tools without a separate safety review,
+- keep runtime facts authoritative in final responses,
+- keep browser QA mandatory for user-visible agent behavior,
+- disclose proposal source and worker transport in every evidence row.
+- retain fail-closed local/production configuration separation before any
+  deployment validation.
 
 ---
 

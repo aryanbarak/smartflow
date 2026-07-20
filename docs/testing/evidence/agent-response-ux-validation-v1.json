@@ -1,0 +1,995 @@
+{
+  "schemaVersion": "agent-response-ux-validation-v1",
+  "canonical": true,
+  "generatedAt": "2026-07-18T00:48:49.279Z",
+  "environment": {
+    "app": "http://127.0.0.1:8080",
+    "data": "local-supabase",
+    "worker": "deterministic-browser-stub",
+    "networkTransport": "intercepted-browser-fetch",
+    "status": "controlled-browser-integration-complete-real-worker-blocked"
+  },
+  "realProposalPath": {
+    "status": "BLOCKED",
+    "reason": "No local model credential is available, and the deployed worker is production-connected.",
+    "networkTransportExercised": false,
+    "layersNotValidated": [
+      "real LLM intent recognition",
+      "real agent worker transport",
+      "real multilingual reasoning behavior through the worker path"
+    ]
+  },
+  "rows": [
+    {
+      "id": "ARUX-01",
+      "executedAt": "2026-07-17T10:32:47.520Z",
+      "fixture": "empty",
+      "scenario": "empty",
+      "tool": "tasks.list",
+      "initialBoundedState": {
+        "scenario": "empty",
+        "localOnly": true
+      },
+      "prompt": "Show my open tasks.",
+      "interfaceLanguage": "en",
+      "aiResponseLanguageMode": "en",
+      "visibleUiActions": [
+        "Submit prompt",
+        "Run tasks.list"
+      ],
+      "sanitizedVisibleResponse": "Good afternoon, SmartFlow Local QA.\nHere is your workspace for today.\nSmartFlow\n\nIntelligent productivity\n\nDashboard\nFlow AI\nSmart Academy\nTasks\nCalendar\nHabits\nJournal\nFinance\nFamily\nDocuments\nPhotos\nMusic\nSettings\nSearch...\n⌘K\nSL\n\nSmartFlow Local QA\n\nPersonal\n\nFlow AI\n\nYour personal AI assistant\n\nNew Chat\nConversation\nShow my open tasks.\n\nInterpreted intent: Inspect tasks. Review the proposed action and run it explicitly when ready.\n\nHere is your task overview.\n\nYou do not have active tasks right now.\n\nINTERPRETED INTENT\n\nInspect tasks\n\nTOOL\nList tasks\nMODE\nRead-only\nRun tasks.list\n\nNo active tasks found.\n\nSend\nConversations\n\nShow my open tasks.\n\nnow",
+      "expectedResult": "No active tasks are reported.",
+      "actualResult": "No active tasks are reported.",
+      "status": "PASS",
+      "forbiddenMetadataCheck": {
+        "passed": true,
+        "forbiddenPatterns": [
+          "/taskId/i",
+          "/requestId/i",
+          "/schemaVersion/i"
+        ]
+      },
+      "browserRuntimeErrorCheck": {
+        "passed": true,
+        "result": "no browser/runtime error detected in visible UI"
+      },
+      "persistedStateVerification": {
+        "checked": false,
+        "result": "not applicable"
+      },
+      "rtlEvidence": {
+        "checked": false
+      },
+      "screenshotEvidence": {
+        "checked": false
+      },
+      "evidenceMethod": "authenticated-visible-browser-ui-local-supabase-cdp",
+      "runStructure": "independent-row-run",
+      "proposalSource": "deterministic-browser-stub",
+      "networkTransport": "intercepted-browser-fetch",
+      "proposalStrategy": "deterministic domain-keyword stub; not natural-language understanding",
+      "layersExercised": [
+        "visible Chat UI",
+        "deterministic intent validator",
+        "tool resolver",
+        "explicit read-only run action",
+        "runtime and policy boundary",
+        "response composer"
+      ],
+      "layersExcluded": [
+        "real LLM intent recognition",
+        "real agent worker transport",
+        "real multilingual reasoning behavior through the worker path"
+      ],
+      "realReasoningCoverage": "blocked-not-exercised"
+    },
+    {
+      "id": "ARUX-02",
+      "executedAt": "2026-07-17T10:32:57.786Z",
+      "fixture": "arux-one-task",
+      "scenario": "arux-one-task",
+      "tool": "tasks.list",
+      "initialBoundedState": {
+        "scenario": "arux-one-task",
+        "localOnly": true
+      },
+      "prompt": "Show my open tasks.",
+      "interfaceLanguage": "en",
+      "aiResponseLanguageMode": "en",
+      "visibleUiActions": [
+        "Submit prompt",
+        "Run tasks.list"
+      ],
+      "sanitizedVisibleResponse": "Good afternoon, SmartFlow Local QA.\nHere is your workspace for today.\nSmartFlow\n\nIntelligent productivity\n\nSearch...\n⌘K\nSL\n\nSmartFlow Local QA\n\nPersonal\n\nFlow AI\n\nYour personal AI assistant\n\nNew Chat\nConversation\nShow my open tasks.\n\nInterpreted intent: Inspect tasks. Review the proposed action and run it explicitly when ready.\n\nHere is your task overview.\n\n1 of your 1 open task is due today.\n\nReview active task list\n\nReview the active tasks and choose the next one.\n\nINTERPRETED INTENT\n\nInspect tasks\n\nTOOL\nList tasks\nMODE\nRead-only\nRun tasks.list\n\n1 active task found.\n\nSend\nConversations\n\nShow my open tasks.\n\nnow",
+      "expectedResult": "One active task is reported with bounded details.",
+      "actualResult": "One active task is reported with bounded details.",
+      "status": "PASS",
+      "forbiddenMetadataCheck": {
+        "passed": true,
+        "forbiddenPatterns": [
+          "/taskId/i",
+          "/requestId/i",
+          "/schemaVersion/i"
+        ]
+      },
+      "browserRuntimeErrorCheck": {
+        "passed": true,
+        "result": "no browser/runtime error detected in visible UI"
+      },
+      "persistedStateVerification": {
+        "checked": false,
+        "result": "not applicable"
+      },
+      "rtlEvidence": {
+        "checked": false
+      },
+      "screenshotEvidence": {
+        "checked": false
+      },
+      "evidenceMethod": "authenticated-visible-browser-ui-local-supabase-cdp",
+      "runStructure": "independent-row-run",
+      "proposalSource": "deterministic-browser-stub",
+      "networkTransport": "intercepted-browser-fetch",
+      "proposalStrategy": "deterministic domain-keyword stub; not natural-language understanding",
+      "layersExercised": [
+        "visible Chat UI",
+        "deterministic intent validator",
+        "tool resolver",
+        "explicit read-only run action",
+        "runtime and policy boundary",
+        "response composer"
+      ],
+      "layersExcluded": [
+        "real LLM intent recognition",
+        "real agent worker transport",
+        "real multilingual reasoning behavior through the worker path"
+      ],
+      "realReasoningCoverage": "blocked-not-exercised"
+    },
+    {
+      "id": "ARUX-03",
+      "executedAt": "2026-07-17T10:33:05.833Z",
+      "fixture": "arux-six-tasks",
+      "scenario": "arux-six-tasks",
+      "tool": "tasks.list",
+      "initialBoundedState": {
+        "scenario": "arux-six-tasks",
+        "localOnly": true
+      },
+      "prompt": "What tasks do I have today?",
+      "interfaceLanguage": "en",
+      "aiResponseLanguageMode": "en",
+      "visibleUiActions": [
+        "Submit prompt",
+        "Run tasks.list"
+      ],
+      "sanitizedVisibleResponse": "Good afternoon, SmartFlow Local QA.\nHere is your workspace for today.\nSmartFlow\n\nIntelligent productivity\n\nSearch...\n⌘K\nSL\n\nSmartFlow Local QA\n\nPersonal\n\nFlow AI\n\nYour personal AI assistant\n\nNew Chat\nConversation\nWhat tasks do I have today?\n\nInterpreted intent: Inspect tasks. Review the proposed action and run it explicitly when ready.\n\nHere is your task overview.\n\n1 of your 6 open tasks is due today.\n\n3 open tasks do not have due dates.\nYou completed 4 tasks this week and have 1 due today.\nReview active task list\nPrepare tomorrow's focus\nOrganize workspace notes\n\nYou may want to add due dates to those tasks.\n\nINTERPRETED INTENT\n\nInspect tasks\n\nTOOL\nList tasks\nMODE\nRead-only\nRun tasks.list\n\n6 active tasks found.\n\nSend\nConversations\n\nWhat tasks do I have today?\n\nnow",
+      "expectedResult": "Six active tasks are reported with bounded preview details.",
+      "actualResult": "Six active tasks are reported with bounded preview details.",
+      "status": "PASS",
+      "forbiddenMetadataCheck": {
+        "passed": true,
+        "forbiddenPatterns": [
+          "/taskId/i",
+          "/requestId/i",
+          "/private notes/i"
+        ]
+      },
+      "browserRuntimeErrorCheck": {
+        "passed": true,
+        "result": "no browser/runtime error detected in visible UI"
+      },
+      "persistedStateVerification": {
+        "checked": false,
+        "result": "not applicable"
+      },
+      "rtlEvidence": {
+        "checked": false
+      },
+      "screenshotEvidence": {
+        "checked": false
+      },
+      "evidenceMethod": "authenticated-visible-browser-ui-local-supabase-cdp",
+      "runStructure": "independent-row-run",
+      "proposalSource": "deterministic-browser-stub",
+      "networkTransport": "intercepted-browser-fetch",
+      "proposalStrategy": "deterministic domain-keyword stub; not natural-language understanding",
+      "layersExercised": [
+        "visible Chat UI",
+        "deterministic intent validator",
+        "tool resolver",
+        "explicit read-only run action",
+        "runtime and policy boundary",
+        "response composer"
+      ],
+      "layersExcluded": [
+        "real LLM intent recognition",
+        "real agent worker transport",
+        "real multilingual reasoning behavior through the worker path"
+      ],
+      "realReasoningCoverage": "blocked-not-exercised"
+    },
+    {
+      "id": "ARUX-04",
+      "executedAt": "2026-07-17T10:33:13.687Z",
+      "fixture": "arux-workspace-rich",
+      "scenario": "arux-workspace-rich",
+      "tool": "tasks.list",
+      "initialBoundedState": {
+        "scenario": "arux-workspace-rich",
+        "localOnly": true
+      },
+      "prompt": "What tasks need attention?",
+      "interfaceLanguage": "en",
+      "aiResponseLanguageMode": "en",
+      "visibleUiActions": [
+        "Submit prompt",
+        "Run tasks.list"
+      ],
+      "sanitizedVisibleResponse": "Good afternoon, SmartFlow Local QA.\nHere is your workspace for today.\nSmartFlow\n\nIntelligent productivity\n\nSearch...\n⌘K\nSL\n\nSmartFlow Local QA\n\nPersonal\n\nFlow AI\n\nYour personal AI assistant\n\nNew Chat\nConversation\nWhat tasks need attention?\n\nInterpreted intent: Inspect tasks. Review the proposed action and run it explicitly when ready.\n\nHere is your task overview.\n\n1 of your 6 open tasks is due today.\n\n3 open tasks do not have due dates.\nYou completed 4 tasks this week and have 1 due today.\nReview active task list\nPrepare tomorrow's focus\nOrganize workspace notes\n\nYou may want to add due dates to those tasks.\n\nINTERPRETED INTENT\n\nInspect tasks\n\nTOOL\nList tasks\nMODE\nRead-only\nRun tasks.list\n\n6 active tasks found.\n\nSend\nConversations\n\nWhat tasks need attention?\n\nnow",
+      "expectedResult": "Task response preserves active task and workspace signal facts without personality claims.",
+      "actualResult": "Task response preserves active task and workspace signal facts without personality claims.",
+      "status": "PASS",
+      "forbiddenMetadataCheck": {
+        "passed": true,
+        "forbiddenPatterns": [
+          "/productive/i",
+          "/lazy/i",
+          "/disciplined/i",
+          "/taskId/i"
+        ]
+      },
+      "browserRuntimeErrorCheck": {
+        "passed": true,
+        "result": "no browser/runtime error detected in visible UI"
+      },
+      "persistedStateVerification": {
+        "checked": false,
+        "result": "not applicable"
+      },
+      "rtlEvidence": {
+        "checked": false
+      },
+      "screenshotEvidence": {
+        "checked": false
+      },
+      "evidenceMethod": "authenticated-visible-browser-ui-local-supabase-cdp",
+      "runStructure": "independent-row-run",
+      "proposalSource": "deterministic-browser-stub",
+      "networkTransport": "intercepted-browser-fetch",
+      "proposalStrategy": "deterministic domain-keyword stub; not natural-language understanding",
+      "layersExercised": [
+        "visible Chat UI",
+        "deterministic intent validator",
+        "tool resolver",
+        "explicit read-only run action",
+        "runtime and policy boundary",
+        "response composer"
+      ],
+      "layersExcluded": [
+        "real LLM intent recognition",
+        "real agent worker transport",
+        "real multilingual reasoning behavior through the worker path"
+      ],
+      "realReasoningCoverage": "blocked-not-exercised"
+    },
+    {
+      "id": "ARUX-05",
+      "executedAt": "2026-07-17T10:33:21.820Z",
+      "fixture": "arux-one-task",
+      "scenario": "arux-one-task",
+      "tool": "calendar.list_today",
+      "initialBoundedState": {
+        "scenario": "arux-one-task",
+        "localOnly": true
+      },
+      "prompt": "What is on my calendar today?",
+      "interfaceLanguage": "en",
+      "aiResponseLanguageMode": "en",
+      "visibleUiActions": [
+        "Submit prompt",
+        "Run calendar.list_today"
+      ],
+      "sanitizedVisibleResponse": "Good afternoon, SmartFlow Local QA.\nHere is your workspace for today.\nSmartFlow\n\nIntelligent productivity\n\nSearch...\n⌘K\nSL\n\nSmartFlow Local QA\n\nPersonal\n\nFlow AI\n\nYour personal AI assistant\n\nNew Chat\nConversation\nWhat is on my calendar today?\n\nInterpreted intent: Inspect today's calendar. Review the proposed action and run it explicitly when ready.\n\nHere is today's calendar.\n\nYour calendar is open today, while 1 task is due.\n\nYou could use the open calendar for focused work.\n\nINTERPRETED INTENT\n\nInspect today's calendar\n\nTOOL\nList today's events\nMODE\nRead-only\nRun calendar.list_today\n\nNo events today.\n\nSend\nConversations\n\nWhat is on my calendar today?\n\nnow",
+      "expectedResult": "Calendar response reports no events without claiming a created focus block.",
+      "actualResult": "Calendar response reports no events without claiming a created focus block.",
+      "status": "PASS",
+      "forbiddenMetadataCheck": {
+        "passed": true,
+        "forbiddenPatterns": [
+          "/reserved/i",
+          "/created/i",
+          "/requestId/i"
+        ]
+      },
+      "browserRuntimeErrorCheck": {
+        "passed": true,
+        "result": "no browser/runtime error detected in visible UI"
+      },
+      "persistedStateVerification": {
+        "checked": false,
+        "result": "not applicable"
+      },
+      "rtlEvidence": {
+        "checked": false
+      },
+      "screenshotEvidence": {
+        "checked": false
+      },
+      "evidenceMethod": "authenticated-visible-browser-ui-local-supabase-cdp",
+      "runStructure": "independent-row-run",
+      "proposalSource": "deterministic-browser-stub",
+      "networkTransport": "intercepted-browser-fetch",
+      "proposalStrategy": "deterministic domain-keyword stub; not natural-language understanding",
+      "layersExercised": [
+        "visible Chat UI",
+        "deterministic intent validator",
+        "tool resolver",
+        "explicit read-only run action",
+        "runtime and policy boundary",
+        "response composer"
+      ],
+      "layersExcluded": [
+        "real LLM intent recognition",
+        "real agent worker transport",
+        "real multilingual reasoning behavior through the worker path"
+      ],
+      "realReasoningCoverage": "blocked-not-exercised"
+    },
+    {
+      "id": "ARUX-06",
+      "executedAt": "2026-07-17T10:33:29.729Z",
+      "fixture": "arux-calendar-two",
+      "scenario": "arux-calendar-two",
+      "tool": "calendar.list_today",
+      "initialBoundedState": {
+        "scenario": "arux-calendar-two",
+        "localOnly": true
+      },
+      "prompt": "Show today's calendar.",
+      "interfaceLanguage": "en",
+      "aiResponseLanguageMode": "en",
+      "visibleUiActions": [
+        "Submit prompt",
+        "Run calendar.list_today"
+      ],
+      "sanitizedVisibleResponse": "Good afternoon, SmartFlow Local QA.\nHere is your workspace for today.\nSmartFlow\n\nIntelligent productivity\n\nSearch...\n⌘K\nSL\n\nSmartFlow Local QA\n\nPersonal\n\nFlow AI\n\nYour personal AI assistant\n\nNew Chat\nConversation\nShow today's calendar.\n\nInterpreted intent: Inspect today's calendar. Review the proposed action and run it explicitly when ready.\n\nHere is today's calendar.\n\nYou have 2 events today.\n\nLocal QA planning block\nLocal QA review\n\nINTERPRETED INTENT\n\nInspect today's calendar\n\nTOOL\nList today's events\nMODE\nRead-only\nRun calendar.list_today\n\n2 events found today.\n\nSend\nConversations\n\nShow today's calendar.\n\nnow",
+      "expectedResult": "Calendar response reports two events.",
+      "actualResult": "Calendar response reports two events.",
+      "status": "PASS",
+      "forbiddenMetadataCheck": {
+        "passed": true,
+        "forbiddenPatterns": [
+          "/requestId/i",
+          "/schemaVersion/i"
+        ]
+      },
+      "browserRuntimeErrorCheck": {
+        "passed": true,
+        "result": "no browser/runtime error detected in visible UI"
+      },
+      "persistedStateVerification": {
+        "checked": false,
+        "result": "not applicable"
+      },
+      "rtlEvidence": {
+        "checked": false
+      },
+      "screenshotEvidence": {
+        "checked": false
+      },
+      "evidenceMethod": "authenticated-visible-browser-ui-local-supabase-cdp",
+      "runStructure": "independent-row-run",
+      "proposalSource": "deterministic-browser-stub",
+      "networkTransport": "intercepted-browser-fetch",
+      "proposalStrategy": "deterministic domain-keyword stub; not natural-language understanding",
+      "layersExercised": [
+        "visible Chat UI",
+        "deterministic intent validator",
+        "tool resolver",
+        "explicit read-only run action",
+        "runtime and policy boundary",
+        "response composer"
+      ],
+      "layersExcluded": [
+        "real LLM intent recognition",
+        "real agent worker transport",
+        "real multilingual reasoning behavior through the worker path"
+      ],
+      "realReasoningCoverage": "blocked-not-exercised"
+    },
+    {
+      "id": "ARUX-07",
+      "executedAt": "2026-07-17T10:33:37.793Z",
+      "fixture": "empty",
+      "scenario": "empty",
+      "tool": "learning.get_progress",
+      "initialBoundedState": {
+        "scenario": "empty",
+        "localOnly": true
+      },
+      "prompt": "Show my learning progress.",
+      "interfaceLanguage": "en",
+      "aiResponseLanguageMode": "en",
+      "visibleUiActions": [
+        "Submit prompt",
+        "Run learning.get_progress"
+      ],
+      "sanitizedVisibleResponse": "Good afternoon, SmartFlow Local QA.\nHere is your workspace for today.\nSmartFlow\n\nIntelligent productivity\n\nSearch...\n⌘K\nSL\n\nSmartFlow Local QA\n\nPersonal\n\nFlow AI\n\nYour personal AI assistant\n\nNew Chat\nConversation\nShow my learning progress.\n\nInterpreted intent: Inspect learning progress. Review the proposed action and run it explicitly when ready.\n\nHere is your learning progress.\n\nI do not see learning progress yet.\n\nINTERPRETED INTENT\n\nInspect learning progress\n\nTOOL\nGet learning progress\nMODE\nRead-only\nRun learning.get_progress\n\nNo learning progress found.\n\nSend\nConversations\n\nShow my learning progress.\n\nnow",
+      "expectedResult": "Learning response reports no visible progress without inventing a lesson.",
+      "actualResult": "Learning response reports no visible progress without inventing a lesson.",
+      "status": "PASS",
+      "forbiddenMetadataCheck": {
+        "passed": true,
+        "forbiddenPatterns": [
+          "/continue Sorting/i",
+          "/mastery/i",
+          "/requestId/i"
+        ]
+      },
+      "browserRuntimeErrorCheck": {
+        "passed": true,
+        "result": "no browser/runtime error detected in visible UI"
+      },
+      "persistedStateVerification": {
+        "checked": false,
+        "result": "not applicable"
+      },
+      "rtlEvidence": {
+        "checked": false
+      },
+      "screenshotEvidence": {
+        "checked": false
+      },
+      "evidenceMethod": "authenticated-visible-browser-ui-local-supabase-cdp",
+      "runStructure": "independent-row-run",
+      "proposalSource": "deterministic-browser-stub",
+      "networkTransport": "intercepted-browser-fetch",
+      "proposalStrategy": "deterministic domain-keyword stub; not natural-language understanding",
+      "layersExercised": [
+        "visible Chat UI",
+        "deterministic intent validator",
+        "tool resolver",
+        "explicit read-only run action",
+        "runtime and policy boundary",
+        "response composer"
+      ],
+      "layersExcluded": [
+        "real LLM intent recognition",
+        "real agent worker transport",
+        "real multilingual reasoning behavior through the worker path"
+      ],
+      "realReasoningCoverage": "blocked-not-exercised"
+    },
+    {
+      "id": "ARUX-08",
+      "executedAt": "2026-07-17T10:33:45.893Z",
+      "fixture": "arux-learning-two",
+      "scenario": "arux-learning-two",
+      "tool": "learning.get_progress",
+      "initialBoundedState": {
+        "scenario": "arux-learning-two",
+        "localOnly": true
+      },
+      "prompt": "Continue my learning.",
+      "interfaceLanguage": "en",
+      "aiResponseLanguageMode": "en",
+      "visibleUiActions": [
+        "Submit prompt",
+        "Run learning.get_progress"
+      ],
+      "sanitizedVisibleResponse": "Good afternoon, SmartFlow Local QA.\nHere is your workspace for today.\nSmartFlow\n\nIntelligent productivity\n\nSearch...\n⌘K\nSL\n\nSmartFlow Local QA\n\nPersonal\n\nFlow AI\n\nYour personal AI assistant\n\nNew Chat\nConversation\nContinue my learning.\n\nInterpreted intent: Inspect learning progress. Review the proposed action and run it explicitly when ready.\n\nHere is your learning progress.\n\nLearning is part of today's goal, and 2 active items are ready to continue.\n\nSorting Algorithms\nOOP Fundamentals\n\nYou can continue the most recent learning item.\n\nINTERPRETED INTENT\n\nInspect learning progress\n\nTOOL\nGet learning progress\nMODE\nRead-only\nRun learning.get_progress\n\n2 learning items found.\n\nSend\nConversations\n\nContinue my learning.\n\nnow",
+      "expectedResult": "Learning response reports two learning items.",
+      "actualResult": "Learning response reports two learning items.",
+      "status": "PASS",
+      "forbiddenMetadataCheck": {
+        "passed": true,
+        "forbiddenPatterns": [
+          "/completed a lesson/i",
+          "/requestId/i"
+        ]
+      },
+      "browserRuntimeErrorCheck": {
+        "passed": true,
+        "result": "no browser/runtime error detected in visible UI"
+      },
+      "persistedStateVerification": {
+        "checked": false,
+        "result": "not applicable"
+      },
+      "rtlEvidence": {
+        "checked": false
+      },
+      "screenshotEvidence": {
+        "checked": false
+      },
+      "evidenceMethod": "authenticated-visible-browser-ui-local-supabase-cdp",
+      "runStructure": "independent-row-run",
+      "proposalSource": "deterministic-browser-stub",
+      "networkTransport": "intercepted-browser-fetch",
+      "proposalStrategy": "deterministic domain-keyword stub; not natural-language understanding",
+      "layersExercised": [
+        "visible Chat UI",
+        "deterministic intent validator",
+        "tool resolver",
+        "explicit read-only run action",
+        "runtime and policy boundary",
+        "response composer"
+      ],
+      "layersExcluded": [
+        "real LLM intent recognition",
+        "real agent worker transport",
+        "real multilingual reasoning behavior through the worker path"
+      ],
+      "realReasoningCoverage": "blocked-not-exercised"
+    },
+    {
+      "id": "ARUX-09",
+      "executedAt": "2026-07-17T10:33:53.684Z",
+      "fixture": "arux-workspace-rich",
+      "scenario": "arux-workspace-rich",
+      "tool": "workspace.get_context",
+      "initialBoundedState": {
+        "scenario": "arux-workspace-rich",
+        "localOnly": true
+      },
+      "prompt": "Summarize my workspace.",
+      "interfaceLanguage": "en",
+      "aiResponseLanguageMode": "en",
+      "visibleUiActions": [
+        "Submit prompt",
+        "Run workspace.get_context"
+      ],
+      "sanitizedVisibleResponse": "Good afternoon, SmartFlow Local QA.\nHere is your workspace for today.\nSmartFlow\n\nIntelligent productivity\n\nSearch...\n⌘K\nSL\n\nSmartFlow Local QA\n\nPersonal\n\nFlow AI\n\nYour personal AI assistant\n\nNew Chat\nConversation\nSummarize my workspace.\n\nInterpreted intent: Inspect workspace context. Review the proposed action and run it explicitly when ready.\n\nHere is the workspace context I verified.\n\nToday's goal is tasks-focused: Clear your most important active work..\n\nUse the loaded context to choose the next read-only step.\n\nINTERPRETED INTENT\n\nInspect workspace context\n\nTOOL\nGet workspace context\nMODE\nRead-only\nRun workspace.get_context\n\nWorkspace context loaded.\n\nSend\nConversations\n\nSummarize my workspace.\n\nnow",
+      "expectedResult": "Workspace response stays bounded and hides engine internals.",
+      "actualResult": "Workspace response stays bounded and hides engine internals.",
+      "status": "PASS",
+      "forbiddenMetadataCheck": {
+        "passed": true,
+        "forbiddenPatterns": [
+          "/Decision Intelligence/i",
+          "/Priority Engine/i",
+          "/WorkspaceMemory/i",
+          "/score/i"
+        ]
+      },
+      "browserRuntimeErrorCheck": {
+        "passed": true,
+        "result": "no browser/runtime error detected in visible UI"
+      },
+      "persistedStateVerification": {
+        "checked": false,
+        "result": "not applicable"
+      },
+      "rtlEvidence": {
+        "checked": false
+      },
+      "screenshotEvidence": {
+        "checked": false
+      },
+      "evidenceMethod": "authenticated-visible-browser-ui-local-supabase-cdp",
+      "runStructure": "independent-row-run",
+      "proposalSource": "deterministic-browser-stub",
+      "networkTransport": "intercepted-browser-fetch",
+      "proposalStrategy": "deterministic domain-keyword stub; not natural-language understanding",
+      "layersExercised": [
+        "visible Chat UI",
+        "deterministic intent validator",
+        "tool resolver",
+        "explicit read-only run action",
+        "runtime and policy boundary",
+        "response composer"
+      ],
+      "layersExcluded": [
+        "real LLM intent recognition",
+        "real agent worker transport",
+        "real multilingual reasoning behavior through the worker path"
+      ],
+      "realReasoningCoverage": "blocked-not-exercised"
+    },
+    {
+      "id": "ARUX-10",
+      "executedAt": "2026-07-17T10:46:57.372Z",
+      "fixture": "arux-complete-target",
+      "scenario": "arux-complete-target",
+      "tool": "tasks.complete",
+      "initialBoundedState": {
+        "scenario": "arux-complete-target",
+        "localOnly": true
+      },
+      "prompt": "Mark the selected task done.",
+      "interfaceLanguage": "en",
+      "aiResponseLanguageMode": "en",
+      "visibleUiActions": [
+        "Submit prompt",
+        "Review approval",
+        "Approve",
+        "Complete task"
+      ],
+      "sanitizedVisibleResponse": "Good afternoon, SmartFlow Local QA.\nHere is your workspace for today.\nSmartFlow\n\nIntelligent productivity\n\nDashboard\nFlow AI\nSmart Academy\nTasks\nCalendar\nHabits\nJournal\nFinance\nFamily\nDocuments\nPhotos\nMusic\nSettings\nSearch...\n⌘K\nSL\n\nSmartFlow Local QA\n\nPersonal\n\nFlow AI\n\nYour personal AI assistant\n\nNew Chat\nConversation\nMark the selected task done.\n\nInterpreted intent: Complete task. Review the proposed action and run it explicitly when ready.\n\nThe task update is complete.\n\nThe task is marked complete.\n\nINTERPRETED INTENT\n\nComplete task\n\nTOOL\nComplete task\nMODE\nApproval required\nTARGET\nSelected task\nComplete task\n\nTask was marked complete.\n\nSend\nConversations\n\nMark the selected task done.\n\nnow",
+      "expectedResult": "Explicit review, approval, and run completes the selected task.",
+      "actualResult": "Explicit review, approval, and run completes the selected task.",
+      "status": "PASS",
+      "forbiddenMetadataCheck": {
+        "passed": true,
+        "forbiddenPatterns": [
+          "/taskId/i",
+          "/requestId/i",
+          "/before verification/i"
+        ]
+      },
+      "browserRuntimeErrorCheck": {
+        "passed": true,
+        "result": "no browser/runtime error detected in visible UI"
+      },
+      "persistedStateVerification": {
+        "checked": true,
+        "result": "selected task completed",
+        "passed": true
+      },
+      "rtlEvidence": {
+        "checked": false
+      },
+      "screenshotEvidence": {
+        "checked": false
+      },
+      "evidenceMethod": "authenticated-visible-browser-ui-local-supabase-cdp",
+      "runStructure": "independent-row-run",
+      "proposalSource": "deterministic-browser-stub",
+      "networkTransport": "intercepted-browser-fetch",
+      "proposalStrategy": "deterministic domain-keyword stub; not natural-language understanding",
+      "layersExercised": [
+        "visible Chat UI",
+        "deterministic intent validator",
+        "tool resolver",
+        "explicit approval and run separation",
+        "runtime and policy boundary",
+        "response composer",
+        "local Supabase task persistence verification"
+      ],
+      "layersExcluded": [
+        "real LLM intent recognition",
+        "real agent worker transport",
+        "real multilingual reasoning behavior through the worker path"
+      ],
+      "realReasoningCoverage": "blocked-not-exercised"
+    },
+    {
+      "id": "ARUX-11",
+      "executedAt": "2026-07-18T00:48:17.554Z",
+      "fixture": "arux-completed-target",
+      "scenario": "arux-completed-target",
+      "tool": "tasks.complete",
+      "initialBoundedState": {
+        "scenario": "arux-completed-target",
+        "localOnly": true
+      },
+      "prompt": "Mark the selected task done again.",
+      "interfaceLanguage": "en",
+      "aiResponseLanguageMode": "en",
+      "visibleUiActions": [
+        "Submit prompt",
+        "Review approval",
+        "Approve",
+        "Complete task"
+      ],
+      "sanitizedVisibleResponse": "Still here, SmartFlow Local QA.\nHere is your workspace for today.\nSmartFlow\n\nIntelligent productivity\n\nDashboard\nFlow AI\nSmart Academy\nTasks\nCalendar\nHabits\nJournal\nFinance\nFamily\nDocuments\nPhotos\nMusic\nSettings\nSearch...\n⌘K\nSL\n\nSmartFlow Local QA\n\nPersonal\n\nFlow AI\n\nYour personal AI assistant\n\nNew Chat\nConversation\nMark the selected task done again.\n\nInterpreted intent: Complete task. Review the proposed action and run it explicitly when ready.\n\nThe task update is complete.\n\nThe task was already complete, so I did not change it again.\n\nINTERPRETED INTENT\n\nComplete task\n\nTOOL\nComplete task\nMODE\nApproval required\nTARGET\nSelected task\nComplete task\n\nThe task was already complete, so I did not change it again.\n\nSend\nConversations\n\nMark the selected task done again.\n\nnow",
+      "expectedResult": "Already-complete task reports no new state change.",
+      "actualResult": "Already-complete task reports no new state change.",
+      "status": "PASS",
+      "forbiddenMetadataCheck": {
+        "passed": true,
+        "forbiddenPatterns": [
+          "/marked complete now/i",
+          "/taskId/i",
+          "/requestId/i"
+        ]
+      },
+      "browserRuntimeErrorCheck": {
+        "passed": true,
+        "result": "no browser/runtime error detected in visible UI"
+      },
+      "persistedStateVerification": {
+        "checked": true,
+        "result": "selected task completed",
+        "passed": true
+      },
+      "rtlEvidence": {
+        "checked": false
+      },
+      "screenshotEvidence": {
+        "checked": false
+      },
+      "evidenceMethod": "authenticated-visible-browser-ui-local-supabase-cdp",
+      "runStructure": "independent-row-run",
+      "proposalSource": "deterministic-browser-stub",
+      "networkTransport": "intercepted-browser-fetch",
+      "proposalStrategy": "deterministic domain-keyword stub; not natural-language understanding",
+      "layersExercised": [
+        "visible Chat UI",
+        "deterministic intent validator",
+        "tool resolver",
+        "explicit approval and run separation",
+        "runtime and policy boundary",
+        "response composer",
+        "local Supabase task persistence verification"
+      ],
+      "layersExcluded": [
+        "real LLM intent recognition",
+        "real agent worker transport",
+        "real multilingual reasoning behavior through the worker path"
+      ],
+      "realReasoningCoverage": "blocked-not-exercised"
+    },
+    {
+      "id": "ARUX-12",
+      "executedAt": "2026-07-17T10:34:47.831Z",
+      "fixture": "empty",
+      "scenario": "empty",
+      "tool": "tasks.list",
+      "initialBoundedState": {
+        "scenario": "empty",
+        "localOnly": true
+      },
+      "prompt": "Show my open tasks.",
+      "interfaceLanguage": "en",
+      "aiResponseLanguageMode": "en",
+      "visibleUiActions": [
+        "Submit prompt",
+        "Run tasks.list"
+      ],
+      "sanitizedVisibleResponse": "Good afternoon, SmartFlow Local QA.\nHere is your workspace for today.\nSmartFlow\n\nIntelligent productivity\n\nSearch...\n⌘K\nSL\n\nSmartFlow Local QA\n\nPersonal\n\nFlow AI\n\nYour personal AI assistant\n\nNew Chat\nConversation\nShow my open tasks.\n\nInterpreted intent: Inspect tasks. Review the proposed action and run it explicitly when ready.\n\nHere is your task overview.\n\nYou do not have active tasks right now.\n\nINTERPRETED INTENT\n\nInspect tasks\n\nTOOL\nList tasks\nMODE\nRead-only\nRun tasks.list\n\nNo active tasks found.\n\nSend\nConversations\n\nShow my open tasks.\n\nnow",
+      "expectedResult": "Runtime zero-task result is preserved and stale six-task context is not shown.",
+      "actualResult": "Runtime zero-task result is preserved and stale six-task context is not shown.",
+      "status": "PASS",
+      "forbiddenMetadataCheck": {
+        "passed": true,
+        "forbiddenPatterns": [
+          "/6 active tasks/i",
+          "/Review active task list/i",
+          "/requestId/i"
+        ]
+      },
+      "browserRuntimeErrorCheck": {
+        "passed": true,
+        "result": "no browser/runtime error detected in visible UI"
+      },
+      "persistedStateVerification": {
+        "checked": false,
+        "result": "not applicable"
+      },
+      "rtlEvidence": {
+        "checked": false
+      },
+      "screenshotEvidence": {
+        "checked": false
+      },
+      "evidenceMethod": "authenticated-visible-browser-ui-local-supabase-cdp",
+      "runStructure": "independent-row-run",
+      "proposalSource": "deterministic-browser-stub",
+      "networkTransport": "intercepted-browser-fetch",
+      "proposalStrategy": "deterministic domain-keyword stub; not natural-language understanding",
+      "layersExercised": [
+        "visible Chat UI",
+        "deterministic intent validator",
+        "tool resolver",
+        "explicit read-only run action",
+        "runtime and policy boundary",
+        "response composer"
+      ],
+      "layersExcluded": [
+        "real LLM intent recognition",
+        "real agent worker transport",
+        "real multilingual reasoning behavior through the worker path"
+      ],
+      "realReasoningCoverage": "blocked-not-exercised"
+    },
+    {
+      "id": "ARUX-13",
+      "executedAt": "2026-07-18T00:48:28.508Z",
+      "fixture": "arux-two-tasks",
+      "scenario": "arux-two-tasks",
+      "tool": "tasks.list",
+      "initialBoundedState": {
+        "scenario": "arux-two-tasks",
+        "localOnly": true
+      },
+      "prompt": "کارهای باز من را نشان بده.",
+      "interfaceLanguage": "en",
+      "aiResponseLanguageMode": "fa",
+      "visibleUiActions": [
+        "Submit prompt",
+        "Run tasks.list"
+      ],
+      "sanitizedVisibleResponse": "Still here, SmartFlow Local QA.\nHere is your workspace for today.\nSmartFlow\n\nIntelligent productivity\n\nDashboard\nFlow AI\nSmart Academy\nTasks\nCalendar\nHabits\nJournal\nFinance\nFamily\nDocuments\nPhotos\nMusic\nSettings\nSearch...\n⌘K\nSL\n\nSmartFlow Local QA\n\nPersonal\n\nFlow AI\n\nYour personal AI assistant\n\nNew Chat\nConversation\nکارهای باز من را نشان بده.\n\nنیت تشخیص داده شد: بررسی وظایف. اقدام پیشنهادی را بررسی کنید و وقتی آماده بودید خودتان اجرا کنید.\n\nنمای کلی کارهایت این است.\n\nامروز 1 مورد از 2 کار باز موعد دارد.\n\nReview active task list\nPrepare tomorrow's focus\n\nReview the active tasks and choose the next one.\n\nINTERPRETED INTENT\n\nInspect tasks\n\nTOOL\nList tasks\nMODE\nRead-only\nRun tasks.list\n\nاکنون 2 کار فعال داری.\n\nSend\nConversations\n\nکارهای باز من را نشان بده.\n\nnow",
+      "expectedResult": "Persian RTL response preserves two active tasks.",
+      "actualResult": "Persian RTL response preserves two active tasks.",
+      "status": "PASS",
+      "forbiddenMetadataCheck": {
+        "passed": true,
+        "forbiddenPatterns": [
+          "/requestId/i",
+          "/schemaVersion/i"
+        ]
+      },
+      "browserRuntimeErrorCheck": {
+        "passed": true,
+        "result": "no browser/runtime error detected in visible UI"
+      },
+      "persistedStateVerification": {
+        "checked": false,
+        "result": "not applicable"
+      },
+      "rtlEvidence": {
+        "checked": true,
+        "direction": "rtl",
+        "isolatedNaturalLanguageBlockCount": 5,
+        "latinBlockCount": 3,
+        "latinBlockDirections": [
+          "ltr",
+          "ltr",
+          "ltr"
+        ],
+        "latinBlocksNaturallyLtr": true
+      },
+      "screenshotEvidence": {
+        "checked": true,
+        "path": "docs/testing/evidence/screenshots/arux-13.png"
+      },
+      "evidenceMethod": "authenticated-visible-browser-ui-local-supabase-cdp",
+      "runStructure": "independent-row-run",
+      "proposalSource": "deterministic-browser-stub",
+      "networkTransport": "intercepted-browser-fetch",
+      "proposalStrategy": "deterministic domain-keyword stub; not natural-language understanding",
+      "layersExercised": [
+        "visible Chat UI",
+        "deterministic intent validator",
+        "tool resolver",
+        "explicit read-only run action",
+        "runtime and policy boundary",
+        "response composer",
+        "RTL rendering"
+      ],
+      "layersExcluded": [
+        "real LLM intent recognition",
+        "real agent worker transport",
+        "real multilingual reasoning behavior through the worker path"
+      ],
+      "realReasoningCoverage": "blocked-not-exercised"
+    },
+    {
+      "id": "ARUX-14",
+      "executedAt": "2026-07-18T00:48:38.550Z",
+      "fixture": "empty",
+      "scenario": "empty",
+      "tool": "calendar.list_today",
+      "initialBoundedState": {
+        "scenario": "empty",
+        "localOnly": true
+      },
+      "prompt": "Zeig mir die heutigen Termine.",
+      "interfaceLanguage": "en",
+      "aiResponseLanguageMode": "de",
+      "visibleUiActions": [
+        "Submit prompt",
+        "Run calendar.list_today"
+      ],
+      "sanitizedVisibleResponse": "Still here, SmartFlow Local QA.\nHere is your workspace for today.\nSmartFlow\n\nIntelligent productivity\n\nSearch...\n⌘K\nSL\n\nSmartFlow Local QA\n\nPersonal\n\nFlow AI\n\nYour personal AI assistant\n\nNew Chat\nConversation\nZeig mir die heutigen Termine.\n\nInterpretierte Absicht: Heutigen Kalender pruefen. Pruefe die vorgeschlagene Aktion und starte sie erst explizit, wenn du bereit bist.\n\nHier ist dein Kalender fur heute.\n\nDein Kalender ist heute frei.\n\nDu konntest den offenen Kalender fuer fokussierte Arbeit nutzen.\n\nINTERPRETED INTENT\n\nInspect today's calendar\n\nTOOL\nList today's events\nMODE\nRead-only\nRun calendar.list_today\n\nDein Kalender ist heute frei.\n\nSend\nConversations\n\nZeig mir die heutigen Termine.\n\nnow",
+      "expectedResult": "German response reports no events today.",
+      "actualResult": "German response reports no events today.",
+      "status": "PASS",
+      "forbiddenMetadataCheck": {
+        "passed": true,
+        "forbiddenPatterns": [
+          "/No events today/i",
+          "/requestId/i"
+        ]
+      },
+      "browserRuntimeErrorCheck": {
+        "passed": true,
+        "result": "no browser/runtime error detected in visible UI"
+      },
+      "persistedStateVerification": {
+        "checked": false,
+        "result": "not applicable"
+      },
+      "rtlEvidence": {
+        "checked": false
+      },
+      "screenshotEvidence": {
+        "checked": false
+      },
+      "evidenceMethod": "authenticated-visible-browser-ui-local-supabase-cdp",
+      "runStructure": "independent-row-run",
+      "proposalSource": "deterministic-browser-stub",
+      "networkTransport": "intercepted-browser-fetch",
+      "proposalStrategy": "deterministic domain-keyword stub; not natural-language understanding",
+      "layersExercised": [
+        "visible Chat UI",
+        "deterministic intent validator",
+        "tool resolver",
+        "explicit read-only run action",
+        "runtime and policy boundary",
+        "response composer"
+      ],
+      "layersExcluded": [
+        "real LLM intent recognition",
+        "real agent worker transport",
+        "real multilingual reasoning behavior through the worker path"
+      ],
+      "realReasoningCoverage": "blocked-not-exercised"
+    },
+    {
+      "id": "ARUX-15",
+      "executedAt": "2026-07-18T00:48:49.276Z",
+      "fixture": "arux-learning-two",
+      "scenario": "arux-learning-two",
+      "tool": "learning.get_progress",
+      "initialBoundedState": {
+        "scenario": "arux-learning-two",
+        "localOnly": true
+      },
+      "prompt": "ادامه درس من را نشان بده.",
+      "interfaceLanguage": "en",
+      "aiResponseLanguageMode": "auto",
+      "visibleUiActions": [
+        "Submit prompt",
+        "Run learning.get_progress"
+      ],
+      "sanitizedVisibleResponse": "Still here, SmartFlow Local QA.\nHere is your workspace for today.\nSmartFlow\n\nIntelligent productivity\n\nSearch...\n⌘K\nSL\n\nSmartFlow Local QA\n\nPersonal\n\nFlow AI\n\nYour personal AI assistant\n\nNew Chat\nConversation\nادامه درس من را نشان بده.\n\nنیت تشخیص داده شد: بررسی پیشرفت یادگیری. اقدام پیشنهادی را بررسی کنید و وقتی آماده بودید خودتان اجرا کنید.\n\nپیشرفت یادگیریات این است.\n\nیادگیری بخشی از هدف امروز است و 2 مورد فعال برای ادامه آماده است.\n\nSorting Algorithms\nOOP Fundamentals\n\nمیتوانی مورد یادگیری اخیر را ادامه بدهی.\n\nINTERPRETED INTENT\n\nInspect learning progress\n\nTOOL\nGet learning progress\nMODE\nRead-only\nRun learning.get_progress\n\n2 مورد یادگیری پیدا کردم.\n\nSend\nConversations\n\nادامه درس من را نشان بده.\n\nnow",
+      "expectedResult": "Auto language resolves to Persian and preserves two learning items.",
+      "actualResult": "Auto language resolves to Persian and preserves two learning items.",
+      "status": "PASS",
+      "forbiddenMetadataCheck": {
+        "passed": true,
+        "forbiddenPatterns": [
+          "/requestId/i",
+          "/schemaVersion/i"
+        ]
+      },
+      "browserRuntimeErrorCheck": {
+        "passed": true,
+        "result": "no browser/runtime error detected in visible UI"
+      },
+      "persistedStateVerification": {
+        "checked": false,
+        "result": "not applicable"
+      },
+      "rtlEvidence": {
+        "checked": true,
+        "direction": "rtl",
+        "isolatedNaturalLanguageBlockCount": 5,
+        "latinBlockCount": 2,
+        "latinBlockDirections": [
+          "ltr",
+          "ltr"
+        ],
+        "latinBlocksNaturallyLtr": true
+      },
+      "screenshotEvidence": {
+        "checked": true,
+        "path": "docs/testing/evidence/screenshots/arux-15.png"
+      },
+      "evidenceMethod": "authenticated-visible-browser-ui-local-supabase-cdp",
+      "runStructure": "independent-row-run",
+      "proposalSource": "deterministic-browser-stub",
+      "networkTransport": "intercepted-browser-fetch",
+      "proposalStrategy": "deterministic domain-keyword stub; not natural-language understanding",
+      "layersExercised": [
+        "visible Chat UI",
+        "deterministic intent validator",
+        "tool resolver",
+        "explicit read-only run action",
+        "runtime and policy boundary",
+        "response composer",
+        "RTL rendering"
+      ],
+      "layersExcluded": [
+        "real LLM intent recognition",
+        "real agent worker transport",
+        "real multilingual reasoning behavior through the worker path"
+      ],
+      "realReasoningCoverage": "blocked-not-exercised"
+    }
+  ]
+}

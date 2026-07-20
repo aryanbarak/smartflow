@@ -45,7 +45,7 @@ DO NOT ADD (hardcoded by design — adding broke auth in the past):
 - Models: qwen2.5-coder:7b, qwen2.5-coder:14b, llama3.1:8b, nomic-embed-text
 
 ## Continue.dev Config
-- Config file: C:\Users\aryan\.continue\config.yaml
+- Config file: user-local `.continue/config.yaml` outside the repository
 - Schema: v1 (new format — not legacy config.json)
 - Default model: qwen2.5-coder:7b for autocomplete, 14b for chat
 - Prompt library: .prompts/ (24 files, 7 categories)

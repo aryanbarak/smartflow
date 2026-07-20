@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-07-20T17:48:44.355Z",
+  "scenario": "synthetic-english-task-inspection",
+  "endpoint": "/agent/reason",
+  "authenticated": true,
+  "authTransport": "local-supabase-auth",
+  "modelTransport": "real-gemini",
+  "proposalSource": "local-real-worker",
+  "networkTransport": "real-local-worker",
+  "workerHttpStatus": 200,
+  "providerDiagnostic": {
+    "httpStatus": 200,
+    "contentType": "application/json",
+    "candidateCount": 1,
+    "finishReasonCategory": "STOP",
+    "textPresent": true,
+    "responseJsonParseSuccess": true,
+    "proposalJsonParseSuccess": true,
+    "proposalSchemaValidation": "accepted"
+  },
+  "responseLanguageRequested": "en",
+  "responseLanguageReturned": "en",
+  "requestIdCorrelated": true,
+  "proposal": {
+    "intent": "inspect_tasks"
+  },
+  "deterministicValidation": {
+    "result": "accepted",
+    "validatedIntent": "inspect_tasks",
+    "resolvedToolId": "tasks.list"
+  },
+  "requestCounts": {
+    "localWorker": 1,
+    "localAuthSetupOtp": 1,
+    "localAuthSetupVerify": 1,
+    "localSupabaseAuthVerification": 1,
+    "gemini": 1,
+    "databaseRest": 0,
+    "toolExecution": 0,
+    "approval": 0,
+    "persistence": 0,
+    "fallback": 0
+  },
+  "toolExecuted": false,
+  "productionAccess": false,
+  "status": "PASS",
+  "fullRealWorkerMatrix": "PENDING"
+}

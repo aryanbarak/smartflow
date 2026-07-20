@@ -1,5 +1,5 @@
 """
-DailyFlow Knowledge Base Builder
+SmartFlow Knowledge Base Builder
 Usage: python .knowledge/build_kb.py
 """
 
@@ -58,7 +58,7 @@ def load_documents():
 
 
 def build_knowledge_base():
-    print("\n=== DailyFlow Knowledge Base Builder ===\n")
+    print("\n=== SmartFlow Knowledge Base Builder ===\n")
 
     import urllib.request
     try:

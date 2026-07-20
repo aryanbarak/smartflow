@@ -3,6 +3,7 @@ import {
   createLlmReasoningCaller,
   parseLlmIntentJson,
 } from "./llmReasoningService";
+import { validateAgentIntentProposal } from "./intentValidator";
 
 describe("llmReasoningService", () => {
   it("parses JSON-only intent output", () => {
@@ -29,7 +30,7 @@ describe("llmReasoningService", () => {
   });
 
   it("uses existing fetch boundary and reads reply JSON", async () => {
-    const fetcher = vi.fn(async () => ({
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => ({
       ok: true,
       json: async () => ({ reply: '{"type":"inspect_learning"}' }),
     }));
@@ -57,5 +58,71 @@ describe("llmReasoningService", () => {
         responseLanguage: "en",
       }),
     ).resolves.toEqual({ rawText: "" });
+  });
+
+  it("uses the structured local reasoning contract with authenticated transport", async () => {
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({
+      requestId: "reasoning:test",
+      proposal: {
+        type: "inspect_tasks",
+        confidence: "high",
+        requestedDomain: "tasks",
+        reasons: ["The request asks for tasks."],
+        language: "en",
+      },
+      responseLanguage: "en",
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const caller = createLlmReasoningCaller({
+      endpoint: "http://127.0.0.1:8787/agent/reason",
+      accessToken: "local-token",
+      fetcher: fetcher as unknown as typeof fetch,
+      transport: "structured-reasoning",
+      requestIdFactory: () => "reasoning:test",
+    });
+
+    const result = await caller({
+      prompt: "Bounded reasoning prompt",
+      responseLanguage: "en",
+      sessionId: "session-1",
+    });
+    const requestBody = JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body));
+
+    expect(requestBody).toEqual({
+      requestId: "reasoning:test",
+      reasoningPrompt: "Bounded reasoning prompt",
+      responseLanguage: "en",
+    });
+    expect(JSON.stringify(fetcher.mock.calls[0]?.[1]?.headers)).toContain("Bearer local-token");
+
+    const parsed = parseLlmIntentJson(result.rawText);
+    expect(parsed.ok).toBe(true);
+    const validated = validateAgentIntentProposal({
+      rawProposal: parsed.ok ? parsed.value : null,
+      userMessage: "Show my tasks.",
+      safeContext: { tasks: [], events: [], learningProgress: null },
+      language: "en",
+      now: new Date("2026-07-18T12:00:00.000Z"),
+    });
+    expect(validated.proposal.type).toBe("inspect_tasks");
+    expect(validated.toolId).toBe("tasks.list");
+  });
+
+  it("fails closed on a mismatched or malformed structured envelope", async () => {
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({
+      requestId: "wrong-request",
+      proposal: { type: "inspect_tasks" },
+      responseLanguage: "en",
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const caller = createLlmReasoningCaller({
+      endpoint: "http://127.0.0.1:8787/agent/reason",
+      fetcher: fetcher as unknown as typeof fetch,
+      transport: "structured-reasoning",
+      requestIdFactory: () => "reasoning:expected",
+    });
+
+    await expect(caller({
+      prompt: "Bounded reasoning prompt",
+      responseLanguage: "en",
+    })).resolves.toEqual({ rawText: "" });
   });
 });

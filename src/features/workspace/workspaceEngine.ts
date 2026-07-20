@@ -288,6 +288,18 @@ const rightRailRecommendations: WorkspaceRecommendation[] = [
   },
 ];
 
+function learningLessonsForActivity(input: WorkspaceEngineInput) {
+  const totalQuestions = input.learnAiActivity?.totalQuestions ?? 0;
+  if (totalQuestions <= 0) return [];
+
+  return recentLessons.slice(0, Math.min(recentLessons.length, totalQuestions)).map((lesson, index) => ({
+    id: `lesson-${index + 1}`,
+    title: lesson.title,
+    completionPercentage: lesson.progress,
+    completed: lesson.progress >= 100,
+  }));
+}
+
 export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
   const today = input.now ?? new Date();
   const todayLabel = today.toLocaleDateString(undefined, {
@@ -448,12 +460,7 @@ export function workspaceEngine(input: WorkspaceEngineInput): Workspace {
         dateTimeStart: event.dateTimeStart,
       })),
       learningProgress: {
-        lessons: recentLessons.map((lesson, index) => ({
-          id: `lesson-${index + 1}`,
-          title: lesson.title,
-          completionPercentage: lesson.progress,
-          completed: lesson.progress >= 100,
-        })),
+        lessons: learningLessonsForActivity(input),
         totalQuestions: input.learnAiActivity?.totalQuestions,
         lastActivityAt: input.learnAiActivity?.lastQuestion?.createdAt,
         mode: input.learnAiActivity?.mostActiveMode?.mode,

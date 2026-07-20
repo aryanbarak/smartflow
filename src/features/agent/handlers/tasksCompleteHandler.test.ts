@@ -91,9 +91,7 @@ describe("tasksCompleteHandler", () => {
     taskServiceMock.getTaskForUser
       .mockResolvedValueOnce(task())
       .mockResolvedValueOnce(task({ completed: true, completedAt }));
-    taskServiceMock.completeTask
-      .mockResolvedValueOnce(task({ completed: true, completedAt }))
-      .mockResolvedValueOnce(task({ completed: true, completedAt }));
+    taskServiceMock.completeTask.mockResolvedValueOnce(task({ completed: true, completedAt }));
 
     const input = { userId: " user-1 ", taskId: " task-1 " };
     const sourceInput = { ...input };
@@ -130,15 +128,11 @@ describe("tasksCompleteHandler", () => {
       previousCompleted: false,
       previousCompletedAt: null,
     });
+    expect(taskServiceMock.completeTask).toHaveBeenCalledTimes(1);
   });
 
-  it("treats already-completed tasks as successful and idempotent", async () => {
-    taskServiceMock.getTaskForUser
-      .mockResolvedValueOnce(task({ completed: true, completedAt }))
-      .mockResolvedValueOnce(task({ completed: true, completedAt }));
-    taskServiceMock.completeTask
-      .mockResolvedValueOnce(task({ completed: true, completedAt }))
-      .mockResolvedValueOnce(task({ completed: true, completedAt }));
+  it("treats an already-completed exact task as a verified no-op", async () => {
+    taskServiceMock.getTaskForUser.mockResolvedValueOnce(task({ completed: true, completedAt }));
 
     const result = await tasksCompleteHandler.execute({ userId: "user-1", taskId: "task-1" }, {});
 
@@ -148,15 +142,20 @@ describe("tasksCompleteHandler", () => {
       completedAt,
       verified: true,
     });
+    expect(result.compensation).toEqual({
+      taskId: "task-1",
+      previousCompleted: true,
+      previousCompletedAt: completedAt,
+    });
+    expect(taskServiceMock.getTaskForUser).toHaveBeenCalledTimes(1);
+    expect(taskServiceMock.completeTask).not.toHaveBeenCalled();
   });
 
-  it("returns verification_failed when readback or repeated completion does not prove the mutation", async () => {
+  it("returns verification_failed when readback does not prove the mutation", async () => {
     taskServiceMock.getTaskForUser
       .mockResolvedValueOnce(task())
       .mockResolvedValueOnce(task({ completed: false, completedAt: null }));
-    taskServiceMock.completeTask
-      .mockResolvedValueOnce(task({ completed: true, completedAt }))
-      .mockResolvedValueOnce(task({ completed: true, completedAt: "2026-07-10T10:00:00.000Z" }));
+    taskServiceMock.completeTask.mockResolvedValueOnce(task({ completed: true, completedAt }));
 
     const result = await tasksCompleteHandler.execute({ userId: "user-1", taskId: "task-1" }, {});
 
@@ -168,6 +167,16 @@ describe("tasksCompleteHandler", () => {
       verified: false,
       redacted: true,
     });
+  });
+
+  it("fails closed when an already-completed record lacks verifiable completion metadata", async () => {
+    taskServiceMock.getTaskForUser.mockResolvedValueOnce(task({ completed: true, completedAt: null }));
+
+    const result = await tasksCompleteHandler.execute({ userId: "user-1", taskId: "task-1" }, {});
+
+    expect(result.status).toBe("verification_failed");
+    expect(result.success).toBe(false);
+    expect(taskServiceMock.completeTask).not.toHaveBeenCalled();
   });
 
   it("normalizes task service errors without leaking raw payloads", async () => {
@@ -184,5 +193,17 @@ describe("tasksCompleteHandler", () => {
       retryable: false,
     });
     expect(JSON.stringify(result)).not.toContain("user-1");
+  });
+
+  it("keeps cross-user or missing targets denied by the owned-task read", async () => {
+    taskServiceMock.getTaskForUser.mockRejectedValueOnce(
+      new MockTaskServiceError("TASK_NOT_FOUND", "Task was not found for this user."),
+    );
+
+    const result = await tasksCompleteHandler.execute({ userId: "other-user", taskId: "task-1" }, {});
+
+    expect(result.status).toBe("failed");
+    expect(result.error?.code).toBe("TASK_NOT_FOUND");
+    expect(taskServiceMock.completeTask).not.toHaveBeenCalled();
   });
 });

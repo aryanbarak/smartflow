@@ -140,25 +140,60 @@ function findTaskTarget(
   context: AgentReasoningSafeContext,
   target: ReturnType<typeof normalizeTarget>,
 ) {
-  const incompleteTasks = context.tasks.filter(
-    (task) => task.completed !== true && task.status !== "completed",
-  );
+  const tasks = context.tasks;
   if (!target) return { status: "missing" as const };
 
   if (target.taskId) {
-    const task = incompleteTasks.find((item) => item.id === target.taskId);
+    const task = tasks.find((item) => item.id === target.taskId);
     return task ? { status: "matched" as const, task } : { status: "missing" as const };
   }
 
   const reference = normalizeTitle(target.taskReference ?? target.taskTitleHint ?? "");
   if (!reference) return { status: "missing" as const };
-  const matches = incompleteTasks.filter((task) => {
+  const matches = tasks.filter((task) => {
     const title = normalizeTitle(task.title ?? "");
     return title === reference || title.includes(reference) || reference.includes(title);
   });
   if (matches.length === 1) return { status: "matched" as const, task: matches[0] };
   if (matches.length > 1) return { status: "ambiguous" as const };
   return { status: "missing" as const };
+}
+
+function requestLooksLikeTaskCompletion(message: string) {
+  if (
+    /\b(abschlie\u00dfen|erledigt)\b/i.test(message) ||
+    /(\u06a9\u0627\u0645\u0644\s+\u06a9\u0646|\u062a\u06a9\u0645\u06cc\u0644\s+\u06a9\u0646|\u062a\u0645\u0627\u0645\s+\u06a9\u0646|\u0627\u0646\u062c\u0627\u0645[\u200c\s-]?\u0634\u062f\u0647|\u0639\u0644\u0627\u0645\u062a\s+\u0628\u0632\u0646)/i.test(message)
+  ) {
+    return true;
+  }
+  return /\b(complete|finish|mark .* done|mark .* complete|done|erledige|abschliessen|abschließen|markiere|کامل کن|تمام کن|انجام‌شده)\b/i.test(message);
+}
+
+function requestReferencesSelectedTask(message: string) {
+  if (
+    /\bausgew[a\u00e4]hlte[nr]?\s+aufgabe\b/i.test(message) ||
+    /(\u0648\u0638\u06cc\u0641\u0647|\u06a9\u0627\u0631)\s+\u0627\u0646\u062a\u062e\u0627\u0628[\u200c\s-]?\u0634\u062f\u0647/i.test(message)
+  ) {
+    return true;
+  }
+  return /\b(selected|this|that|the)\s+task\b/i.test(message);
+}
+
+function deriveTaskCompletionTarget(
+  context: AgentReasoningSafeContext,
+  target: ReturnType<typeof normalizeTarget>,
+  message: string,
+): ReturnType<typeof normalizeTarget> {
+  if (target?.taskId || target?.taskReference || target?.taskTitleHint) return target;
+  if (!requestReferencesSelectedTask(message)) return target;
+  if (context.tasks.length !== 1) return target;
+
+  const [task] = context.tasks;
+  if (!task?.id) return target;
+  return {
+    taskId: task.id,
+    taskTitleHint: task.title,
+  };
 }
 
 function requestLooksUnsupported(message: string) {
@@ -173,8 +208,7 @@ function requestLooksMixed(message: string, type: AgentIntentType) {
   if (type === "complete_task") return false;
   const hasReadIntent =
     /\b(check|show|inspect|list|summarize|continue|what|which|zeig|zeige|pruefe|prüfe|fasse|setze|نشان بده|بررسی کن|خلاصه کن|ادامه بده)\b/i.test(message);
-  const hasCompleteIntent =
-    /\b(complete|finish|mark .* done|done|erledige|abschliessen|abschließen|markiere|کامل کن|تمام کن|انجام‌شده)\b/i.test(message);
+  const hasCompleteIntent = requestLooksLikeTaskCompletion(message);
   return hasReadIntent && hasCompleteIntent;
 }
 
@@ -268,7 +302,13 @@ export function validateAgentIntentProposal(input: {
 
   const initialType = safeString(input.rawProposal.type) as AgentIntentType;
   const domainEvidence = getStrongReadDomainEvidence(input.userMessage);
-  const type = normalizeReadIntentFromEvidence(initialType, domainEvidence);
+  const completionRequested = requestLooksLikeTaskCompletion(input.userMessage);
+  const mixedReadWriteRequest = requestLooksMixed(input.userMessage, "inspect_tasks");
+  const type = completionRequested &&
+    !mixedReadWriteRequest &&
+    (initialType === "ask_clarification" || initialType === "inspect_tasks" || initialType === "complete_task")
+    ? "complete_task"
+    : normalizeReadIntentFromEvidence(initialType, domainEvidence);
   const normalizedByEvidence = type !== initialType;
   if (!supportedIntentTypes.includes(initialType) || !supportedIntentTypes.includes(type)) {
     return createSafeProposal("unsupported", {
@@ -360,7 +400,9 @@ export function validateAgentIntentProposal(input: {
     });
   }
 
-  const target = normalizeTarget(input.rawProposal.target);
+  const target = type === "complete_task"
+    ? deriveTaskCompletionTarget(input.safeContext, normalizeTarget(input.rawProposal.target), input.userMessage)
+    : normalizeTarget(input.rawProposal.target);
   if (type === "complete_task") {
     const match = findTaskTarget(input.safeContext, target);
     if (match.status !== "matched" || !match.task.id) {
@@ -371,7 +413,7 @@ export function validateAgentIntentProposal(input: {
         question: textFor(input.language, "clarify"),
         reason: match.status === "ambiguous"
           ? "Multiple matching tasks require clarification."
-          : "Exact incomplete task target is required before approval.",
+          : "Exact task target is required before approval.",
       });
     }
     target!.taskId = match.task.id;

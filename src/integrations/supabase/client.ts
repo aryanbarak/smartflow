@@ -1,12 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
+import { resolveSupabaseClientConfig } from './supabaseConfig';
 
-// Anon key is a public credential — safe to commit (RLS enforces data access).
-// Credentials are intentionally hardcoded to prevent env var misconfigurations from breaking auth.
-const SUPABASE_URL = 'https://taqxwnlwllbywaklwyno.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhcXh3bmx3bGxieXdha2x3eW5vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4ODQzNjEsImV4cCI6MjA5MzQ2MDM2MX0.TmhuyWcwEUwnSvxXJiZ2HueY6Jr0sudmyJWlpM-X7_Y';
+const supabaseConfig = resolveSupabaseClientConfig(import.meta.env);
 
-export const supabase = createClient<Database>(SUPABASE_URL, supabaseKey, {
+if (import.meta.env.DEV) {
+  console.info(`[Supabase] mode=${supabaseConfig.mode} url=${supabaseConfig.url}`);
+}
+
+export const supabase = createClient<Database>(supabaseConfig.url, supabaseConfig.anonKey, {
   auth: {
     storage: localStorage,
     persistSession: true,

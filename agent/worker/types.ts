@@ -1,4 +1,5 @@
 export interface Env {
+  SMARTFLOW_WORKER_MODE?: string
   SUPABASE_URL: string
   SUPABASE_ANON_KEY: string
   SUPABASE_SERVICE_KEY: string

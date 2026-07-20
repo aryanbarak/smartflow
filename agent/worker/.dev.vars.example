@@ -1,0 +1,6 @@
+# Copy to .dev.vars for local real-worker QA. Never commit real values.
+SMARTFLOW_WORKER_MODE=local-qa
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_ANON_KEY=<local-public-anon-key>
+GEMINI_API_KEY=<local-secret>
+GEMINI_MODEL=gemini-2.5-flash

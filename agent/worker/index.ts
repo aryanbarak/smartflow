@@ -1,6 +1,7 @@
 import type { Env, AgentBriefing, ExtractedFact, MemoryEntry, UserContext, BriefingMode, ChatMessage, ChatOptions } from './types'
 import { buildUserContext, fetchUserMemory, fetchUserLanguage, fetchTaskSnapshot, fetchCalendarSnapshot, fetchHabitSnapshot, fetchFinanceSnapshot, supabaseGet, supabasePost, supabasePatch } from './context-builder'
 import { buildPrompt, buildExtractionPrompt, buildChatExtractionPrompt, EXTRACTABLE_KEYS, buildChatSystemPrompt } from './prompt-builder'
+import { handleLocalReasoningRequest } from './reasoning-endpoint'
 
 const ENABLE_AUTO_MEMORY_WRITE = true
 
@@ -16,6 +17,12 @@ export default {
   // HTTP Trigger — POST /generate | POST /chat
   // =============================================
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const { pathname } = new URL(request.url)
+
+    if (pathname === '/agent/reason') {
+      return handleLocalReasoningRequest(request, env, { logger: console })
+    }
+
     const origin = request.headers.get('Origin') ?? ''
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders(origin) })
@@ -24,8 +31,6 @@ export default {
     if (request.method !== 'POST') {
       return json({ error: 'Method not allowed' }, 405, origin)
     }
-
-    const { pathname } = new URL(request.url)
 
     if (pathname === '/chat') {
       return handleChat(request, env, ctx)

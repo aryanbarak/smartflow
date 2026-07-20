@@ -1,0 +1,496 @@
+{
+  "schemaVersion": 1,
+  "canonical": true,
+  "matrix": "Real-Worker ARUX Matrix V1",
+  "proposalSource": "real-gemini",
+  "networkTransport": "local-real-worker",
+  "generatedAt": "2026-07-20T18:24:59.508Z",
+  "controlledBrowserArtifactUnchanged": true,
+  "responseObservation": "passive-fetch-response-clone; request and response transport were not intercepted or replaced",
+  "totalGeminiRequestCountAcrossAttempts": 14,
+  "executionAttempts": [
+    {
+      "attempt": 1,
+      "rowsRequested": 8,
+      "geminiRequestCount": 7,
+      "result": "3/8 PASS",
+      "boundedFailureCategory": "runner response-body timing and Run-button assertion defects"
+    },
+    {
+      "attempt": 2,
+      "rowsRequested": 5,
+      "geminiRequestCount": 1,
+      "result": "runner blocked after RW-01",
+      "boundedFailureCategory": "CDP response body unavailable; later rows were not submitted"
+    },
+    {
+      "attempt": 3,
+      "rowsRequested": 5,
+      "geminiRequestCount": 5,
+      "result": "7/8 PASS",
+      "boundedFailureCategory": "RW-01 CORS preflight counted as reasoning POST"
+    },
+    {
+      "attempt": 4,
+      "rowsRequested": 1,
+      "geminiRequestCount": 1,
+      "result": "8/8 PASS",
+      "boundedFailureCategory": null
+    }
+  ],
+  "rows": [
+    {
+      "rowId": "RW-01",
+      "language": "en",
+      "prompt": "Show me my current tasks.",
+      "authenticated": true,
+      "proposalSource": "real-gemini",
+      "networkTransport": "local-real-worker",
+      "geminiRequestCount": 1,
+      "proposedIntent": "inspect_tasks",
+      "deterministicValidatedIntent": "inspect_tasks",
+      "resolvedToolId": "tasks.list",
+      "approvalRequired": false,
+      "toolExecuted": false,
+      "persistenceRequestCount": 0,
+      "productionAccess": false,
+      "expectedResult": {
+        "intent": "inspect_tasks",
+        "toolId": "tasks.list",
+        "approvalRequired": false
+      },
+      "result": "PASS",
+      "failureCategory": null,
+      "timestamp": "2026-07-20T18:24:59.507Z",
+      "requestIdCorrelated": true,
+      "responseLanguage": "en",
+      "visiblePrompt": true,
+      "visibleResponseLanguage": true,
+      "rtl": {
+        "checked": false
+      },
+      "screenshot": null,
+      "checks": {
+        "workerHttpStatus": 200,
+        "workerRequestCount": 1,
+        "legacyChatRequestCount": 0,
+        "productionRequestCount": 0,
+        "taskMutationCount": 0,
+        "requestIdCorrelated": true,
+        "responseLanguageMatched": true,
+        "targetBound": true,
+        "expectedUiControl": true,
+        "noInternalLeak": true,
+        "languageVisible": true,
+        "rtlPassed": true
+      },
+      "layersExercised": [
+        "visible Chat UI",
+        "local Supabase Auth",
+        "local real-worker transport",
+        "real Gemini structured proposal",
+        "deterministic intent validator",
+        "tool resolver"
+      ],
+      "layersExcluded": [
+        "tool execution",
+        "approval grant",
+        "legacy /chat",
+        "persistence by /agent/reason",
+        "production deployment"
+      ]
+    },
+    {
+      "rowId": "RW-02",
+      "language": "de",
+      "prompt": "Welche Termine habe ich heute?",
+      "authenticated": true,
+      "proposalSource": "real-gemini",
+      "networkTransport": "local-real-worker",
+      "geminiRequestCount": 1,
+      "proposedIntent": "inspect_calendar",
+      "deterministicValidatedIntent": "inspect_calendar",
+      "resolvedToolId": "calendar.list_today",
+      "approvalRequired": false,
+      "toolExecuted": false,
+      "persistenceRequestCount": 0,
+      "productionAccess": false,
+      "expectedResult": {
+        "intent": "inspect_calendar",
+        "toolId": "calendar.list_today",
+        "approvalRequired": false
+      },
+      "result": "PASS",
+      "failureCategory": null,
+      "timestamp": "2026-07-20T18:22:41.844Z",
+      "requestIdCorrelated": true,
+      "responseLanguage": "de",
+      "visiblePrompt": true,
+      "visibleResponseLanguage": true,
+      "rtl": {
+        "checked": false
+      },
+      "screenshot": "docs/testing/evidence/screenshots/real-worker-rw-02-de.png",
+      "checks": {
+        "workerHttpStatus": 200,
+        "workerRequestCount": 1,
+        "legacyChatRequestCount": 0,
+        "productionRequestCount": 0,
+        "taskMutationCount": 0,
+        "requestIdCorrelated": true,
+        "responseLanguageMatched": true,
+        "targetBound": true,
+        "expectedUiControl": true,
+        "noInternalLeak": true,
+        "languageVisible": true,
+        "rtlPassed": true
+      },
+      "layersExercised": [
+        "visible Chat UI",
+        "local Supabase Auth",
+        "local real-worker transport",
+        "real Gemini structured proposal",
+        "deterministic intent validator",
+        "tool resolver"
+      ],
+      "layersExcluded": [
+        "tool execution",
+        "approval grant",
+        "legacy /chat",
+        "persistence by /agent/reason",
+        "production deployment"
+      ]
+    },
+    {
+      "rowId": "RW-03",
+      "language": "fa",
+      "prompt": "روند یادگیری من را نشان بده.",
+      "authenticated": true,
+      "proposalSource": "real-gemini",
+      "networkTransport": "local-real-worker",
+      "geminiRequestCount": 1,
+      "proposedIntent": "inspect_learning",
+      "deterministicValidatedIntent": "inspect_learning",
+      "resolvedToolId": "learning.get_progress",
+      "approvalRequired": false,
+      "toolExecuted": false,
+      "persistenceRequestCount": 0,
+      "productionAccess": false,
+      "expectedResult": {
+        "intent": "inspect_learning",
+        "toolId": "learning.get_progress",
+        "approvalRequired": false
+      },
+      "result": "PASS",
+      "failureCategory": null,
+      "timestamp": "2026-07-20T18:22:43.705Z",
+      "requestIdCorrelated": true,
+      "responseLanguage": "fa",
+      "visiblePrompt": true,
+      "visibleResponseLanguage": true,
+      "rtl": {
+        "checked": true,
+        "direction": "rtl",
+        "passed": true
+      },
+      "screenshot": "docs/testing/evidence/screenshots/real-worker-rw-03-fa.png",
+      "checks": {
+        "workerHttpStatus": 200,
+        "workerRequestCount": 1,
+        "legacyChatRequestCount": 0,
+        "productionRequestCount": 0,
+        "taskMutationCount": 0,
+        "requestIdCorrelated": true,
+        "responseLanguageMatched": true,
+        "targetBound": true,
+        "expectedUiControl": true,
+        "noInternalLeak": true,
+        "languageVisible": true,
+        "rtlPassed": true
+      },
+      "layersExercised": [
+        "visible Chat UI",
+        "local Supabase Auth",
+        "local real-worker transport",
+        "real Gemini structured proposal",
+        "deterministic intent validator",
+        "tool resolver",
+        "RTL rendering"
+      ],
+      "layersExcluded": [
+        "tool execution",
+        "approval grant",
+        "legacy /chat",
+        "persistence by /agent/reason",
+        "production deployment"
+      ]
+    },
+    {
+      "rowId": "RW-04",
+      "language": "en",
+      "prompt": "Summarize my current workspace.",
+      "authenticated": true,
+      "proposalSource": "real-gemini",
+      "networkTransport": "local-real-worker",
+      "geminiRequestCount": 1,
+      "proposedIntent": "inspect_workspace",
+      "deterministicValidatedIntent": "inspect_workspace",
+      "resolvedToolId": "workspace.get_context",
+      "approvalRequired": false,
+      "toolExecuted": false,
+      "persistenceRequestCount": 0,
+      "productionAccess": false,
+      "expectedResult": {
+        "intent": "inspect_workspace",
+        "toolId": "workspace.get_context",
+        "approvalRequired": false
+      },
+      "result": "PASS",
+      "failureCategory": null,
+      "timestamp": "2026-07-20T18:22:45.151Z",
+      "requestIdCorrelated": true,
+      "responseLanguage": "en",
+      "visiblePrompt": true,
+      "visibleResponseLanguage": true,
+      "rtl": {
+        "checked": false
+      },
+      "screenshot": null,
+      "checks": {
+        "workerHttpStatus": 200,
+        "workerRequestCount": 1,
+        "legacyChatRequestCount": 0,
+        "productionRequestCount": 0,
+        "taskMutationCount": 0,
+        "requestIdCorrelated": true,
+        "responseLanguageMatched": true,
+        "targetBound": true,
+        "expectedUiControl": true,
+        "noInternalLeak": true,
+        "languageVisible": true,
+        "rtlPassed": true
+      },
+      "layersExercised": [
+        "visible Chat UI",
+        "local Supabase Auth",
+        "local real-worker transport",
+        "real Gemini structured proposal",
+        "deterministic intent validator",
+        "tool resolver"
+      ],
+      "layersExcluded": [
+        "tool execution",
+        "approval grant",
+        "legacy /chat",
+        "persistence by /agent/reason",
+        "production deployment"
+      ]
+    },
+    {
+      "rowId": "RW-05",
+      "language": "en",
+      "prompt": "Mark \"Local QA selected task\" as done.",
+      "authenticated": true,
+      "proposalSource": "real-gemini",
+      "networkTransport": "local-real-worker",
+      "geminiRequestCount": 1,
+      "proposedIntent": "complete_task",
+      "deterministicValidatedIntent": "complete_task",
+      "resolvedToolId": "tasks.complete",
+      "approvalRequired": true,
+      "toolExecuted": false,
+      "persistenceRequestCount": 0,
+      "productionAccess": false,
+      "expectedResult": {
+        "intent": "complete_task",
+        "toolId": "tasks.complete",
+        "approvalRequired": true
+      },
+      "result": "PASS",
+      "failureCategory": null,
+      "timestamp": "2026-07-20T18:16:48.186Z",
+      "requestIdCorrelated": true,
+      "responseLanguage": "en",
+      "visiblePrompt": true,
+      "visibleResponseLanguage": true,
+      "rtl": {
+        "checked": false
+      },
+      "screenshot": null,
+      "layersExercised": [
+        "visible Chat UI",
+        "local Supabase Auth",
+        "local real-worker transport",
+        "real Gemini structured proposal",
+        "deterministic intent validator",
+        "tool resolver",
+        "approval-required presentation without approval"
+      ],
+      "layersExcluded": [
+        "tool execution",
+        "approval grant",
+        "legacy /chat",
+        "persistence by /agent/reason",
+        "production deployment"
+      ]
+    },
+    {
+      "rowId": "RW-06",
+      "language": "en",
+      "prompt": "Complete a task.",
+      "authenticated": true,
+      "proposalSource": "real-gemini",
+      "networkTransport": "local-real-worker",
+      "geminiRequestCount": 1,
+      "proposedIntent": "ask_clarification",
+      "deterministicValidatedIntent": "ask_clarification",
+      "resolvedToolId": null,
+      "approvalRequired": false,
+      "toolExecuted": false,
+      "persistenceRequestCount": 0,
+      "productionAccess": false,
+      "expectedResult": {
+        "intent": "ask_clarification",
+        "toolId": null,
+        "approvalRequired": false
+      },
+      "result": "PASS",
+      "failureCategory": null,
+      "timestamp": "2026-07-20T18:16:52.037Z",
+      "requestIdCorrelated": true,
+      "responseLanguage": "en",
+      "visiblePrompt": true,
+      "visibleResponseLanguage": true,
+      "rtl": {
+        "checked": false
+      },
+      "screenshot": null,
+      "layersExercised": [
+        "visible Chat UI",
+        "local Supabase Auth",
+        "local real-worker transport",
+        "real Gemini structured proposal",
+        "deterministic intent validator",
+        "tool resolver"
+      ],
+      "layersExcluded": [
+        "tool execution",
+        "approval grant",
+        "legacy /chat",
+        "persistence by /agent/reason",
+        "production deployment"
+      ]
+    },
+    {
+      "rowId": "RW-07",
+      "language": "de",
+      "prompt": "Lösche alle meine Aufgaben.",
+      "authenticated": true,
+      "proposalSource": "real-gemini",
+      "networkTransport": "local-real-worker",
+      "geminiRequestCount": 1,
+      "proposedIntent": "unsupported",
+      "deterministicValidatedIntent": "unsupported",
+      "resolvedToolId": null,
+      "approvalRequired": false,
+      "toolExecuted": false,
+      "persistenceRequestCount": 0,
+      "productionAccess": false,
+      "expectedResult": {
+        "intent": "unsupported",
+        "toolId": null,
+        "approvalRequired": false
+      },
+      "result": "PASS",
+      "failureCategory": null,
+      "timestamp": "2026-07-20T18:16:56.497Z",
+      "requestIdCorrelated": true,
+      "responseLanguage": "de",
+      "visiblePrompt": true,
+      "visibleResponseLanguage": true,
+      "rtl": {
+        "checked": false
+      },
+      "screenshot": "docs/testing/evidence/screenshots/real-worker-rw-07-de.png",
+      "layersExercised": [
+        "visible Chat UI",
+        "local Supabase Auth",
+        "local real-worker transport",
+        "real Gemini structured proposal",
+        "deterministic intent validator",
+        "tool resolver"
+      ],
+      "layersExcluded": [
+        "tool execution",
+        "approval grant",
+        "legacy /chat",
+        "persistence by /agent/reason",
+        "production deployment"
+      ]
+    },
+    {
+      "rowId": "RW-08",
+      "language": "fa",
+      "prompt": "امروز چه کارهایی دارم؟",
+      "authenticated": true,
+      "proposalSource": "real-gemini",
+      "networkTransport": "local-real-worker",
+      "geminiRequestCount": 1,
+      "proposedIntent": "inspect_tasks",
+      "deterministicValidatedIntent": "inspect_tasks",
+      "resolvedToolId": "tasks.list",
+      "approvalRequired": false,
+      "toolExecuted": false,
+      "persistenceRequestCount": 0,
+      "productionAccess": false,
+      "expectedResult": {
+        "intent": "inspect_tasks",
+        "toolId": "tasks.list",
+        "approvalRequired": false
+      },
+      "result": "PASS",
+      "failureCategory": null,
+      "timestamp": "2026-07-20T18:22:46.855Z",
+      "requestIdCorrelated": true,
+      "responseLanguage": "fa",
+      "visiblePrompt": true,
+      "visibleResponseLanguage": true,
+      "rtl": {
+        "checked": true,
+        "direction": "rtl",
+        "passed": true
+      },
+      "screenshot": "docs/testing/evidence/screenshots/real-worker-rw-08-fa.png",
+      "checks": {
+        "workerHttpStatus": 200,
+        "workerRequestCount": 1,
+        "legacyChatRequestCount": 0,
+        "productionRequestCount": 0,
+        "taskMutationCount": 0,
+        "requestIdCorrelated": true,
+        "responseLanguageMatched": true,
+        "targetBound": true,
+        "expectedUiControl": true,
+        "noInternalLeak": true,
+        "languageVisible": true,
+        "rtlPassed": true
+      },
+      "layersExercised": [
+        "visible Chat UI",
+        "local Supabase Auth",
+        "local real-worker transport",
+        "real Gemini structured proposal",
+        "deterministic intent validator",
+        "tool resolver",
+        "RTL rendering"
+      ],
+      "layersExcluded": [
+        "tool execution",
+        "approval grant",
+        "legacy /chat",
+        "persistence by /agent/reason",
+        "production deployment"
+      ]
+    }
+  ]
+}

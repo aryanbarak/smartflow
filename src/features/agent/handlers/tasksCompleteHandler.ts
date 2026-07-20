@@ -100,22 +100,62 @@ export const tasksCompleteHandler: AgentWriteToolHandler<TasksCompleteHandlerOut
 
     try {
       const before = await tasksService.getTaskForUser(userId, taskId);
+
+      if (before.completed === true) {
+        const completedAt = before.completedAt ?? null;
+        const verified =
+          before.id === taskId &&
+          typeof completedAt === "string" &&
+          completedAt.length > 0;
+
+        if (!verified) {
+          return failure(
+            "verification_failed",
+            "VERIFICATION_FAILED",
+            "Existing task completion could not be verified.",
+            taskId,
+          );
+        }
+
+        const data: TasksCompleteHandlerOutput = Object.freeze({
+          taskId,
+          completed: true,
+          completedAt,
+          alreadyCompleted: true,
+          verified: true,
+        });
+
+        return {
+          status: "success",
+          success: true,
+          data,
+          auditMetadata: {
+            taskId,
+            alreadyCompleted: true,
+            verified: true,
+            resultShape: "object",
+            redacted: true,
+          },
+          compensation: {
+            taskId,
+            previousCompleted: true,
+            previousCompletedAt: completedAt,
+          },
+        };
+      }
+
       const completed = await tasksService.completeTask(userId, taskId);
       const verifiedReadback = await tasksService.getTaskForUser(userId, taskId);
-      const repeated = await tasksService.completeTask(userId, taskId);
       const completedAt = completed.completedAt ?? null;
 
       const verified =
         completed.id === taskId &&
         verifiedReadback.id === taskId &&
-        repeated.id === taskId &&
         completed.completed === true &&
         verifiedReadback.completed === true &&
-        repeated.completed === true &&
         typeof completedAt === "string" &&
         completedAt.length > 0 &&
-        verifiedReadback.completedAt === completedAt &&
-        repeated.completedAt === completedAt;
+        verifiedReadback.completedAt === completedAt;
 
       if (!verified) {
         return {
@@ -128,12 +168,11 @@ export const tasksCompleteHandler: AgentWriteToolHandler<TasksCompleteHandlerOut
         };
       }
 
-      const alreadyCompleted = before.completed === true;
       const data: TasksCompleteHandlerOutput = Object.freeze({
         taskId,
         completed: true,
         completedAt,
-        alreadyCompleted,
+        alreadyCompleted: false,
         verified: true,
       });
 
@@ -143,7 +182,7 @@ export const tasksCompleteHandler: AgentWriteToolHandler<TasksCompleteHandlerOut
         data,
         auditMetadata: {
           taskId,
-          alreadyCompleted,
+          alreadyCompleted: false,
           verified: true,
           resultShape: "object",
           redacted: true,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validateAgentIntentProposal } from "./intentValidator";
 import type { AgentReasoningSafeContext } from "./reasoningTypes";
+import type { SupportedAiResponseLanguage } from "@/features/ai/responseLanguage";
 
 const now = new Date("2026-07-15T08:00:00.000Z");
 
@@ -40,6 +41,21 @@ function validate(rawProposal: unknown, userMessage = "What tasks do I have?") {
     userMessage,
     safeContext: context,
     language: "en",
+    now,
+  });
+}
+
+function validateWithContext(
+  rawProposal: unknown,
+  userMessage: string,
+  safeContext: AgentReasoningSafeContext,
+  language: SupportedAiResponseLanguage = "en",
+) {
+  return validateAgentIntentProposal({
+    rawProposal,
+    userMessage,
+    safeContext,
+    language,
     now,
   });
 }
@@ -118,7 +134,103 @@ describe("intentValidator", () => {
     expect(exact.proposal.requiresApproval).toBe(true);
   });
 
-  it("does not allow completed task targets", () => {
+  it("normalizes selected-task completion only when it can bind one exact task", () => {
+    const selectedContext: AgentReasoningSafeContext = {
+      ...context,
+      tasks: [{ id: "task-selected", title: "Selected task", completed: false, status: "open" }],
+    };
+    const result = validateWithContext(
+      proposal({ type: "inspect_tasks", toolId: "tasks.list" }),
+      "Mark the selected task done.",
+      selectedContext,
+    );
+
+    expect(result.proposal.type).toBe("complete_task");
+    expect(result.proposal.toolId).toBe("tasks.complete");
+    expect(result.proposal.target?.taskId).toBe("task-selected");
+    expect(result.proposal.requiresApproval).toBe(true);
+  });
+
+  it("normalizes German selected-task completion only with one exact selected task", () => {
+    const selectedContext: AgentReasoningSafeContext = {
+      ...context,
+      tasks: [{ id: "task-selected-de", title: "Ausgewählte Aufgabe", completed: false, status: "open" }],
+    };
+
+    const markiere = validateWithContext(
+      proposal({ type: "inspect_tasks", toolId: "tasks.list" }),
+      "Markiere die ausgewählte Aufgabe als erledigt.",
+      selectedContext,
+      "de",
+    );
+    const erledige = validateWithContext(
+      proposal({ type: "inspect_tasks", toolId: "tasks.list" }),
+      "Erledige die ausgewählte Aufgabe.",
+      selectedContext,
+      "de",
+    );
+
+    expect(markiere.proposal.type).toBe("complete_task");
+    expect(markiere.proposal.target?.taskId).toBe("task-selected-de");
+    expect(markiere.proposal.requiresApproval).toBe(true);
+    expect(erledige.proposal.type).toBe("complete_task");
+    expect(erledige.proposal.target?.taskId).toBe("task-selected-de");
+  });
+
+  it("normalizes Persian selected-task completion only with one exact selected task", () => {
+    const selectedContext: AgentReasoningSafeContext = {
+      ...context,
+      tasks: [{ id: "task-selected-fa", title: "کار انتخاب‌شده", completed: false, status: "open" }],
+    };
+
+    const completeSelected = validateWithContext(
+      proposal({ type: "inspect_tasks", toolId: "tasks.list" }),
+      "وظیفه انتخاب‌شده را تکمیل کن.",
+      selectedContext,
+      "fa",
+    );
+    const markDone = validateWithContext(
+      proposal({ type: "inspect_tasks", toolId: "tasks.list" }),
+      "کار انتخاب‌شده را انجام‌شده علامت بزن.",
+      selectedContext,
+      "fa",
+    );
+
+    expect(completeSelected.proposal.type).toBe("complete_task");
+    expect(completeSelected.proposal.target?.taskId).toBe("task-selected-fa");
+    expect(completeSelected.proposal.requiresApproval).toBe(true);
+    expect(markDone.proposal.type).toBe("complete_task");
+    expect(markDone.proposal.target?.taskId).toBe("task-selected-fa");
+  });
+
+  it("does not silently choose a selected task when context is missing or ambiguous", () => {
+    const missing = validateWithContext(
+      proposal({ type: "inspect_tasks", toolId: "tasks.list" }),
+      "Mark the selected task done.",
+      { ...context, tasks: [] },
+    );
+    const ambiguous = validateWithContext(
+      proposal({ type: "inspect_tasks", toolId: "tasks.list" }),
+      "Markiere die ausgewählte Aufgabe als erledigt.",
+      { ...context, tasks: [
+        { id: "task-a", title: "A", completed: false, status: "open" },
+        { id: "task-b", title: "B", completed: false, status: "open" },
+      ] },
+      "de",
+    );
+    const generic = validateWithContext(
+      proposal({ type: "inspect_tasks", toolId: "tasks.list" }),
+      "erledigt",
+      { ...context, tasks: [] },
+      "de",
+    );
+
+    expect(missing.proposal.type).toBe("ask_clarification");
+    expect(ambiguous.proposal.type).toBe("ask_clarification");
+    expect(generic.proposal.type).toBe("ask_clarification");
+  });
+
+  it("allows exact completed task targets so runtime can report no new change", () => {
     const result = validate(proposal({
       type: "complete_task",
       requestedDomain: "tasks",
@@ -126,7 +238,8 @@ describe("intentValidator", () => {
       target: { taskId: "task-3" },
     }), "Complete clean desk");
 
-    expect(result.proposal.type).toBe("ask_clarification");
+    expect(result.proposal.type).toBe("complete_task");
+    expect(result.proposal.target?.taskId).toBe("task-3");
   });
 
   it("creates localized clarification text", () => {

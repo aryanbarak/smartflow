@@ -27,7 +27,7 @@ import { useProfile } from '@/features/profile/useProfile'
 import { useTasks } from '@/hooks/useTasks'
 import { SmartFlowIcon } from '@/components/SmartFlowLogo'
 import { SmartflowAsciiVisual } from '@/components/smartflow'
-import { useT } from '@/i18n'
+import { translations, useT } from '@/i18n'
 import type { TranslationKey } from '@/i18n'
 import { useChatSessions } from '@/hooks/useChatSessions'
 import { useAppearance } from '@/features/settings/appearanceStore'
@@ -39,6 +39,7 @@ import {
   synthesizeContext,
   getToolById,
   reasonAboutUserMessage,
+  resolveAgentReasoningTransport,
   resolveToolForStep,
   runReadOnlyTool,
   runWriteTool,
@@ -47,6 +48,7 @@ import {
   type WriteRuntimeResult,
   type ApprovalInteractionResult,
   type ContextSynthesisWorkspaceContext,
+  type ExecutionContextTask,
   type SynthesizedContext,
 } from '@/features/agent'
 import { StepApprovalDialog } from '@/features/workspace/components/StepApprovalDialog'
@@ -135,13 +137,13 @@ const QUICK_ACTIONS: QuickAction[] = [
 ]
 
 function MsgP({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <p className="mb-1 last:mb-0">{children}</p>
+  return <p dir="auto" className="mb-1 last:mb-0">{children}</p>
 }
 function MsgUl({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <ul className="list-disc pl-4 mt-1 space-y-0.5">{children}</ul>
+  return <ul className="mt-1 list-disc space-y-0.5 ps-4">{children}</ul>
 }
 function MsgLi({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <li>{children}</li>
+  return <li dir="auto">{children}</li>
 }
 const MSG_MD_COMPONENTS = { p: MsgP, ul: MsgUl, li: MsgLi } as const
 
@@ -212,6 +214,25 @@ function intentTitleKey(type: AgentReasoningResult['proposal']['type']): Transla
 
 function intentTitle(type: AgentReasoningResult['proposal']['type'], t: Translate) {
   return t(intentTitleKey(type))
+}
+
+function responseLanguageTranslator(language: SupportedAiResponseLanguage): Translate {
+  const dictionary = translations[language] ?? translations.en
+  return (key, vars) => {
+    let value = dictionary[key] ?? translations.en[key] ?? key
+    if (vars) {
+      Object.entries(vars).forEach(([name, replacement]) => {
+        value = value.replace(`{{${name}}}`, String(replacement))
+      })
+    }
+    return value
+  }
+}
+
+export function proposalMessage(result: AgentReasoningResult) {
+  if (result.proposal.clarificationQuestion) return result.proposal.clarificationQuestion
+  const responseT = responseLanguageTranslator(result.responseLanguage)
+  return `${responseT('agent_intent_proposed')}: ${intentTitle(result.proposal.type, responseT)}. ${responseT('agent_intent_run_hint')}`
 }
 
 function stepForReasoning(result: AgentReasoningResult, t: Translate): WorkspacePlanStep | null {
@@ -316,6 +337,26 @@ interface ContextTaskSnapshot {
   completedAt?: string | null
 }
 
+export interface LiveTaskReasoningContextInput {
+  tasks: readonly ContextTaskSnapshot[] & readonly { id?: string; title?: string; createdAt?: string }[]
+  isLoading: boolean
+  error: string | null
+}
+
+export function liveTaskReasoningContext(
+  input: LiveTaskReasoningContextInput,
+): ExecutionContextTask[] {
+  if (input.isLoading || input.error !== null || input.tasks.length === 0) return []
+  return input.tasks.map((task) => ({
+    id: task.id,
+    title: task.title,
+    completed: task.completed,
+    status: task.completed === true ? 'completed' : 'open',
+    dueDate: task.dueDate ?? undefined,
+    createdAt: task.createdAt,
+  }))
+}
+
 function dateKey(date: Date) {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -375,6 +416,20 @@ export function resultMessage(
   return `${result.safeSummary}\n\n${items.map((item) => `- ${item}`).join('\n')}`
 }
 
+export function runtimeSummaryMessage(
+  result: ReadOnlyRuntimeResult | WriteRuntimeResult,
+  language: SupportedAiResponseLanguage,
+) {
+  if (!canComposeAssistantResponse(result.toolId)) return result.safeSummary
+  return composeAssistantResponse({
+    toolId: result.toolId,
+    language,
+    success: result.success,
+    safeSummary: result.safeSummary,
+    safePreviewItems: [],
+  }).summary
+}
+
 export function ReasoningProposalCard({
   proposal,
   onRunReadOnly,
@@ -404,6 +459,7 @@ export function ReasoningProposalCard({
   )
   const canReviewApproval = isCompleteTask && approval?.status === 'pending'
   const canRunWrite = isCompleteTask && isApproved && runStatus !== 'success' && runStatus !== 'failed'
+  const runtimeResult = proposal.readOnlyResult ?? proposal.writeResult
 
   return (
     <div className="mb-3 rounded-xl border border-primary/20 bg-primary/[0.04] p-3">
@@ -482,21 +538,25 @@ export function ReasoningProposalCard({
         </div>
       )}
 
-      {(proposal.readOnlyResult || proposal.writeResult) && (
-        <p className="mt-3 rounded-lg border border-border/25 bg-background/30 px-3 py-2 text-xs leading-5 text-muted-foreground">
-          {proposal.readOnlyResult?.safeSummary ?? proposal.writeResult?.safeSummary}
+      {runtimeResult && (
+        <p
+          className="mt-3 rounded-lg border border-border/25 bg-background/30 px-3 py-2 text-xs leading-5 text-muted-foreground"
+          dir="auto"
+          lang={result.responseLanguage}
+        >
+          {runtimeSummaryMessage(runtimeResult, result.responseLanguage)}
         </p>
       )}
     </div>
   )
 }
 
-function AssistantContent({ content }: Readonly<{ content: string }>) {
+export function AssistantContent({ content }: Readonly<{ content: string }>) {
   const md = content.replace(/^•\s*/gm, '- ')
   return <ReactMarkdown components={MSG_MD_COMPONENTS}>{md}</ReactMarkdown>
 }
 
-function ChatBubble({ role, content, language }: Readonly<{
+export function ChatBubble({ role, content, language }: Readonly<{
   role: 'user' | 'assistant'
   content: string
   language?: SupportedAiResponseLanguage
@@ -555,7 +615,7 @@ function timeAgo(iso: string): string {
 export default function ChatPage() {
   const { user } = useAuth()
   const { profile } = useProfile()
-  const { tasks } = useTasks()
+  const { tasks, isLoading: tasksLoading, error: tasksError } = useTasks()
   const workspace = useWorkspace()
   const { t } = useT()
   const interfaceLanguage = useAppearance((state) => state.language)
@@ -574,6 +634,7 @@ export default function ChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const initialPromptFired = useRef(false)
   const workerUrl = import.meta.env.VITE_AGENT_WORKER_URL as string
+  const reasoningTransport = resolveAgentReasoningTransport(import.meta.env)
 
   const loadSessionMessages = useCallback(async (sessionId: string) => {
     if (!user?.id) return
@@ -646,7 +707,11 @@ export default function ChatPage() {
           configuredResponseLanguage: getStoredAiResponseLanguage(),
           interfaceLanguage,
           safeContext: {
-            tasks: workspace.agentContext.tasks,
+            tasks: liveTaskReasoningContext({
+              tasks,
+              isLoading: tasksLoading,
+              error: tasksError,
+            }),
             events: workspace.agentContext.events,
             learningProgress: workspace.agentContext.learningProgress,
             workspace: {
@@ -658,15 +723,14 @@ export default function ChatPage() {
           sessionId,
         }, {
           callLlmReasoning: createLlmReasoningCaller({
-            endpoint: `${workerUrl}/chat`,
+            endpoint: reasoningTransport.endpoint,
             accessToken: session.access_token,
+            transport: reasoningTransport.transport,
           }),
         })
         const proposalState = proposalToState(result, t)
         setReasoningProposal(proposalState)
-        const assistantContent = result.proposal.clarificationQuestion
-          ? result.proposal.clarificationQuestion
-          : `${t('agent_intent_proposed')}: ${intentTitle(result.proposal.type, t)}. ${t('agent_intent_run_hint')}`
+        const assistantContent = proposalMessage(result)
 
         setMessages(prev => [
           ...prev,
@@ -709,7 +773,7 @@ export default function ChatPage() {
     } finally {
       setSending(false)
     }
-  }, [draft, sending, workerUrl, t, activeSessionId, createSession, refreshSessions, interfaceLanguage, workspace])
+  }, [draft, sending, workerUrl, t, activeSessionId, createSession, refreshSessions, interfaceLanguage, workspace, tasks, tasksLoading, tasksError])
 
   useEffect(() => {
     const prompt = (location.state as { initialPrompt?: string } | null)?.initialPrompt

@@ -1,114 +1,149 @@
 # Agent Response UX Validation V1
 
-This document validates the deterministic response path:
+This document tracks validation for the response path:
 
-Verified runtime result + bounded workspace context + safe reflection + bounded decision profile
--> Context Synthesis -> Response Composer -> Chat UI
+```text
+Verified runtime result
++ bounded workspace context
++ safe reflection
++ bounded decision profile
+-> Context Synthesis
+-> Response Composer
+-> Chat UI
+```
 
 Scope:
-- Supported tools: `tasks.list`, `calendar.list_today`, `learning.get_progress`, `workspace.get_context`, `tasks.complete`
+
+- Supported tools: `tasks.list`, `calendar.list_today`, `learning.get_progress`,
+  `workspace.get_context`, `tasks.complete`
 - Languages: English, German, Persian
-- Validation type: deterministic automated/static validation plus browser QA matrix for manual retest
+- Validation type: deterministic automated/static validation plus authenticated
+  local browser QA
 
 Out of scope:
+
 - New tool execution
 - New LLM calls
-- Backend or Supabase changes
+- Backend or Supabase production changes
 - Autonomous behavior
 - Semantic memory or vector storage
 
-## Pass Criteria
+## Evidence Integrity
 
-Final responses must:
-- summarize first,
-- remain concise,
-- preserve verified runtime facts,
-- include at most one bounded suggestion,
-- avoid duplicate or contradictory counts,
-- avoid personality, emotion, motivation, or productivity claims,
-- avoid implying read-only inspection changed data,
-- avoid exposing internal metadata.
+The canonical evidence artifact is:
 
-Final responses must not expose:
-- `requestId`
-- `stepId`
-- `taskId`
-- `schemaVersion`
-- audit or policy information
-- reflection or memory evidence
-- internal confidence or scores
-- engine names
-- prompts
-- raw JSON
-- Supabase structures
-- private task notes
+```text
+docs/testing/evidence/agent-response-ux-validation-v1.json
+```
+
+Every evidence row must disclose:
+
+- `proposalSource`: `real-agent-worker`, `local-real-worker`, or
+  `deterministic-browser-stub`
+- `networkTransport`: whether worker transport was real or intercepted
+- `layersExercised`: architectural layers actually exercised
+- `layersExcluded`: architectural layers not exercised
+
+A deterministic browser fetch stub may validate visible Chat UI, deterministic
+intent validation, resolver behavior, approval separation, runtime/policy,
+response composition, local persistence, and RTL rendering. It does not prove
+real LLM intent recognition, actual worker request/response transport, or real
+multilingual reasoning through the proposal path.
+
+## Current Browser QA Status
+
+Status: CONTROLLED AUTHENTICATED BROWSER INTEGRATION: PASS (15/15); LOCAL
+REAL-WORKER REASONING MATRIX: PASS (8/8).
+
+The bounded authentication smoke passed against local Supabase:
+
+- The browser started at `/auth` with no stale authenticated session.
+- The expected email, password, and sign-in controls were present.
+- Local Supabase was reachable from the browser with HTTP 200.
+- Authentication completed and the runner returned to `/chat` with the composer
+  enabled.
+- No network request failed. Existing React Router and PWA meta warnings remain
+  non-blocking.
+
+The controlled 15-row browser matrix completed with 15 `PASS` results. Every
+row used `proposalSource: deterministic-browser-stub` and
+`networkTransport: intercepted-browser-fetch`. These results validate only the
+explicitly listed downstream browser-integration layers; they do not validate
+the real proposal path.
+
+## Real Reasoning Coverage
+
+Rows intended to validate multilingual intent proposal and Worker transport use
+one of these sources:
+
+- `real-agent-worker`: deployed worker request/response path, with synthetic QA
+  prompts and no production data mutation.
+- `local-real-worker`: repository-supported local worker path.
+
+The deployed worker authenticates against and persists to production Supabase,
+so it was not used for synthetic QA. The fail-closed, stateless local reasoning
+boundary at `POST /agent/reason` completed an eight-row authenticated matrix
+through real Gemini and local Supabase Auth. Canonical sanitized evidence is at
+`docs/testing/evidence/real-worker-arux-matrix-v1.json`.
+
+The real-worker matrix covers task, calendar, learning, workspace, exact task
+completion proposal, clarification, unsupported intent, and English/German/
+Persian reasoning. Each accepted row made exactly one real Gemini request and
+then passed through the deterministic validator and resolver. No row approved
+or executed a tool, persisted through `/agent/reason`, or contacted production.
 
 ## Browser QA Matrix
 
-Synthetic data only. The automated result records deterministic unit/component validation. Live browser result remains for manual QA.
+Synthetic local data only.
 
-| Test ID | Tool | Language | Input message | Verified source facts | Expected response meaning | Forbidden claims | Automated result | Live browser result | Notes |
-|---|---|---|---|---|---|---|---|---|---|
-| ARUX-01 | `tasks.list` | EN | Show my open tasks. | `0 active tasks found.` | Says there are no active tasks. | Must not suggest choosing an active task. Must not invent task titles. | PASS | BLOCKED | Regression added for zero-result suggestion suppression. |
-| ARUX-02 | `tasks.list` | EN | Show my open tasks. | `1 active task found.` with one safe preview title. | Says one active task exists and may show the verified title. | Must not expose `taskId` or imply completion. | PASS | BLOCKED | Runtime preview remains authoritative. |
-| ARUX-03 | `tasks.list` | EN | What tasks do I have today? | `6 active tasks found.` with three safe preview titles. | Says six active tasks exist and shows a bounded preview. | Must not dump raw task data or private notes. | PASS | BLOCKED | Details remain bounded. |
-| ARUX-04 | `tasks.list` | EN | What tasks need attention? | Runtime: six open tasks. Workspace snapshot: one due today, three unscheduled, four completed this week. | Says one of six open tasks is due, three lack due dates, four were completed this week. | Must not call the user productive/lazy/disciplined. Must not command completion. | PASS | BLOCKED | Context synthesis supplies bounded facts. |
-| ARUX-05 | `calendar.list_today` | EN | What is on my calendar today? | `No events today.` and one due task in bounded workspace context. | Says calendar is open and one task is due. | Must not claim a focus block was reserved. | PASS | BLOCKED | Suggestion may mention focused work as optional. |
-| ARUX-06 | `calendar.list_today` | EN | Show today's calendar. | `2 events found today.` | Says two events exist today. | Must not infer availability beyond supplied data. | PASS | BLOCKED | Runtime count remains authoritative. |
-| ARUX-07 | `learning.get_progress` | EN | Show my learning progress. | `No learning progress found.` | Says no learning progress is visible yet. | Must not suggest continuing an item. Must not infer mastery. | PASS | BLOCKED | Zero-result suggestion suppression applies. |
-| ARUX-08 | `learning.get_progress` | EN | Continue my learning. | `2 learning items found.` and learning is the current goal domain. | Says learning is part of today's goal and active items are ready to continue. | Must not claim a lesson was completed unless verified. | PASS | BLOCKED | Suggestion may mention continuing the recent item. |
-| ARUX-09 | `workspace.get_context` | EN | Summarize my workspace. | Workspace context loaded; goal title and primary domain are bounded. | Says verified workspace context is available and may mention the current goal/domain. | Must not mention Decision Intelligence, Priority Engine, WorkspaceMemory, or scores. | PASS | BLOCKED | Internal names are scrubbed. |
-| ARUX-10 | `tasks.complete` | EN | Mark the selected task done. | Write runtime success and verification completed. | Says the task is marked complete. | Must not claim success before verification. Must not expose task id. | PASS | BLOCKED | Write runtime remains authoritative. |
-| ARUX-11 | `tasks.complete` | EN | Mark the selected task done again. | Write runtime reports already complete. | Says the task was already complete and no new change was made. | Must not claim a new state change. | PASS | BLOCKED | Existing composer behavior retained. |
-| ARUX-12 | `tasks.list` | EN | Show my open tasks. | Runtime says zero active tasks; stale workspace snapshot says six. | Preserves runtime zero-task result and omits disputed synthesized facts. | Must not show contradictory counts. Must not guess. | PASS | BLOCKED | Contradiction handling lowers synthesis confidence and suppresses insight. |
-| ARUX-13 | `tasks.list` | FA fixed | کارهای باز من را نشان بده. | `2 active tasks found.` with English task titles. | Persian response with same verified count; English titles remain readable as titles. | Must not fall back to English-only assistant copy. | PASS | BLOCKED | Chat bubble keeps language metadata for RTL. |
-| ARUX-14 | `calendar.list_today` | DE fixed | Zeig mir die heutigen Termine. | `0 events today.` | German response states the calendar is free/open today. | Must not use broken literal wording or English fallback. | PASS | BLOCKED | German deterministic copy validated. |
-| ARUX-15 | `learning.get_progress` | auto | ادامه درس من را نشان بده. | `2 learning items found.` | Auto language resolves to Persian and preserves the verified learning count. | Must not change facts across languages. | PASS | BLOCKED | Language resolution path remains existing Chat UI behavior. |
+| Test ID | Tool | Language | Input message | Expected response meaning | Automated result | Browser result | Proposal source | Notes |
+|---|---|---|---|---|---|---|---|---|
+| ARUX-01 | `tasks.list` | EN | Show my open tasks. | Says there are no active tasks. | PASS | PASS | deterministic-browser-stub | Controlled downstream integration only. |
+| ARUX-02 | `tasks.list` | EN | Show my open tasks. | Says one active task exists with bounded details. | PASS | PASS | deterministic-browser-stub | Controlled downstream integration only. |
+| ARUX-03 | `tasks.list` | EN | What tasks do I have today? | Says six active tasks exist with bounded preview. | PASS | PASS | deterministic-browser-stub | Controlled downstream integration only. |
+| ARUX-04 | `tasks.list` | EN | What tasks need attention? | Preserves active task and workspace signal facts. | PASS | PASS | deterministic-browser-stub | Controlled downstream integration only. |
+| ARUX-05 | `calendar.list_today` | EN | What is on my calendar today? | Reports no events without claiming a created focus block. | PASS | PASS | deterministic-browser-stub | Controlled downstream integration only. |
+| ARUX-06 | `calendar.list_today` | EN | Show today's calendar. | Reports two events. | PASS | PASS | deterministic-browser-stub | Controlled downstream integration only. |
+| ARUX-07 | `learning.get_progress` | EN | Show my learning progress. | Reports no visible progress without inventing a lesson. | PASS | PASS | deterministic-browser-stub | Controlled downstream integration only. |
+| ARUX-08 | `learning.get_progress` | EN | Continue my learning. | Reports two learning items. | PASS | PASS | deterministic-browser-stub | Controlled downstream integration only. |
+| ARUX-09 | `workspace.get_context` | EN | Summarize my workspace. | Gives a bounded workspace summary. | PASS | PASS | deterministic-browser-stub | Controlled downstream integration only. |
+| ARUX-10 | `tasks.complete` | EN | Mark the selected task done. | Requires review, approval, run, and completion verification. | PASS | PASS | deterministic-browser-stub | Review, Approve, Complete Task, and local persistence verification passed. |
+| ARUX-11 | `tasks.complete` | EN | Mark the selected task done again. | Reports already-complete with no new state change. | PASS | PASS | deterministic-browser-stub | Exact owned persisted state was verified; no duplicate mutation occurred and the UI reported an idempotent no-op. |
+| ARUX-12 | `tasks.list` | EN | Show my open tasks. | Preserves runtime zero-task result over stale context. | PASS | PASS | deterministic-browser-stub | Controlled downstream integration only. |
+| ARUX-13 | `tasks.list` | FA fixed | Persian task-list prompt. | Persian RTL response preserves two active tasks. | PASS | PASS | deterministic-browser-stub | Persian flow remained RTL; independent Latin blocks computed as LTR and screenshot review passed. |
+| ARUX-14 | `calendar.list_today` | DE fixed | Zeig mir die heutigen Termine. | German response reports no events today. | PASS | PASS | deterministic-browser-stub | Proposal, composed answer, and visible runtime summary were German. |
+| ARUX-15 | `learning.get_progress` | auto | Persian learning prompt. | Auto language resolves to Persian and preserves two learning items. | PASS | PASS | deterministic-browser-stub | Persian flow remained RTL; independent Latin lesson blocks computed as LTR and screenshot review passed. |
 
-## Factual Correctness Findings
+## Deterministic Findings
 
 - Runtime summaries remain authoritative.
-- Context Synthesis suppresses cross-source facts when runtime and workspace counts conflict.
-- `tasks.complete` responses are based on write runtime status and do not claim success before verified runtime success.
+- Context Synthesis suppresses cross-source facts when runtime and workspace
+  counts conflict.
+- `tasks.complete` responses are based on write runtime status and do not claim
+  success before verified runtime success.
 - Already-completed tasks produce a no-new-change response.
+- Zero task and zero learning results no longer receive generic action
+  suggestions.
+- Response scrubbing covers `taskId`, `schemaVersion`, confidence/score tokens,
+  engine names, request IDs, audit/policy fields, raw JSON, prompts, and
+  Supabase structures.
 
-Finding: PASS after focused fix.
+Finding: deterministic tests, the controlled authenticated browser matrix, and
+the local real-worker reasoning matrix pass. The two evidence classes remain
+separate: the 15-row controlled matrix validates downstream browser integration,
+while the 8-row real-worker matrix validates the real local proposal transport
+and multilingual model proposal path without tool execution.
 
-## Multilingual Findings
+## Final Result
 
-- English responses remain concise and summary-first.
-- German deterministic copy is grammar-safe for supported count cases.
-- Persian deterministic copy is available for supported tools, and Chat UI preserves assistant language metadata for RTL rendering.
-- English task titles are only displayed when they come from safe runtime preview items.
+Agent Response UX Validation V1 is complete for its bounded local scope:
 
-Finding: PASS by deterministic tests; live browser RTL visual retest remains manual.
+- controlled authenticated browser integration: 15/15 `PASS`, using
+  `deterministic-browser-stub` and intercepted browser fetch;
+- local real-worker reasoning: 8/8 `PASS`, using `real-gemini` and
+  `local-real-worker` transport.
 
-## Contradiction Handling Findings
-
-- Task and calendar count conflicts suppress synthesized context.
-- The composer no longer backfills a generic suggestion when synthesis was suppressed by contradiction.
-
-Finding: PASS.
-
-## Suggestion Safety Findings
-
-Allowed suggestions remain:
-- add due dates for unscheduled tasks,
-- use open calendar for focused work,
-- continue the recent learning item when active learning exists.
-
-Focused fix:
-- zero task and zero learning results no longer receive generic action suggestions.
-
-Finding: PASS.
-
-## Privacy Findings
-
-Focused fix:
-- response scrubbing now covers `taskId`, `schemaVersion`, internal confidence/score tokens, and engine names in addition to request/audit/policy fields.
-
-Finding: PASS.
-
-## Remaining Manual Browser QA
-
-The matrix above is ready for live browser retest. Automated tests validate deterministic output and ChatPage formatting, but this pass did not execute an interactive browser session.
+This result is not production deployment validation. It does not validate
+autonomous execution, additional tools, approval grant, or tool execution in
+the real-worker matrix. The controlled rows must still not be interpreted as
+proof of natural-language understanding or real Worker transport.

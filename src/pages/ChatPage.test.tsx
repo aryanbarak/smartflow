@@ -1,3 +1,5 @@
+
+
 import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -11,8 +13,12 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 
 import {
+  ChatBubble,
+  liveTaskReasoningContext,
+  proposalMessage,
   ReasoningProposalCard,
   resultMessage,
+  runtimeSummaryMessage,
   shouldUseReasoningForMessage,
 } from "./ChatPage";
 import { getToolById } from "@/features/agent";
@@ -113,6 +119,53 @@ function approval(status: WorkspaceStepApproval["status"] = "pending"): Workspac
 }
 
 describe("ChatPage LLM reasoning UX boundary", () => {
+  it("uses live task context when loading completed with non-empty tasks", () => {
+    const result = liveTaskReasoningContext({
+      tasks: [{ id: "live-1", title: "Live task", completed: false, createdAt: now }],
+      isLoading: false,
+      error: null,
+    });
+
+    expect(result).toEqual([{
+      id: "live-1",
+      title: "Live task",
+      completed: false,
+      status: "open",
+      dueDate: undefined,
+      createdAt: now,
+    }]);
+  });
+
+  it("treats true empty live tasks as authoritative instead of falling back to stale workspace tasks", () => {
+    const result = liveTaskReasoningContext({
+      tasks: [],
+      isLoading: false,
+      error: null,
+    });
+
+    expect(result).toEqual([]);
+  });
+
+  it("does not manufacture exact task context while live tasks are loading", () => {
+    const result = liveTaskReasoningContext({
+      tasks: [{ id: "stale-1", title: "Stale task", completed: false, createdAt: now }],
+      isLoading: true,
+      error: null,
+    });
+
+    expect(result).toEqual([]);
+  });
+
+  it("does not manufacture exact task context when live tasks failed to load", () => {
+    const result = liveTaskReasoningContext({
+      tasks: [{ id: "stale-1", title: "Stale task", completed: false, createdAt: now }],
+      isLoading: false,
+      error: "Failed to load tasks",
+    });
+
+    expect(result).toEqual([]);
+  });
+
   it("does not route ordinary educational conversation into intent mode", () => {
     expect(shouldUseReasoningForMessage("Why is task management important?")).toBe(false);
     expect(shouldUseReasoningForMessage("Explain how calendars work.")).toBe(false);
@@ -222,5 +275,129 @@ describe("ChatPage LLM reasoning UX boundary", () => {
     expect(message).toContain("- Finish report");
     expect(message).toContain("You may want to add due dates to those tasks.");
     expect(message).not.toContain("request-1");
+  });
+
+  it("localizes deterministic proposal messages to the resolved response language", () => {
+    const german = reasoningResult("inspect_calendar");
+    german.responseLanguage = "de";
+    const farsi = reasoningResult("inspect_learning");
+    farsi.responseLanguage = "fa";
+
+    expect(proposalMessage(german)).toContain("Interpretierte Absicht");
+    expect(proposalMessage(german)).toContain("Pruefe die vorgeschlagene Aktion");
+    expect(proposalMessage(german)).not.toContain("Interpreted intent");
+    expect(proposalMessage(farsi)).toContain("نیت تشخیص داده شد");
+    expect(proposalMessage(farsi)).not.toContain("Interpreted intent");
+  });
+
+  it("localizes the same authoritative runtime summary for English, German, and Persian", () => {
+    const emptyCalendar = {
+      requestId: "request-calendar",
+      stepId: "step-calendar",
+      toolId: "calendar.list_today",
+      status: "success" as const,
+      success: true,
+      memoryEvidenceRetained: false,
+      safeSummary: "No events today.",
+      safePreviewItems: [],
+      reasons: [],
+      startedAt: now,
+      completedAt: now,
+      durationMs: 0,
+    };
+
+    expect(runtimeSummaryMessage(emptyCalendar, "en")).toBe("Your calendar is clear today.");
+    expect(runtimeSummaryMessage(emptyCalendar, "de")).toBe("Dein Kalender ist heute frei.");
+    expect(runtimeSummaryMessage(emptyCalendar, "fa")).toBe("تقویمت امروز خالی است.");
+  });
+
+  it("localizes completed, already-completed, and failed write summaries", () => {
+    const writeResult = {
+      requestId: "request-write",
+      stepId: "step-write",
+      toolId: "tasks.complete",
+      status: "success" as const,
+      success: true,
+      verified: true,
+      alreadyCompleted: false,
+      memoryEvidenceRetained: false,
+      safeSummary: "Task was marked complete.",
+      reasons: [],
+      startedAt: now,
+      completedAt: now,
+      durationMs: 0,
+    };
+
+    expect(runtimeSummaryMessage(writeResult, "de")).toBe("Die Aufgabe ist als erledigt markiert.");
+    expect(runtimeSummaryMessage({
+      ...writeResult,
+      alreadyCompleted: true,
+      safeSummary: "Task was already complete.",
+    }, "fa")).toContain("قبلا انجام شده بود");
+    expect(runtimeSummaryMessage({
+      ...writeResult,
+      status: "policy_denied",
+      success: false,
+      verified: false,
+      safeSummary: "Write action was blocked.",
+    }, "de")).toBe("Ich konnte die Aufgabenerledigung nicht sicher bestatigen.");
+  });
+
+  it("keeps Persian flow RTL while isolating independent English, German, and numeric blocks", () => {
+    const mixed = renderToString(
+      <ChatBubble
+        role="assistant"
+        language="fa"
+        content={"این نتیجه برای Review active tasks است.\n\nReview active tasks (2).\n\nHeute sind 2 Termine frei."}
+      />,
+    );
+    const english = renderToString(
+      <ChatBubble role="assistant" language="en" content="Review active tasks (2)." />,
+    );
+    const german = renderToString(
+      <ChatBubble role="assistant" language="de" content="Heute sind 2 Termine frei." />,
+    );
+    const farsi = renderToString(
+      <ChatBubble role="assistant" language="fa" content="امروز ۲ کار فعال داری." />,
+    );
+
+    expect(mixed).toContain('dir="rtl"');
+    expect(mixed.match(/dir="auto"/g)?.length).toBe(3);
+    expect(mixed).toContain("Review active tasks (2).");
+    expect(english).toContain('dir="ltr"');
+    expect(german).toContain('dir="ltr"');
+    expect(farsi).toContain('dir="rtl"');
+    expect(farsi).toContain('dir="auto"');
+  });
+
+  it("isolates an English proposal inside Persian flow without mirroring proposal controls", () => {
+    const proposalBubble = renderToString(
+      <ChatBubble
+        role="assistant"
+        language="fa"
+        content="Interpreted intent: Inspect tasks. Review the proposed action."
+      />,
+    );
+    const farsiResult = reasoningResult("inspect_tasks");
+    farsiResult.responseLanguage = "fa";
+    const controls = renderToString(
+      <ReasoningProposalCard
+        proposal={{
+          result: farsiResult,
+          step: step("inspect_tasks"),
+          resolution: resolution("tasks.list"),
+          approval: null,
+          runStatus: "idle",
+        }}
+        onRunReadOnly={vi.fn()}
+        onReviewApproval={vi.fn()}
+        onRunWrite={vi.fn()}
+      />,
+    );
+
+    expect(proposalBubble).toContain('dir="rtl"');
+    expect(proposalBubble).toContain('dir="auto"');
+    expect(controls).toContain("Run tasks.list");
+    expect(controls).not.toContain('dir="rtl"');
   });
 });

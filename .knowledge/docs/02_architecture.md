@@ -396,6 +396,6 @@ response composition remain authoritative boundaries.
 
 - Ollama server: `http://localhost:11434`
 - `OLLAMA_VULKAN=1` for Intel Arc 140V iGPU
-- Continue.dev config: `C:\Users\aryan\.continue\config.yaml`
+- Continue.dev config: user-local `.continue/config.yaml` outside the repository
 - Prompt library: `.prompts/`
 - Knowledge base: `.knowledge/` with ChromaDB and `nomic-embed-text`

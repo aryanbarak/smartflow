@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "wrangler dev --local --port 8787",
+    "test": "echo \"Run worker tests from the repository root with npm test -- agent/worker\""
   },
   "keywords": [],
   "author": "",

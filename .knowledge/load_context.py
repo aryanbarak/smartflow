@@ -1,5 +1,5 @@
 """
-Load DailyFlow Context for AI
+Load SmartFlow Context for AI
 Usage:
   python .knowledge/load_context.py
   python .knowledge/load_context.py "specific question or topic"
@@ -17,7 +17,7 @@ console = Console()
 KB_DIR = Path(__file__).parent
 CHROMA_DIR = KB_DIR / "chroma_db"
 
-SYSTEM_PROMPT = """You are the AI Technical Architect for the dailyFlow project.
+SYSTEM_PROMPT = """You are the AI Technical Architect for the SmartFlow project.
 
 You have complete knowledge of:
 - Project structure, patterns, and architecture
@@ -81,7 +81,7 @@ def load_full_context(question: str = "") -> str:
         console.print(f"  📚 Loaded {len(context_docs)} core docs")
 
     today = date.today().isoformat()
-    context = f"""# DailyFlow AI Context — {today}
+    context = f"""# SmartFlow AI Context — {today}
 
 ## System Role
 
@@ -103,7 +103,7 @@ def load_full_context(question: str = "") -> str:
 if __name__ == "__main__":
     question = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else ""
 
-    console.print("\n[bold blue]🧠  Loading DailyFlow Context...[/bold blue]")
+    console.print("\n[bold blue]🧠  Loading SmartFlow Context...[/bold blue]")
     context = load_full_context(question)
 
     output_file = KB_DIR / "context_output.md"

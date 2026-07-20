@@ -40,6 +40,8 @@ dist-ssr
 # .knowledge/راهنما.md
 
 supabase/.temp/
+supabase/.branches/
 android/app/src/main/assets/
 
 .wrangler/
+agent/worker/.dev.vars

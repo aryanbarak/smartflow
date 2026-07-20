@@ -12,7 +12,11 @@ export interface AgentReasoningServiceOptions {
   endpoint?: string;
   accessToken?: string;
   fetcher?: typeof fetch;
+  transport?: AgentReasoningTransport;
+  requestIdFactory?: () => string;
 }
+
+export type AgentReasoningTransport = "stateful-chat" | "structured-reasoning";
 
 function extractJson(text: string) {
   const trimmed = text.trim();
@@ -41,24 +45,50 @@ export function createLlmReasoningCaller(
     }
 
     const fetcher = options.fetcher ?? globalThis.fetch;
+    const transport = options.transport ?? "stateful-chat";
+    const requestId = options.requestIdFactory?.() ??
+      `reasoning:${request.sessionId ?? "session"}:${Date.now()}`;
+    const body = transport === "structured-reasoning"
+      ? {
+          requestId,
+          reasoningPrompt: request.prompt,
+          responseLanguage: request.responseLanguage,
+        }
+      : {
+          message: request.prompt,
+          session_id: request.sessionId ?? "flow-ai-reasoning",
+          responseLanguage: request.responseLanguage,
+        };
     const response = await fetcher(options.endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(options.accessToken ? { Authorization: `Bearer ${options.accessToken}` } : {}),
       },
-      body: JSON.stringify({
-        message: request.prompt,
-        session_id: request.sessionId ?? "flow-ai-reasoning",
-        responseLanguage: request.responseLanguage,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
       return { rawText: "" };
     }
 
-    const data = (await response.json()) as { reply?: unknown; intent?: unknown };
+    const data = (await response.json()) as {
+      requestId?: unknown;
+      proposal?: unknown;
+      responseLanguage?: unknown;
+      reply?: unknown;
+      intent?: unknown;
+    };
+    if (transport === "structured-reasoning") {
+      if (
+        data.requestId !== requestId ||
+        !isPartialIntentProposal(data.proposal) ||
+        data.responseLanguage !== request.responseLanguage
+      ) {
+        return { rawText: "" };
+      }
+      return { rawText: JSON.stringify(data.proposal) };
+    }
     if (typeof data.intent === "object" && data.intent) {
       return { rawText: JSON.stringify(data.intent) };
     }

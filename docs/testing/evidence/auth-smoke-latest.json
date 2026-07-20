@@ -1,0 +1,275 @@
+{
+  "status": "PASS",
+  "purpose": "bounded-auth-smoke",
+  "app": "http://127.0.0.1:8080",
+  "beforeAuth": {
+    "currentUrl": "http://127.0.0.1:8080/auth",
+    "pathname": "/auth",
+    "readyState": "interactive",
+    "renderedText": "SMARTFLOW\n\nOrganize with clarity.\nWelcome Back\n\nSign in to continue to SmartFlow\n\nPlan smarter\nTrack money\nLearn faster\nSign In\nDon't have an account? Sign up\n\nBy continuing, you agree to our terms of service and privacy policy.",
+    "bodyTextContent": "\n    SmartFlowOrganize with clarity.Welcome BackSign in to continue to SmartFlowPlan smarterTrack moneyLearn fasterSign InDon't have an account? Sign upBy continuing, you agree to our terms of service and privacy policy.\n    \n  \n\n",
+    "renderedHtmlLength": 181690,
+    "rootChildCount": 3,
+    "rootHtmlLength": 4323,
+    "scripts": [
+      "inline",
+      "http://127.0.0.1:8080/@vite/client",
+      "http://127.0.0.1:8080/src/main.tsx"
+    ],
+    "resources": [
+      {
+        "name": "http://127.0.0.1:8080/@vite/client",
+        "initiatorType": "script",
+        "duration": 285
+      },
+      {
+        "name": "https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap",
+        "initiatorType": "link",
+        "duration": 221
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/main.tsx",
+        "initiatorType": "script",
+        "duration": 52
+      },
+      {
+        "name": "http://127.0.0.1:8080/@react-refresh",
+        "initiatorType": "script",
+        "duration": 66
+      },
+      {
+        "name": "http://127.0.0.1:8080/node_modules/.vite/deps/react-dom_client.js?v=2fed9e62",
+        "initiatorType": "script",
+        "duration": 215
+      },
+      {
+        "name": "http://127.0.0.1:8080/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=2fed9e62",
+        "initiatorType": "script",
+        "duration": 218
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/App.tsx",
+        "initiatorType": "script",
+        "duration": 254
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/index.css",
+        "initiatorType": "script",
+        "duration": 1796
+      },
+      {
+        "name": "http://127.0.0.1:8080/node_modules/.vite/deps/chunk-LO37LJW2.js?v=2fed9e62",
+        "initiatorType": "script",
+        "duration": 1869
+      },
+      {
+        "name": "http://127.0.0.1:8080/node_modules/.vite/deps/chunk-PR4QN5HX.js?v=2fed9e62",
+        "initiatorType": "script",
+        "duration": 1604
+      },
+      {
+        "name": "http://127.0.0.1:8080/node_modules/.vite/deps/chunk-PWPD3MW7.js?v=2fed9e62",
+        "initiatorType": "script",
+        "duration": 1604
+      },
+      {
+        "name": "http://127.0.0.1:8080/node_modules/vite/dist/client/env.mjs",
+        "initiatorType": "script",
+        "duration": 1567
+      },
+      {
+        "name": "http://127.0.0.1:8080/node_modules/.vite/deps/react.js?v=2fed9e62",
+        "initiatorType": "script",
+        "duration": 1559
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/features/settings/appearanceStore.ts",
+        "initiatorType": "script",
+        "duration": 1788
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/components/ui/toaster.tsx",
+        "initiatorType": "script",
+        "duration": 1791
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/components/ui/sonner.tsx",
+        "initiatorType": "script",
+        "duration": 1818
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/components/ui/tooltip.tsx",
+        "initiatorType": "script",
+        "duration": 1818
+      },
+      {
+        "name": "http://127.0.0.1:8080/node_modules/.vite/deps/@tanstack_react-query.js?v=2fed9e62",
+        "initiatorType": "script",
+        "duration": 1819
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/components/layout/AppLayout.tsx",
+        "initiatorType": "script",
+        "duration": 2158
+      },
+      {
+        "name": "http://127.0.0.1:8080/node_modules/.vite/deps/react-router-dom.js?v=2fed9e62",
+        "initiatorType": "script",
+        "duration": 2159
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/pages/Dashboard.tsx",
+        "initiatorType": "script",
+        "duration": 2167
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/pages/CalendarPage.tsx",
+        "initiatorType": "script",
+        "duration": 2172
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/pages/TasksPage.tsx",
+        "initiatorType": "script",
+        "duration": 2170
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/pages/FinancePage.tsx",
+        "initiatorType": "script",
+        "duration": 2185
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/pages/FamilyPage.tsx",
+        "initiatorType": "script",
+        "duration": 2226
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/pages/SettingsPage.tsx",
+        "initiatorType": "script",
+        "duration": 2232
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/pages/HabitsPage.tsx",
+        "initiatorType": "script",
+        "duration": 2235
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/pages/JournalPage.tsx",
+        "initiatorType": "script",
+        "duration": 2235
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/pages/ChatPage.tsx",
+        "initiatorType": "script",
+        "duration": 2240
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/pages/AuthPage.tsx",
+        "initiatorType": "script",
+        "duration": 2261
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/pages/NotFound.tsx",
+        "initiatorType": "script",
+        "duration": 2266
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/pages/OfflinePage.tsx",
+        "initiatorType": "script",
+        "duration": 2267
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/providers/AuthProvider.tsx",
+        "initiatorType": "script",
+        "duration": 2270
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/providers/MusicPlayerProvider.tsx",
+        "initiatorType": "script",
+        "duration": 2272
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/contexts/PlaylistPlayerContext.tsx",
+        "initiatorType": "script",
+        "duration": 2272
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/components/AppLoader.tsx",
+        "initiatorType": "script",
+        "duration": 2278
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/components/FlowAIOrb/index.ts",
+        "initiatorType": "script",
+        "duration": 2281
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/components/LanguageProvider.tsx",
+        "initiatorType": "script",
+        "duration": 2284
+      },
+      {
+        "name": "http://127.0.0.1:8080/src/components/smartflow/index.ts",
+        "initiatorType": "script",
+        "duration": 2284
+      },
+      {
+        "name": "http://127.0.0.1:8080/node_modules/.vite/deps/zustand.js?v=2fed9e62",
+        "initiatorType": "script",
+        "duration": 569
+      }
+    ],
+    "selectors": {
+      "emailInput": true,
+      "passwordInput": true,
+      "textarea": false,
+      "signInButton": true
+    },
+    "staleAuthenticatedSession": false,
+    "authStorageKeyCount": 0
+  },
+  "afterAuth": {
+    "currentUrl": "http://127.0.0.1:8080/chat",
+    "pathname": "/chat",
+    "chatReady": true,
+    "renderedText": "Still here, smartflow-local-qa.\nHere is your workspace for today."
+  },
+  "supabaseReachability": {
+    "reachable": true,
+    "status": 200,
+    "ok": true
+  },
+  "failedNetworkRequests": [],
+  "consoleErrors": [
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    }
+  ],
+  "logErrors": [
+    {
+      "level": "warning",
+      "source": "other",
+      "text": "<meta name=\"apple-mobile-web-app-capable\" content=\"yes\"> is deprecated. Please include <meta name=\"mobile-web-app-capable\" content=\"yes\">",
+      "url": "http://127.0.0.1:8080/"
+    },
+    {
+      "level": "warning",
+      "source": "other",
+      "text": "<meta name=\"apple-mobile-web-app-capable\" content=\"yes\"> is deprecated. Please include <meta name=\"mobile-web-app-capable\" content=\"yes\">",
+      "url": "http://127.0.0.1:8080/chat"
+    }
+  ],
+  "selectorWaitFix": "auth input wait uses Boolean(...) so CDP returnByValue does not serialize DOM nodes"
+}
