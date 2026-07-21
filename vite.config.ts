@@ -85,6 +85,15 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
+    test: {
+      exclude: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/cypress/**',
+        '**/.{idea,git,cache,output,temp}/**',
+        'scripts/**',
+      ],
+    },
     build: {
       chunkSizeWarningLimit: 650,
       rollupOptions: {
