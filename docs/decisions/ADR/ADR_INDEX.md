@@ -16,6 +16,7 @@ Each ADR documents a significant architectural decision, its context, alternativ
 
 - ADR-0001 – Architecture Decision Record
 - ADR-0002 – Flow AI Presence Architecture
+- ADR-0003 – /agent/reason Remains Local-QA-Only
 
 Additional ADRs will be added as the project evolves.
 
