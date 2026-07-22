@@ -45,3 +45,5 @@ android/app/src/main/assets/
 
 .wrangler/
 agent/worker/.dev.vars
+agent/worker/.dev.vars.*
+.github-qa-pids
