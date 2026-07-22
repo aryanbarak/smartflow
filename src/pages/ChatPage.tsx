@@ -52,6 +52,7 @@ import {
   type SynthesizedContext,
 } from '@/features/agent'
 import { StepApprovalDialog } from '@/features/workspace/components/StepApprovalDialog'
+import { createGitHubRepositoriesClient } from '@/features/integrations/github/githubRepositoriesClient'
 import { useWorkspace } from '@/features/workspace'
 import type {
   WorkspacePlanActionType,
@@ -165,6 +166,7 @@ const readIntentAction: Record<string, WorkspacePlanActionType> = {
   inspect_calendar: 'review',
   inspect_learning: 'continue',
   inspect_workspace: 'inspect',
+  inspect_github_repositories: 'inspect',
 }
 
 export function shouldUseReasoningForMessage(message: string) {
@@ -187,9 +189,9 @@ export function shouldUseReasoningForMessage(message: string) {
   if (realPersianReasoningIntent) return true
 
   return (
-    /\b(task|tasks|todo|todos|unfinished|open tasks|focus on|complete|done|calendar|appointments|meetings|learning|lesson|workspace|current plan)\b/i.test(text) ||
-    /\b(kalender|termin|termine|besprechung|besprechungen|aufgabe|aufgaben|offenen aufgaben|nicht erledigt|lernen|lernfortschritt|fokus|aktueller plan|erledige|markiere)\b/i.test(text) ||
-    /(یادگیری|درس|تقویم|قرار|جلسه|وظیفه|وظیفه‌ها|کارها|کار|تمرکز|برنامه فعلی|کامل کن|انجام‌شده|تمام نشده)/i.test(text)
+    /\b(task|tasks|todo|todos|unfinished|open tasks|focus on|complete|done|calendar|appointments|meetings|learning|lesson|workspace|current plan|github[-\s]+repositories|github[-\s]+repos)\b/i.test(text) ||
+    /\b(kalender|termin|termine|besprechung|besprechungen|aufgabe|aufgaben|offenen aufgaben|nicht erledigt|lernen|lernfortschritt|fokus|aktueller plan|erledige|markiere|github-repositories)\b/i.test(text) ||
+    /(یادگیری|درس|تقویم|قرار|جلسه|وظیفه|وظیفه‌ها|کارها|کار|تمرکز|برنامه فعلی|کامل کن|انجام‌شده|تمام نشده|((گیت[‌\s-]?هاب|github).*(مخزن|مخزن[‌\s-]?ها)|(مخزن|مخزن[‌\s-]?ها).*(گیت[‌\s-]?هاب|github)))/i.test(text)
   )
 }
 
@@ -203,6 +205,8 @@ function intentTitleKey(type: AgentReasoningResult['proposal']['type']): Transla
       return 'agent_intent_title_inspect_learning'
     case 'inspect_workspace':
       return 'agent_intent_title_inspect_workspace'
+    case 'inspect_github_repositories':
+      return 'agent_intent_title_inspect_github_repositories'
     case 'complete_task':
       return 'agent_intent_title_complete_task'
     case 'ask_clarification':
@@ -241,7 +245,9 @@ function stepForReasoning(result: AgentReasoningResult, t: Translate): Workspace
     return null
   }
   const domain =
-    proposal.type === 'inspect_workspace'
+    proposal.type === 'inspect_github_repositories'
+      ? 'github'
+      : proposal.type === 'inspect_workspace'
       ? 'workspace'
       : proposal.type === 'inspect_calendar'
       ? 'calendar'
@@ -821,6 +827,13 @@ export default function ChatPage() {
         ...workspace.agentContext,
         workspace,
         currentTime: currentTime.toISOString(),
+        githubRepositoriesClient: createGitHubRepositoriesClient({
+          workerBaseUrl: workerUrl,
+          getAccessToken: async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            return session?.access_token
+          },
+        }),
       },
       currentTime,
     })
@@ -850,7 +863,7 @@ export default function ChatPage() {
       ),
       reasoningProposal.result.responseLanguage,
     )
-  }, [appendAssistantResult, reasoningProposal, tasks, workspace])
+  }, [appendAssistantResult, reasoningProposal, tasks, workerUrl, workspace])
 
   const handleApprovalDecision = useCallback((decision: ApprovalInteractionResult) => {
     if (!decision.ok || decision.decision === 'closed') return

@@ -32,18 +32,21 @@ import {
   type AiResponseLanguage,
 } from '@/features/ai/responseLanguage';
 import { AiMemoryTab } from '@/features/ai-memory/AiMemoryTab';
+import { GitHubIntegrationCard } from '@/features/integrations/github/GitHubIntegrationCard';
+import { useT, type TranslationKey } from '@/i18n';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type Tab = 'profile' | 'security' | 'appearance' | 'notifications' | 'data' | 'ai-memory';
+type Tab = 'profile' | 'security' | 'appearance' | 'notifications' | 'data' | 'ai-memory' | 'integrations';
 
-const TABS: { id: Tab; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
-  { id: 'profile',       label: 'Profile',       icon: User      },
-  { id: 'security',      label: 'Security',       icon: Shield    },
-  { id: 'appearance',    label: 'Appearance',     icon: Palette   },
-  { id: 'notifications', label: 'Notifications',  icon: Bell      },
-  { id: 'data',          label: 'Data',           icon: Database  },
-  { id: 'ai-memory',     label: 'AI Memory',      icon: Brain     },
+const TABS: { id: Tab; labelKey: TranslationKey; icon: React.ComponentType<{ size?: number }> }[] = [
+  { id: 'profile',       labelKey: 'settings_profile',       icon: User      },
+  { id: 'security',      labelKey: 'settings_security',      icon: Shield    },
+  { id: 'appearance',    labelKey: 'settings_appearance',    icon: Palette   },
+  { id: 'notifications', labelKey: 'settings_notifications', icon: Bell      },
+  { id: 'data',          labelKey: 'settings_data',          icon: Database  },
+  { id: 'ai-memory',     labelKey: 'settings_ai_memory',     icon: Brain     },
+  { id: 'integrations',  labelKey: 'settings_integrations',  icon: Globe     },
 ];
 
 type AiDefaults = { mode: LearnAIMode; aiResponseLanguage: AiResponseLanguage; language?: AiResponseLanguage };
@@ -881,6 +884,7 @@ function DataTab() {
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const { user, isLoading } = useAuth();
+  const { t, isRTL } = useT();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -941,10 +945,11 @@ export default function SettingsPage() {
     notifications: <NotificationsTab />,
     data:          <DataTab />,
     'ai-memory':   <AiMemoryTab />,
+    integrations:  <GitHubIntegrationCard />,
   };
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 pb-6 space-y-5">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 sm:px-6 lg:px-8 pb-6 space-y-5">
       {/* Hero Profile Card */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
         <Card className="glass-card card-accent overflow-hidden">
@@ -1011,7 +1016,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex gap-1 bg-muted rounded-xl p-1 overflow-x-auto scrollbar-hide">
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {TABS.map(({ id, labelKey, icon: Icon }) => (
           <button
             key={id}
             type="button"
@@ -1024,7 +1029,7 @@ export default function SettingsPage() {
             }}
           >
             <Icon size={13} />
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>

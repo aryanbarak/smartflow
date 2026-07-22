@@ -181,6 +181,9 @@ describe("ChatPage LLM reasoning UX boundary", () => {
     expect(shouldUseReasoningForMessage("امروز چه کارهایی دارم و به فارسی جواب بده")).toBe(true);
     expect(shouldUseReasoningForMessage("امروز چه کارهایی دارم؟")).toBe(true);
     expect(shouldUseReasoningForMessage("What is on my calendar today?")).toBe(true);
+    expect(shouldUseReasoningForMessage("Show my connected GitHub repositories.")).toBe(true);
+    expect(shouldUseReasoningForMessage("Zeige meine verbundenen GitHub-Repositories.")).toBe(true);
+    expect(shouldUseReasoningForMessage("مخزن‌های متصل گیت‌هاب را نشان بده.")).toBe(true);
   });
 
   it("renders a safe read-only action card without executing or exposing internals", () => {
