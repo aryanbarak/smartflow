@@ -319,6 +319,96 @@ describe('GitHub App connection boundary', () => {
     expect(fake.connection?.user_id).not.toBe(USER_TWO)
   })
 
+  it('completes the connection via the setup-state fallback when the Setup URL is bypassed', async () => {
+    const fake = fakeProvider()
+    const started = await start(fake)
+    const setupState = new URL(started.installationUrl).searchParams.get('state')!
+
+    const callback = await handleGitHubIntegrationRequest(
+      new Request(`http://127.0.0.1:8787/github/connect/callback?code=oauth-code&state=${setupState}&installation_id=777&setup_action=install`),
+      env(),
+      fake.dependencies,
+    )
+
+    expect(callback?.status).toBe(200)
+    expect(fake.connection).toMatchObject({
+      user_id: USER_ONE,
+      installation_id: 777,
+      github_account_id: 9001,
+      github_account_login: 'verified-user',
+      status: 'connected',
+    })
+  })
+
+  it('still completes the connection via the normal two-step setup-then-oauth path', async () => {
+    const fake = fakeProvider()
+    const { callback } = await connect(fake)
+
+    expect(callback.status).toBe(200)
+    expect(fake.connection).toMatchObject({
+      user_id: USER_ONE,
+      installation_id: 777,
+      status: 'connected',
+    })
+  })
+
+  it('calls installation verification on both the oauth-state and setup-state fallback paths', async () => {
+    const oauthPathFake = fakeProvider()
+    await connect(oauthPathFake)
+    expect(oauthPathFake.calls.some((call) => call.url.includes('/user/installations/'))).toBe(true)
+
+    const setupPathFake = fakeProvider()
+    const started = await start(setupPathFake)
+    const setupState = new URL(started.installationUrl).searchParams.get('state')!
+    await handleGitHubIntegrationRequest(
+      new Request(`http://127.0.0.1:8787/github/connect/callback?code=oauth-code&state=${setupState}&installation_id=777&setup_action=install`),
+      env(),
+      setupPathFake.dependencies,
+    )
+    expect(setupPathFake.calls.some((call) => call.url.includes('/user/installations/'))).toBe(true)
+  })
+
+  it('never allows a state consumed via the fallback path to be replayed on either column', async () => {
+    const fake = fakeProvider()
+    const started = await start(fake)
+    const setupState = new URL(started.installationUrl).searchParams.get('state')!
+    const callbackUrl = `http://127.0.0.1:8787/github/connect/callback?code=oauth-code&state=${setupState}&installation_id=777&setup_action=install`
+
+    const first = await handleGitHubIntegrationRequest(new Request(callbackUrl), env(), fake.dependencies)
+    expect(first?.status).toBe(200)
+
+    // Replaying the same raw state tries the oauth column first (never
+    // populated on this path) and then the setup column (already consumed
+    // by the first call), so both lookups must miss.
+    const replay = await handleGitHubIntegrationRequest(new Request(callbackUrl), env(), fake.dependencies)
+    expect(replay?.status).toBe(400)
+    expect(await replay?.json()).toMatchObject({ error: { code: 'CONNECTION_STATE_INVALID' } })
+  })
+
+  it('rejects a pending organization-approval installation without consuming state', async () => {
+    const fake = fakeProvider()
+    const started = await start(fake)
+    const setupState = new URL(started.installationUrl).searchParams.get('state')!
+
+    const pending = await handleGitHubIntegrationRequest(
+      new Request(`http://127.0.0.1:8787/github/connect/callback?code=oauth-code&state=${setupState}&installation_id=777&setup_action=request`),
+      env(),
+      fake.dependencies,
+    )
+    expect(pending?.status).toBe(409)
+    expect(await pending?.json()).toMatchObject({ error: { code: 'CONNECTION_APPROVAL_PENDING' } })
+    expect(fake.connection).toBeUndefined()
+
+    // The request-pending check runs before any state is touched, so the
+    // same state can still complete once the installation is approved.
+    const retry = await handleGitHubIntegrationRequest(
+      new Request(`http://127.0.0.1:8787/github/connect/callback?code=oauth-code&state=${setupState}&installation_id=777&setup_action=install`),
+      env(),
+      fake.dependencies,
+    )
+    expect(retry?.status).toBe(200)
+  })
+
   it('fails closed when required Worker configuration is missing', async () => {
     const fake = fakeProvider()
     const incomplete = env({ GITHUB_CLIENT_SECRET: undefined })

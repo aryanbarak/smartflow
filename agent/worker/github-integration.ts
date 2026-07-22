@@ -306,14 +306,14 @@ async function userDatabaseRequest(
   return response
 }
 
-async function consumeAttempt(
+async function tryConsumeAttempt(
   config: GitHubConfig,
   deps: GitHubIntegrationDependencies,
   hashColumn: 'setup_state_hash' | 'oauth_state_hash',
   stateHash: string,
   consumedColumn: 'setup_consumed_at' | 'oauth_consumed_at',
   update: Record<string, unknown>,
-) {
+): Promise<ConnectionAttempt | undefined> {
   const now = deps.now().toISOString()
   const response = await databaseRequest(
     config,
@@ -326,10 +326,22 @@ async function consumeAttempt(
     },
   )
   const rows = await response.json() as ConnectionAttempt[]
-  if (!Array.isArray(rows) || rows.length !== 1) {
+  return Array.isArray(rows) && rows.length === 1 ? rows[0] : undefined
+}
+
+async function consumeAttempt(
+  config: GitHubConfig,
+  deps: GitHubIntegrationDependencies,
+  hashColumn: 'setup_state_hash' | 'oauth_state_hash',
+  stateHash: string,
+  consumedColumn: 'setup_consumed_at' | 'oauth_consumed_at',
+  update: Record<string, unknown>,
+) {
+  const attempt = await tryConsumeAttempt(config, deps, hashColumn, stateHash, consumedColumn, update)
+  if (!attempt) {
     throw new GitHubIntegrationError('CONNECTION_STATE_INVALID', 400, 'Connection state is invalid, expired, or already used.')
   }
-  return rows[0]
+  return attempt
 }
 
 async function startConnection(
@@ -543,19 +555,50 @@ async function handleCallback(
 ) {
   const url = new URL(request.url)
   const code = boundedString(url.searchParams.get('code'), 512)
-  const oauthState = url.searchParams.get('state')
-  if (!code || !validState(oauthState)) {
+  const incomingState = url.searchParams.get('state')
+  const setupAction = url.searchParams.get('setup_action')
+  if (!code || !validState(incomingState)) {
     throw new GitHubIntegrationError('CONNECTION_CALLBACK_INVALID', 400, 'GitHub callback parameters are invalid.')
   }
-  const attempt = await consumeAttempt(
-    config,
-    deps,
-    'oauth_state_hash',
-    await sha256(oauthState!),
-    'oauth_consumed_at',
-    {},
-  )
-  const installationId = positiveInteger(attempt.claimed_installation_id)
+  if (setupAction === 'request') {
+    throw new GitHubIntegrationError(
+      'CONNECTION_APPROVAL_PENDING',
+      409,
+      'Installation approval is pending from an organization owner.',
+    )
+  }
+
+  // GitHub does not guarantee state survives a Setup URL round trip, but
+  // production traffic confirms it reliably reaches this callback. When the
+  // Setup URL was skipped, the state we receive here is still the original
+  // setup-phase token, so oauth_state_hash never got populated for it. Try
+  // the OAuth-phase column first (the intended two-step path), then fall
+  // back to the setup-phase column (the collapsed path GitHub actually took
+  // for this App configuration). Each lookup is a single atomic
+  // filtered PATCH, so a given state can be consumed at most once total,
+  // regardless of which column it is eventually matched against.
+  const stateHash = await sha256(incomingState!)
+  const oauthAttempt = await tryConsumeAttempt(config, deps, 'oauth_state_hash', stateHash, 'oauth_consumed_at', {})
+
+  let attempt: ConnectionAttempt
+  let installationId: number | undefined
+
+  if (oauthAttempt) {
+    attempt = oauthAttempt
+    installationId = positiveInteger(attempt.claimed_installation_id)
+  } else {
+    const setupAttempt = await tryConsumeAttempt(config, deps, 'setup_state_hash', stateHash, 'setup_consumed_at', {})
+    if (!setupAttempt) {
+      throw new GitHubIntegrationError('CONNECTION_STATE_INVALID', 400, 'Connection state is invalid, expired, or already used.')
+    }
+    attempt = setupAttempt
+    // handleSetup() never ran on this path, so claimed_installation_id was
+    // never written. The callback's own installation_id is the only source
+    // for it here; verifyInstallation() independently re-checks it against
+    // GitHub before anything is trusted or persisted.
+    installationId = positiveInteger(url.searchParams.get('installation_id'))
+  }
+
   if (!installationId || !attempt.user_id) {
     throw new GitHubIntegrationError('CONNECTION_STATE_INVALID', 400, 'Connection state is incomplete.')
   }
