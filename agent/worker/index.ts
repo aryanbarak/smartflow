@@ -2,6 +2,7 @@ import type { Env, AgentBriefing, ExtractedFact, MemoryEntry, UserContext, Brief
 import { buildUserContext, fetchUserMemory, fetchUserLanguage, fetchTaskSnapshot, fetchCalendarSnapshot, fetchHabitSnapshot, fetchFinanceSnapshot, supabaseGet, supabasePost, supabasePatch } from './context-builder'
 import { buildPrompt, buildExtractionPrompt, buildChatExtractionPrompt, EXTRACTABLE_KEYS, buildChatSystemPrompt } from './prompt-builder'
 import { handleLocalReasoningRequest } from './reasoning-endpoint'
+import { handleGitHubIntegrationRequest } from './github-integration'
 
 const ENABLE_AUTO_MEMORY_WRITE = true
 
@@ -22,6 +23,9 @@ export default {
     if (pathname === '/agent/reason') {
       return handleLocalReasoningRequest(request, env, { logger: console })
     }
+
+    const githubResponse = await handleGitHubIntegrationRequest(request, env)
+    if (githubResponse) return githubResponse
 
     const origin = request.headers.get('Origin') ?? ''
     if (request.method === 'OPTIONS') {

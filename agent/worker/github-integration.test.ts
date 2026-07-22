@@ -1,0 +1,522 @@
+import { describe, expect, it } from 'vitest'
+import { handleGitHubIntegrationRequest } from './github-integration'
+import type { Env } from './types'
+
+const USER_ONE = '11111111-1111-4111-8111-111111111111'
+const USER_TWO = '22222222-2222-4222-8222-222222222222'
+const NOW = new Date('2026-07-22T10:00:00.000Z')
+
+function env(overrides: Partial<Env> = {}): Env {
+  return {
+    SMARTFLOW_WORKER_MODE: 'local-qa',
+    SUPABASE_URL: 'http://127.0.0.1:54321',
+    SUPABASE_ANON_KEY: 'anon-key',
+    SUPABASE_SERVICE_KEY: 'service-key',
+    GEMINI_API_KEY: 'gemini-key',
+    GEMINI_MODEL: 'gemini-model',
+    GITHUB_APP_ID: '12345',
+    GITHUB_CLIENT_ID: 'Iv1_client',
+    GITHUB_APP_SLUG: 'smartflow-local-qa',
+    GITHUB_SETUP_URL: 'http://127.0.0.1:8787/github/connect/setup',
+    GITHUB_CALLBACK_URL: 'http://127.0.0.1:8787/github/connect/callback',
+    GITHUB_ALLOWED_ORIGINS: 'http://localhost:8080',
+    GITHUB_APP_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\nAA==\n-----END PRIVATE KEY-----',
+    GITHUB_CLIENT_SECRET: 'client-secret',
+    AI: {} as Ai,
+    ...overrides,
+  }
+}
+
+interface FakeOptions {
+  currentUser?: string
+  verificationStatus?: number
+  verifiedAppId?: number
+  verifiedInstallationId?: number
+  installationTokenStatus?: number
+  repositoriesStatus?: number
+  repositories?: unknown
+  malformedToken?: boolean
+  malformedRepositoriesJson?: boolean
+  rejectGitHub?: boolean
+}
+
+function response(body: unknown, status = 200) {
+  return new Response(status === 204 ? null : JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+function fakeProvider(options: FakeOptions = {}) {
+  let currentUser = options.currentUser ?? USER_ONE
+  let attempt: Record<string, unknown> | undefined
+  let connection: Record<string, unknown> | undefined
+  let randomCall = 0
+  const calls: Array<{ url: string; method: string; body?: string; authorization?: string }> = []
+
+  const fetcher: typeof fetch = async (input, init = {}) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    const parsed = new URL(url)
+    const method = init.method ?? 'GET'
+    const headers = new Headers(init.headers)
+    const body = typeof init.body === 'string' ? init.body : undefined
+    calls.push({ url, method, body, authorization: headers.get('Authorization') ?? undefined })
+
+    if (url.endsWith('/auth/v1/user')) {
+      return headers.get('Authorization')?.startsWith('Bearer ') ? response({ id: currentUser }) : response({}, 401)
+    }
+
+    if (parsed.pathname.includes('/rest/v1/github_connection_attempts')) {
+      if (method === 'DELETE') {
+        attempt = undefined
+        return response(null, 204)
+      }
+      if (method === 'POST') {
+        attempt = JSON.parse(body ?? '{}')
+        return response(null, 201)
+      }
+      if (method === 'PATCH') {
+        const update = JSON.parse(body ?? '{}') as Record<string, unknown>
+        if (!attempt) return response([])
+        if (parsed.searchParams.has('setup_state_hash')) {
+          const setupStateHash = parsed.searchParams.get('setup_state_hash')?.replace(/^eq\./, '')
+          if (attempt.setup_state_hash !== setupStateHash || attempt.setup_consumed_at) return response([])
+          attempt = { ...attempt, ...update }
+          return response([{
+            id: attempt.id,
+            user_id: attempt.user_id,
+            claimed_installation_id: attempt.claimed_installation_id,
+            expires_at: attempt.expires_at,
+          }])
+        }
+        if (parsed.searchParams.has('oauth_state_hash')) {
+          const oauthStateHash = parsed.searchParams.get('oauth_state_hash')?.replace(/^eq\./, '')
+          if (attempt.oauth_state_hash !== oauthStateHash || attempt.oauth_consumed_at) return response([])
+          attempt = { ...attempt, ...update }
+          return response([{
+            id: attempt.id,
+            user_id: attempt.user_id,
+            claimed_installation_id: attempt.claimed_installation_id,
+            expires_at: attempt.expires_at,
+          }])
+        }
+        attempt = { ...attempt, ...update }
+        return response(null, 204)
+      }
+    }
+
+    if (parsed.pathname.includes('/rest/v1/github_connections')) {
+      if (method === 'POST') {
+        connection = JSON.parse(body ?? '{}')
+        return response(null, 201)
+      }
+      if (method === 'DELETE') {
+        if (connection?.user_id === currentUser) connection = undefined
+        return response(null, 204)
+      }
+      if (method === 'GET') {
+        return response(connection?.user_id === currentUser ? [connection] : [])
+      }
+    }
+
+    if (parsed.origin === 'https://github.com' || parsed.origin === 'https://api.github.com') {
+      if (options.rejectGitHub) {
+        throw new DOMException('Aborted', 'AbortError')
+      }
+      if (url === 'https://github.com/login/oauth/access_token') {
+        return options.malformedToken
+          ? response({ token_type: 'bearer' })
+          : response({ access_token: 'ghu_transient-user-token', token_type: 'bearer' })
+      }
+      if (parsed.pathname.startsWith('/user/installations/')) {
+        const status = options.verificationStatus ?? 200
+        return status === 200
+          ? response({
+              id: options.verifiedInstallationId ?? 777,
+              app_id: options.verifiedAppId ?? 12345,
+              account: { id: 9001, login: 'verified-user' },
+            })
+          : response({ message: 'provider detail must not escape' }, status)
+      }
+      if (parsed.pathname.endsWith('/access_tokens')) {
+        const status = options.installationTokenStatus ?? 201
+        return status < 300
+          ? response({ token: 'ghs_transient-installation-token', expires_at: '2026-07-22T11:00:00Z' }, status)
+          : response({ message: 'provider detail must not escape' }, status)
+      }
+      if (parsed.pathname === '/installation/repositories') {
+        const status = options.repositoriesStatus ?? 200
+        if (options.malformedRepositoriesJson) {
+          return new Response('{not-json', { status, headers: { 'Content-Type': 'application/json' } })
+        }
+        return status === 200
+          ? response({ repositories: options.repositories ?? [] })
+          : response({ message: 'provider detail must not escape' }, status)
+      }
+    }
+
+    throw new Error(`Unexpected request: ${method} ${url}`)
+  }
+
+  const dependencies = {
+    fetcher,
+    now: () => NOW,
+    randomBytes(length: number) {
+      randomCall += 1
+      return new Uint8Array(length).fill(randomCall)
+    },
+    createAppJwt: async () => 'signed-app-jwt',
+  }
+
+  return {
+    calls,
+    dependencies,
+    get attempt() { return attempt },
+    get connection() { return connection },
+    set connection(value: Record<string, unknown> | undefined) { connection = value },
+    set currentUser(value: string) { currentUser = value },
+  }
+}
+
+function apiRequest(path: string, method = 'GET', authenticated = true) {
+  return new Request(`http://127.0.0.1:8787${path}`, {
+    method,
+    headers: {
+      Origin: 'http://localhost:8080',
+      ...(authenticated ? { Authorization: 'Bearer supabase-session' } : {}),
+    },
+  })
+}
+
+async function start(fake: ReturnType<typeof fakeProvider>) {
+  const result = await handleGitHubIntegrationRequest(
+    apiRequest('/github/connect/start', 'POST'),
+    env(),
+    fake.dependencies,
+  )
+  expect(result?.status).toBe(200)
+  const body = await result!.json() as { installationUrl: string; expiresAt: string }
+  return body
+}
+
+async function setup(fake: ReturnType<typeof fakeProvider>, state: string, installationId = 777) {
+  const result = await handleGitHubIntegrationRequest(
+    new Request(`http://127.0.0.1:8787/github/connect/setup?state=${state}&installation_id=${installationId}`),
+    env(),
+    fake.dependencies,
+  )
+  expect(result?.status).toBe(302)
+  return new URL(result!.headers.get('Location')!).searchParams.get('state')!
+}
+
+async function connect(fake: ReturnType<typeof fakeProvider>, installationId = 777) {
+  const started = await start(fake)
+  const setupState = new URL(started.installationUrl).searchParams.get('state')!
+  const oauthState = await setup(fake, setupState, installationId)
+  const callback = await handleGitHubIntegrationRequest(
+    new Request(`http://127.0.0.1:8787/github/connect/callback?code=oauth-code&state=${oauthState}`),
+    env(),
+    fake.dependencies,
+  )
+  return { callback: callback!, setupState, oauthState, started }
+}
+
+describe('GitHub App connection boundary', () => {
+  it('requires a verified Supabase bearer token before connection start', async () => {
+    const fake = fakeProvider()
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/connect/start', 'POST', false), env(), fake.dependencies)
+    expect(result?.status).toBe(401)
+    expect(fake.attempt).toBeUndefined()
+  })
+
+  it('creates a secure short-lived user-bound state and stores only its hash', async () => {
+    const fake = fakeProvider()
+    const result = await start(fake)
+    const state = new URL(result.installationUrl).searchParams.get('state')!
+    expect(state).toMatch(/^[A-Za-z0-9_-]{43}$/)
+    expect(fake.attempt?.user_id).toBe(USER_ONE)
+    expect(fake.attempt?.setup_state_hash).toMatch(/^[a-f0-9]{64}$/)
+    expect(JSON.stringify(fake.attempt)).not.toContain(state)
+    expect(new Date(String(fake.attempt?.expires_at)).getTime() - NOW.getTime()).toBe(10 * 60 * 1000)
+  })
+
+  it('keeps Setup URL and user authorization callback distinct and single-use', async () => {
+    const fake = fakeProvider()
+    const started = await start(fake)
+    const setupState = new URL(started.installationUrl).searchParams.get('state')!
+    const oauthState = await setup(fake, setupState)
+    const setupReplay = await handleGitHubIntegrationRequest(
+      new Request(`http://127.0.0.1:8787/github/connect/setup?state=${setupState}&installation_id=777`),
+      env(),
+      fake.dependencies,
+    )
+    expect(setupReplay?.status).toBe(400)
+
+    const callback = await handleGitHubIntegrationRequest(
+      new Request(`http://127.0.0.1:8787/github/connect/callback?code=oauth-code&state=${oauthState}`),
+      env(),
+      fake.dependencies,
+    )
+    expect(callback?.status).toBe(200)
+    const replay = await handleGitHubIntegrationRequest(
+      new Request(`http://127.0.0.1:8787/github/connect/callback?code=oauth-code&state=${oauthState}`),
+      env(),
+      fake.dependencies,
+    )
+    expect(replay?.status).toBe(400)
+  })
+
+  it.each([
+    ['wrong App', { verifiedAppId: 99999 }],
+    ['spoofed installation ID', { verifiedInstallationId: 778 }],
+  ] as const)('rejects a %s before persistence', async (_label, options) => {
+    const fake = fakeProvider(options)
+    const { callback } = await connect(fake)
+    expect(callback.status).toBe(409)
+    expect(fake.connection).toBeUndefined()
+  })
+
+  it.each([401, 403, 404])('rejects an installation the authorizing GitHub user cannot access (%s)', async (status) => {
+    const fake = fakeProvider({ verificationStatus: status })
+    const { callback } = await connect(fake)
+    expect(callback.status).toBe(409)
+    expect(fake.connection).toBeUndefined()
+  })
+
+  it('persists only verified non-secret metadata after user/installation association succeeds', async () => {
+    const fake = fakeProvider()
+    const { callback } = await connect(fake)
+    expect(callback.status).toBe(200)
+    expect(fake.connection).toMatchObject({
+      user_id: USER_ONE,
+      installation_id: 777,
+      github_account_id: 9001,
+      github_account_login: 'verified-user',
+      status: 'connected',
+    })
+    const persisted = JSON.stringify(fake.calls.filter((call) => call.url.includes('/rest/v1/')).map((call) => call.body))
+    const returned = await callback.text()
+    expect(persisted).not.toContain('ghu_transient-user-token')
+    expect(persisted).not.toContain('ghs_transient-installation-token')
+    expect(returned).not.toContain('token')
+  })
+
+  it('keeps callback ownership bound to the SmartFlow user that initiated the state', async () => {
+    const fake = fakeProvider({ currentUser: USER_ONE })
+    const started = await start(fake)
+    const setupState = new URL(started.installationUrl).searchParams.get('state')!
+    const oauthState = await setup(fake, setupState)
+    fake.currentUser = USER_TWO
+
+    const callback = await handleGitHubIntegrationRequest(
+      new Request(`http://127.0.0.1:8787/github/connect/callback?code=oauth-code&state=${oauthState}`),
+      env(),
+      fake.dependencies,
+    )
+
+    expect(callback?.status).toBe(200)
+    expect(fake.connection?.user_id).toBe(USER_ONE)
+    expect(fake.connection?.user_id).not.toBe(USER_TWO)
+  })
+
+  it('fails closed when required Worker configuration is missing', async () => {
+    const fake = fakeProvider()
+    const incomplete = env({ GITHUB_CLIENT_SECRET: undefined })
+    const unauthenticated = await handleGitHubIntegrationRequest(
+      apiRequest('/github/connect/start', 'POST', false),
+      incomplete,
+      fake.dependencies,
+    )
+    expect(unauthenticated?.status).toBe(401)
+    fake.calls.length = 0
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/connect/start', 'POST'), incomplete, fake.dependencies)
+    expect(result?.status).toBe(503)
+    expect(fake.calls).toHaveLength(1)
+    expect(fake.calls[0].url).toContain('/auth/v1/user')
+  })
+})
+
+describe('GitHub repository listing boundary', () => {
+  function verifiedConnection(userId = USER_ONE) {
+    return {
+      user_id: userId,
+      installation_id: 777,
+      github_account_id: 9001,
+      github_account_login: 'verified-user',
+      status: 'connected',
+    }
+  }
+
+  it('requires authentication and loads only the authenticated user connection', async () => {
+    const fake = fakeProvider()
+    fake.connection = verifiedConnection()
+    const unauthenticated = await handleGitHubIntegrationRequest(apiRequest('/github/repositories', 'GET', false), env(), fake.dependencies)
+    expect(unauthenticated?.status).toBe(401)
+
+    fake.currentUser = USER_TWO
+    const crossUser = await handleGitHubIntegrationRequest(apiRequest('/github/repositories'), env(), fake.dependencies)
+    expect(crossUser?.status).toBe(409)
+    expect(fake.calls.some((call) => call.url.includes('/access_tokens'))).toBe(false)
+  })
+
+  it('mints transient installation credentials and returns at most 20 sanitized repositories', async () => {
+    const repositories = Array.from({ length: 25 }, (_, index) => ({
+      id: index + 1,
+      name: `repo-${index}`,
+      owner: { login: 'owner' },
+      visibility: index % 2 ? 'private' : 'public',
+      default_branch: 'main',
+      archived: false,
+      clone_url: 'https://token@example.invalid/private.git',
+      permissions: { admin: true },
+    }))
+    const fake = fakeProvider({ repositories })
+    fake.connection = verifiedConnection()
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/repositories'), env(), fake.dependencies)
+    expect(result?.status).toBe(200)
+    const body = await result!.json() as { repositories: Array<Record<string, unknown>> }
+    expect(body.repositories).toHaveLength(20)
+    expect(Object.keys(body.repositories[0]).sort()).toEqual(['archived', 'defaultBranch', 'id', 'name', 'owner', 'visibility'])
+    const serialized = JSON.stringify(body)
+    expect(serialized).not.toContain('clone_url')
+    expect(serialized).not.toContain('permissions')
+    expect(serialized).not.toContain('ghs_transient-installation-token')
+
+    const githubCalls = fake.calls.filter((call) => call.url.startsWith('https://github.com') || call.url.startsWith('https://api.github.com'))
+    expect(githubCalls.every((call) => ['https://github.com', 'https://api.github.com'].includes(new URL(call.url).origin))).toBe(true)
+    expect(githubCalls.filter((call) => call.url.includes('/installation/repositories'))).toHaveLength(1)
+  })
+
+  it('returns an empty bounded list without traversing pages', async () => {
+    const fake = fakeProvider({ repositories: [] })
+    fake.connection = verifiedConnection()
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/repositories'), env(), fake.dependencies)
+    expect(await result?.json()).toEqual({ repositories: [] })
+    expect(fake.calls.filter((call) => call.url.includes('/installation/repositories'))).toHaveLength(1)
+  })
+
+  it.each([
+    [401, 409, 'GITHUB_AUTHORIZATION_INVALID'],
+    [403, 409, 'GITHUB_AUTHORIZATION_INVALID'],
+    [404, 409, 'GITHUB_APP_NOT_INSTALLED'],
+    [429, 503, 'GITHUB_RATE_LIMITED'],
+    [500, 502, 'GITHUB_UNAVAILABLE'],
+  ])('normalizes provider status %s without raw errors or retries', async (providerStatus, expectedStatus, code) => {
+    const fake = fakeProvider({ repositoriesStatus: providerStatus })
+    fake.connection = verifiedConnection()
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/repositories'), env(), fake.dependencies)
+    expect(result?.status).toBe(expectedStatus)
+    const responseText = await result!.text()
+    expect(JSON.parse(responseText)).toMatchObject({ error: { code } })
+    expect(fake.calls.filter((call) => call.url.includes('/installation/repositories'))).toHaveLength(1)
+    expect(responseText).not.toContain('provider detail')
+  })
+
+  it('normalizes timeouts and malformed provider responses without retrying', async () => {
+    const timeoutFake = fakeProvider({ rejectGitHub: true })
+    timeoutFake.connection = verifiedConnection()
+    const timeout = await handleGitHubIntegrationRequest(apiRequest('/github/repositories'), env(), timeoutFake.dependencies)
+    expect(timeout?.status).toBe(504)
+
+    const malformedFake = fakeProvider({ repositories: [{ id: 1, name: 'missing-owner' }] })
+    malformedFake.connection = verifiedConnection()
+    const malformed = await handleGitHubIntegrationRequest(apiRequest('/github/repositories'), env(), malformedFake.dependencies)
+    expect(malformed?.status).toBe(502)
+    expect(await malformed?.json()).toMatchObject({ error: { code: 'GITHUB_RESPONSE_INVALID' } })
+
+    const invalidJsonFake = fakeProvider({ malformedRepositoriesJson: true })
+    invalidJsonFake.connection = verifiedConnection()
+    const invalidJson = await handleGitHubIntegrationRequest(apiRequest('/github/repositories'), env(), invalidJsonFake.dependencies)
+    expect(invalidJson?.status).toBe(502)
+    expect(await invalidJson?.json()).toMatchObject({ error: { code: 'GITHUB_RESPONSE_INVALID' } })
+  })
+
+  it('disconnects only the authenticated user mapping and does not call GitHub', async () => {
+    const fake = fakeProvider()
+    fake.connection = verifiedConnection()
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/disconnect', 'POST'), env(), fake.dependencies)
+    expect(await result?.json()).toEqual({ connected: false, appUninstalled: false })
+    expect(fake.connection).toBeUndefined()
+    expect(fake.calls.some((call) => call.url.startsWith('https://api.github.com'))).toBe(false)
+  })
+})
+
+describe('GitHub connection status boundary', () => {
+  it('requires authentication without requiring GitHub App credentials', async () => {
+    const fake = fakeProvider()
+    const missingProviderConfig = env({
+      GITHUB_APP_ID: undefined,
+      GITHUB_CLIENT_ID: undefined,
+      GITHUB_APP_SLUG: undefined,
+      GITHUB_SETUP_URL: undefined,
+      GITHUB_CALLBACK_URL: undefined,
+      GITHUB_APP_PRIVATE_KEY: undefined,
+      GITHUB_CLIENT_SECRET: undefined,
+    })
+
+    const unauthenticated = await handleGitHubIntegrationRequest(
+      apiRequest('/github/connection', 'GET', false),
+      missingProviderConfig,
+      fake.dependencies,
+    )
+    expect(unauthenticated?.status).toBe(401)
+
+    const authenticated = await handleGitHubIntegrationRequest(
+      apiRequest('/github/connection'),
+      missingProviderConfig,
+      fake.dependencies,
+    )
+    expect(await authenticated?.json()).toEqual({
+      connected: false,
+      status: 'not_connected',
+      reconnectRequired: false,
+    })
+  })
+
+  it('returns only bounded connection fields through the user RLS token', async () => {
+    const fake = fakeProvider()
+    fake.connection = {
+      user_id: USER_ONE,
+      installation_id: 777,
+      github_account_id: 9001,
+      github_account_login: 'verified-user',
+      status: 'connected',
+      verified_at: '2026-07-22T10:00:00.000Z',
+      provider_secret: 'must-not-pass',
+    }
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/connection'), env(), fake.dependencies)
+    const body = await result?.json()
+    expect(body).toEqual({
+      connected: true,
+      accountLabel: 'verified-user',
+      status: 'connected',
+      connectedAt: '2026-07-22T10:00:00.000Z',
+      reconnectRequired: false,
+    })
+    const databaseRead = fake.calls.find((call) => call.url.includes('/rest/v1/github_connections'))
+    expect(databaseRead?.authorization).toBe('Bearer supabase-session')
+    expect(JSON.stringify(body)).not.toContain('installation')
+  })
+
+  it('maps revoked local state to reconnect required without exposing provider metadata', async () => {
+    const fake = fakeProvider()
+    fake.connection = {
+      user_id: USER_ONE,
+      installation_id: 777,
+      github_account_id: 9001,
+      github_account_login: 'verified-user',
+      status: 'revoked',
+      verified_at: '2026-07-22T10:00:00.000Z',
+    }
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/connection'), env(), fake.dependencies)
+    expect(await result?.json()).toEqual({
+      connected: false,
+      accountLabel: 'verified-user',
+      status: 'reconnect_required',
+      connectedAt: '2026-07-22T10:00:00.000Z',
+      reconnectRequired: true,
+    })
+  })
+})

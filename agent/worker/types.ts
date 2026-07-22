@@ -5,6 +5,14 @@ export interface Env {
   SUPABASE_SERVICE_KEY: string
   GEMINI_API_KEY: string
   GEMINI_MODEL: string
+  GITHUB_APP_ID?: string
+  GITHUB_CLIENT_ID?: string
+  GITHUB_APP_SLUG?: string
+  GITHUB_SETUP_URL?: string
+  GITHUB_CALLBACK_URL?: string
+  GITHUB_ALLOWED_ORIGINS?: string
+  GITHUB_APP_PRIVATE_KEY?: string
+  GITHUB_CLIENT_SECRET?: string
   AI: Ai  // Cloudflare AI Gateway
 }
 
