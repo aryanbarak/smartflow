@@ -15,6 +15,7 @@ const toolDomains: AgentToolDomain[] = [
   "conversations",
   "workspace",
   "system",
+  "github",
 ];
 
 const toolCapabilities: AgentToolCapability[] = [
@@ -30,6 +31,7 @@ const toolCapabilities: AgentToolCapability[] = [
   "complete",
   "analyze",
   "recommend",
+  "read",
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {

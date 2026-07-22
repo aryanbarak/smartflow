@@ -38,7 +38,7 @@ const actionCapabilityMap: Record<WorkspacePlanActionType, AgentToolCapability[]
   plan: ["inspect", "recommend", "schedule"],
   select: ["inspect", "update"],
   focus: ["inspect", "update"],
-  inspect: ["inspect", "search", "analyze"],
+  inspect: ["inspect", "search", "analyze", "read"],
   create: ["create"],
   update: ["update"],
   complete: ["complete"],

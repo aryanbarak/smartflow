@@ -13,6 +13,7 @@ export type AgentIntentType =
   | "inspect_calendar"
   | "inspect_learning"
   | "inspect_workspace"
+  | "inspect_github_repositories"
   | "complete_task"
   | "ask_clarification"
   | "unsupported";
@@ -22,7 +23,8 @@ export type AgentIntentDomain =
   | "tasks"
   | "calendar"
   | "learning"
-  | "workspace";
+  | "workspace"
+  | "github";
 
 export interface AgentIntentTarget {
   taskId?: string;
@@ -83,7 +85,7 @@ export type AgentLlmReasoningCaller = (
 
 export interface AgentReasoningValidationResult {
   proposal: AgentIntentProposal;
-  toolId?: "tasks.list" | "calendar.list_today" | "learning.get_progress" | "workspace.get_context" | "tasks.complete";
+  toolId?: "tasks.list" | "calendar.list_today" | "learning.get_progress" | "workspace.get_context" | "github.repositories.list" | "tasks.complete";
   validationReasons: string[];
 }
 

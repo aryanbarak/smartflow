@@ -24,6 +24,11 @@ interface LearningGetProgressData {
   }>;
 }
 
+interface GitHubRepositoriesData {
+  connectionStatus?: string;
+  repositories?: Array<{ name?: string; owner?: string }>;
+}
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object");
 }
@@ -92,6 +97,26 @@ function learningPresentation(data: unknown): ReadOnlyResultPresentation {
   };
 }
 
+function githubPresentation(data: unknown): ReadOnlyResultPresentation {
+  const value = isObject(data) ? data as GitHubRepositoriesData : {};
+  if (value.connectionStatus === "not_connected") {
+    return { safeSummary: "GitHub is not connected.", safePreviewItems: [] };
+  }
+  const repositories = Array.isArray(value.repositories) ? value.repositories.slice(0, 20) : [];
+  return {
+    safeSummary: countSummary(
+      repositories.length,
+      "No connected GitHub repositories found.",
+      "1 connected GitHub repository found.",
+      (count) => `${count} connected GitHub repositories found.`,
+    ),
+    safePreviewItems: repositories
+      .map((item) => item.owner && item.name ? `${item.owner}/${item.name}` : undefined)
+      .filter((item): item is string => Boolean(item))
+      .slice(0, 6),
+  };
+}
+
 export function presentReadOnlyResult(result: ExecutionResult): ReadOnlyResultPresentation {
   if (result.status !== "success") {
     if (result.status === "policy_denied") {
@@ -119,6 +144,8 @@ export function presentReadOnlyResult(result: ExecutionResult): ReadOnlyResultPr
         safeSummary: "Workspace context loaded.",
         safePreviewItems: [],
       };
+    case "github.repositories.list":
+      return githubPresentation(result.data);
     default:
       return {
         safeSummary: "The read-only action completed.",

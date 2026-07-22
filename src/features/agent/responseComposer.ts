@@ -10,6 +10,7 @@ export const SUPPORTED_RESPONSE_COMPOSER_TOOL_IDS = Object.freeze([
   "learning.get_progress",
   "workspace.get_context",
   "tasks.complete",
+  "github.repositories.list",
 ] as const);
 
 export type ResponseComposerToolId = typeof SUPPORTED_RESPONSE_COMPOSER_TOOL_IDS[number];
@@ -136,6 +137,29 @@ const TOOL_COPY: Record<ResponseComposerToolId, Record<AssistantResponseLanguage
       countSummary: () => "\u0632\u0645\u06cc\u0646\u0647 \u0648\u0631\u06a9\u0633\u067e\u06cc\u0633\u062a \u0622\u0645\u0627\u062f\u0647 \u0627\u0633\u062a.",
       failureSummary: "\u0646\u062a\u0648\u0627\u0646\u0633\u062a\u0645 \u0632\u0645\u06cc\u0646\u0647 \u0648\u0631\u06a9\u0633\u067e\u06cc\u0633 \u0631\u0627 \u0628\u0647 \u0634\u06a9\u0644 \u0627\u0645\u0646 \u0628\u06cc\u0627\u0648\u0631\u0645.",
       suggestion: "\u0627\u0632 \u0627\u06cc\u0646 \u0632\u0645\u06cc\u0646\u0647 \u0628\u0631\u0627\u06cc \u0627\u0646\u062a\u062e\u0627\u0628 \u0642\u062f\u0645 \u0628\u0639\u062f\u06cc \u0627\u0633\u062a\u0641\u0627\u062f\u0647 \u06a9\u0646.",
+    },
+  },
+  "github.repositories.list": {
+    en: {
+      headline: "Here are your connected GitHub repositories.",
+      emptySummary: "GitHub is not connected or no repositories are available.",
+      countSummary: (count) => `I found ${count} connected GitHub ${count === 1 ? "repository" : "repositories"}.`,
+      failureSummary: "I could not load your connected GitHub repositories safely.",
+      suggestion: "Open GitHub settings separately if you need to change repository access.",
+    },
+    de: {
+      headline: "Hier sind deine verbundenen GitHub-Repositories.",
+      emptySummary: "GitHub ist nicht verbunden oder es sind keine Repositories verfuegbar.",
+      countSummary: (count) => `Ich habe ${count} verbundene GitHub-${count === 1 ? "Repository" : "Repositories"} gefunden.`,
+      failureSummary: "Ich konnte deine verbundenen GitHub-Repositories nicht sicher laden.",
+      suggestion: "Aendere den Repository-Zugriff bei Bedarf separat in den GitHub-Einstellungen.",
+    },
+    fa: {
+      headline: "مخزن‌های متصل گیت‌هاب تو این‌ها هستند.",
+      emptySummary: "گیت‌هاب متصل نیست یا مخزنی در دسترس نیست.",
+      countSummary: (count) => `${count} مخزن متصل گیت‌هاب پیدا کردم.`,
+      failureSummary: "نتوانستم مخزن‌های متصل گیت‌هاب را به شکل امن بارگذاری کنم.",
+      suggestion: "برای تغییر دسترسی مخزن‌ها، تنظیمات گیت‌هاب را جداگانه باز کن.",
     },
   },
   "tasks.complete": {

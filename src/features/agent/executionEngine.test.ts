@@ -450,6 +450,7 @@ describe("executionEngine", () => {
       "calendar.list_today",
       "learning.get_progress",
       "workspace.get_context",
+      "github.repositories.list",
     ]);
   });
 });

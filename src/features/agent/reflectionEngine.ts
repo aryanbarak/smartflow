@@ -1,6 +1,7 @@
 import {
   REFLECTION_ENGINE_VERSION,
   type AgentReflectionConfidence,
+  type AgentReflectionDomain,
   type AgentReflectionGoalProgress,
   type AgentReflectionInput,
   type AgentReflectionOutcome,
@@ -118,6 +119,14 @@ function assessToolData(result: ExecutionResult): ToolDataAssessment {
         empty: !hasContext,
       };
     }
+    case "github.repositories.list": {
+      const count = arrayLength(result.data, "repositories");
+      return {
+        itemCount: count,
+        hasUsefulData: count > 0,
+        empty: count === 0,
+      };
+    }
     case "tasks.complete": {
       const alreadyCompleted = isObject(result.data) && result.data.alreadyCompleted === true;
       const verified = isObject(result.data) && result.data.verified === true;
@@ -154,18 +163,18 @@ function outcomeFor(result: ExecutionResult, assessment: ToolDataAssessment): Ag
   }
 }
 
-function toolDomain(input: AgentReflectionInput): WorkspaceSignalDomain | "workspace" | undefined {
-  return input.toolResolution.tool?.domain ?? input.toolResolution.toolId?.split(".")[0] as WorkspaceSignalDomain | "workspace" | undefined;
+function toolDomain(input: AgentReflectionInput): AgentReflectionDomain | undefined {
+  return input.toolResolution.tool?.domain ?? input.toolResolution.toolId?.split(".")[0] as AgentReflectionDomain | undefined;
 }
 
 function relevance(
   step: WorkspacePlanStep,
   goal: WorkspaceGoal,
-  domain?: WorkspaceSignalDomain | "workspace",
+  domain?: AgentReflectionDomain,
 ) {
   if (step.domain !== goal.primaryDomain && domain !== goal.primaryDomain) {
-    if (goal.supportingDomains.includes(step.domain)) return "supporting";
-    if (domain && domain !== "workspace" && goal.supportingDomains.includes(domain)) return "supporting";
+    if (step.domain !== "github" && step.domain !== "workspace" && goal.supportingDomains.includes(step.domain)) return "supporting";
+    if (domain && domain !== "workspace" && domain !== "github" && goal.supportingDomains.includes(domain)) return "supporting";
     if (domain === "workspace") return "supporting";
     return "unrelated";
   }
@@ -253,6 +262,10 @@ function summaryFor(result: ExecutionResult, outcome: AgentReflectionOutcome, as
       return assessment.empty
         ? "No workspace context was available."
         : "Workspace context was gathered.";
+    case "github.repositories.list":
+      return assessment.empty
+        ? "No connected GitHub repositories were found."
+        : "Connected GitHub repository metadata was gathered.";
     case "tasks.complete":
       return assessment.empty
         ? "Task was already completed. No new change was needed."
@@ -282,6 +295,8 @@ function followUpFor(result: ExecutionResult, outcome: AgentReflectionOutcome, a
         : "Continue the most recent unfinished learning item.";
     case "workspace.get_context":
       return "Use the loaded context to choose the next read-only step.";
+    case "github.repositories.list":
+      return assessment.empty ? undefined : "Choose a repository to inspect in GitHub when needed.";
     case "tasks.complete":
       return assessment.empty ? undefined : "Refresh the task view before choosing the next action.";
     default:

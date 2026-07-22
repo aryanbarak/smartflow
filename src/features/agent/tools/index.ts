@@ -4,6 +4,7 @@ import { conversationTools } from "./conversationTools";
 import { documentTools } from "./documentTools";
 import { financeTools } from "./financeTools";
 import { habitTools } from "./habitTools";
+import { githubTools } from "./githubTools";
 import { learningTools } from "./learningTools";
 import { taskTools } from "./taskTools";
 import { workspaceTools } from "./workspaceTools";
@@ -14,6 +15,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   ...documentTools.slice(0, 1),
   ...learningTools,
   ...workspaceTools,
+  ...githubTools,
   ...taskTools.slice(1),
   ...calendarTools.slice(1),
   ...habitTools,
@@ -28,6 +30,7 @@ export {
   documentTools,
   financeTools,
   habitTools,
+  githubTools,
   learningTools,
   taskTools,
   workspaceTools,

@@ -93,6 +93,8 @@ export type WorkspaceSignalDomain =
   | "documents"
   | "learning";
 
+export type WorkspacePlanDomain = WorkspaceSignalDomain | "github" | "workspace";
+
 export type WorkspaceSignalSeverity = "low" | "medium" | "high";
 export type WorkspacePriorityConfidence = "low" | "medium" | "high";
 export type WorkspacePersonalizationConfidence = "low" | "medium" | "high";
@@ -239,7 +241,7 @@ export interface WorkspacePlanStep {
   order: number;
   title: string;
   description: string;
-  domain: WorkspaceSignalDomain;
+  domain: WorkspacePlanDomain;
   estimatedMinutes: number;
   status: WorkspacePlanStepStatus;
   actionType: WorkspacePlanActionType;
@@ -303,7 +305,7 @@ export interface WorkspaceStepApproval {
   riskLevel: WorkspaceApprovalRiskLevel;
   reversible: boolean;
   externalEffect: boolean;
-  dataDomains: WorkspaceSignalDomain[];
+  dataDomains: WorkspacePlanDomain[];
   approvalScope: WorkspaceApprovalScope;
 }
 

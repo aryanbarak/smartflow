@@ -56,6 +56,24 @@ export interface ExecutionLearningProgressSnapshot {
   mode?: string;
 }
 
+export interface GitHubRepositorySummary {
+  id: string;
+  name: string;
+  owner: string;
+  visibility: "public" | "private" | "internal";
+  defaultBranch: string;
+  archived: boolean;
+}
+
+export interface GitHubRepositoriesResult {
+  connectionStatus: "connected" | "not_connected";
+  repositories: GitHubRepositorySummary[];
+}
+
+export interface GitHubRepositoriesClient {
+  listRepositories(): Promise<GitHubRepositoriesResult>;
+}
+
 export interface ExecutionContext {
   tasks?: readonly ExecutionContextTask[];
   events?: readonly ExecutionContextEvent[];
@@ -63,6 +81,7 @@ export interface ExecutionContext {
   workspace?: Workspace | null;
   policyContext?: ExecutionPolicyContext;
   currentTime?: string;
+  githubRepositoriesClient?: GitHubRepositoriesClient;
 }
 
 export interface ExecutionRequest {

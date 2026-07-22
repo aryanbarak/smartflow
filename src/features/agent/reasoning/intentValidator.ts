@@ -14,6 +14,7 @@ const supportedIntentTypes: AgentIntentType[] = [
   "inspect_calendar",
   "inspect_learning",
   "inspect_workspace",
+  "inspect_github_repositories",
   "complete_task",
   "ask_clarification",
   "unsupported",
@@ -24,6 +25,7 @@ const supportedDomains: AgentIntentDomain[] = [
   "calendar",
   "learning",
   "workspace",
+  "github",
 ];
 
 const supportedConfidence: AgentIntentConfidence[] = ["low", "medium", "high"];
@@ -33,6 +35,7 @@ const intentToolMap = {
   inspect_calendar: "calendar.list_today",
   inspect_learning: "learning.get_progress",
   inspect_workspace: "workspace.get_context",
+  inspect_github_repositories: "github.repositories.list",
   complete_task: "tasks.complete",
 } as const;
 
@@ -43,6 +46,7 @@ const domainByIntent: Partial<Record<AgentIntentType, AgentIntentDomain>> = {
   inspect_calendar: "calendar",
   inspect_learning: "learning",
   inspect_workspace: "workspace",
+  inspect_github_repositories: "github",
   complete_task: "tasks",
 };
 
@@ -237,12 +241,18 @@ function getStrongReadDomainEvidence(message: string): AgentIntentDomain | "conf
     /\b(workspace|aktueller plan|arbeitsbereich)\b/i,
     /(\u0628\u0631\u0646\u0627\u0645\u0647 \u0641\u0639\u0644\u06cc|workspace)/i,
   ]);
+  const githubEvidence = messageHasAny(message, [
+    /\b(github repositories|github repos|connected repositories|connected repos|github repository)\b/i,
+    /\b(github-repositories|verbundene repositories|github-repos)\b/i,
+    /((\u06af\u06cc\u062a[\u200c\s-]?\u0647\u0627\u0628|github).*(\u0645\u062e\u0632\u0646|\u0645\u062e\u0632\u0646[\u200c\s-]?\u0647\u0627)|(\u0645\u062e\u0632\u0646|\u0645\u062e\u0632\u0646[\u200c\s-]?\u0647\u0627).*(\u06af\u06cc\u062a[\u200c\s-]?\u0647\u0627\u0628|github))/i,
+  ]);
 
   const matches = [
     taskEvidence ? "tasks" : null,
     calendarEvidence ? "calendar" : null,
     learningEvidence ? "learning" : null,
     workspaceEvidence ? "workspace" : null,
+    githubEvidence ? "github" : null,
   ].filter((domain): domain is AgentIntentDomain => domain !== null);
 
   const uniqueMatches = Array.from(new Set(matches));
@@ -263,12 +273,14 @@ function normalizeReadIntentFromEvidence(
     type === "inspect_tasks" ||
     type === "inspect_calendar" ||
     type === "inspect_learning" ||
-    type === "inspect_workspace"
+    type === "inspect_workspace" ||
+    type === "inspect_github_repositories"
   ) {
     if (domainEvidence === "tasks") return "inspect_tasks";
     if (domainEvidence === "calendar") return "inspect_calendar";
     if (domainEvidence === "learning") return "inspect_learning";
     if (domainEvidence === "workspace") return "inspect_workspace";
+    if (domainEvidence === "github") return "inspect_github_repositories";
   }
   return type;
 }

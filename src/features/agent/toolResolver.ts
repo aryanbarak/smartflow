@@ -15,6 +15,7 @@ const executableReadOnlyToolIds = new Set([
   "calendar.list_today",
   "learning.get_progress",
   "workspace.get_context",
+  "github.repositories.list",
 ]);
 
 const unsupportedMutationActions = new Set<WorkspacePlanActionType>([
@@ -48,6 +49,9 @@ const explicitReadOnlyMappings: Record<string, Partial<Record<WorkspacePlanActio
     reflect: "workspace.get_context",
     inspect: "workspace.get_context",
     open: "workspace.get_context",
+  },
+  github: {
+    inspect: "github.repositories.list",
   },
 };
 
@@ -111,7 +115,8 @@ function expectedToolIdFor(
   return explicitReadOnlyMappings[domain]?.[actionType];
 }
 
-function expectedCapabilitiesFor(actionType: WorkspacePlanActionType): AgentToolCapability[] {
+function expectedCapabilitiesFor(domain: string, actionType: WorkspacePlanActionType): AgentToolCapability[] {
+  if (domain === "github" && actionType === "inspect") return ["read"];
   switch (actionType) {
     case "review":
     case "open":
@@ -139,7 +144,7 @@ function candidateFor(
   expectedToolId: string,
 ): ToolResolutionCandidate {
   const step = input.step;
-  const expectedCapabilities = step ? expectedCapabilitiesFor(step.actionType) : [];
+  const expectedCapabilities = step ? expectedCapabilitiesFor(step.domain, step.actionType) : [];
   const domainMatch = Boolean(step && tool.domain === step.domain);
   const capabilityMatch = expectedCapabilities.includes(tool.capability);
   const modeMatch = tool.mode === "read" && !tool.externalEffect;

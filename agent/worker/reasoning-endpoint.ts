@@ -11,12 +11,13 @@ const SUPPORTED_INTENT_VALUES = [
   'inspect_calendar',
   'inspect_learning',
   'inspect_workspace',
+  'inspect_github_repositories',
   'complete_task',
   'ask_clarification',
   'unsupported',
 ] as const
 const SUPPORTED_CONFIDENCE_VALUES = ['low', 'medium', 'high'] as const
-const SUPPORTED_DOMAIN_VALUES = ['tasks', 'calendar', 'learning', 'workspace'] as const
+const SUPPORTED_DOMAIN_VALUES = ['tasks', 'calendar', 'learning', 'workspace', 'github'] as const
 const SUPPORTED_INTENTS = new Set<string>(SUPPORTED_INTENT_VALUES)
 const SUPPORTED_CONFIDENCE = new Set<string>(SUPPORTED_CONFIDENCE_VALUES)
 const SUPPORTED_DOMAINS = new Set<string>(SUPPORTED_DOMAIN_VALUES)

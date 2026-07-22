@@ -8,6 +8,7 @@ export const CONTEXT_SYNTHESIS_VERSION = "context-synthesis-v1" as const;
 
 export type ContextSynthesisConfidence = "low" | "medium" | "high";
 export type ContextSynthesisLanguage = "en" | "de" | "fa";
+export type ContextSynthesisEvidenceDomain = WorkspaceSignalDomain | "github";
 
 export interface ContextSynthesisWorkspaceContext {
   activeTaskCount?: number;
@@ -39,7 +40,7 @@ export interface SynthesizedContext {
   supportingFacts: string[];
   derivedInsight?: string;
   safeSuggestion?: string;
-  evidenceDomains: WorkspaceSignalDomain[];
+  evidenceDomains: ContextSynthesisEvidenceDomain[];
   confidence: ContextSynthesisConfidence;
   synthesisVersion: typeof CONTEXT_SYNTHESIS_VERSION;
 }
@@ -50,6 +51,7 @@ const SUPPORTED_TOOL_IDS = new Set([
   "learning.get_progress",
   "workspace.get_context",
   "tasks.complete",
+  "github.repositories.list",
 ]);
 
 const INTERNAL_PATTERN =
@@ -80,7 +82,7 @@ function countFromSummary(summary: string, zeroPattern: RegExp) {
 function emptyResult(confidence: ContextSynthesisConfidence = "low"): SynthesizedContext {
   return Object.freeze({
     supportingFacts: Object.freeze([]) as string[],
-    evidenceDomains: Object.freeze([]) as WorkspaceSignalDomain[],
+    evidenceDomains: Object.freeze([]) as ContextSynthesisEvidenceDomain[],
     confidence,
     synthesisVersion: CONTEXT_SYNTHESIS_VERSION,
   });
@@ -191,6 +193,7 @@ function repeatedEvidenceDomain(reflection: AgentReflectionResult | undefined): 
     if (
       item.domain &&
       item.domain !== "workspace" &&
+      item.domain !== "github" &&
       (item.outcome === "successful" || item.outcome === "empty") &&
       item.usefulness !== "none"
     ) {
@@ -349,6 +352,17 @@ function synthesizeWorkspace(input: ContextSynthesisInput): SynthesizedContext {
   });
 }
 
+function synthesizeGitHub(input: ContextSynthesisInput): SynthesizedContext {
+  const primaryFact = cleanText(input.safeRuntimeSummary);
+  return Object.freeze({
+    primaryFact: primaryFact || undefined,
+    supportingFacts: Object.freeze([]) as string[],
+    evidenceDomains: Object.freeze(["github"]) as ContextSynthesisEvidenceDomain[],
+    confidence: primaryFact ? "medium" : "low",
+    synthesisVersion: CONTEXT_SYNTHESIS_VERSION,
+  });
+}
+
 export function synthesizeContext(input: ContextSynthesisInput): SynthesizedContext {
   if (!SUPPORTED_TOOL_IDS.has(input.toolId ?? "")) return emptyResult("low");
   if (input.executionStatus !== "success") return emptyResult("low");
@@ -362,6 +376,8 @@ export function synthesizeContext(input: ContextSynthesisInput): SynthesizedCont
       return synthesizeLearning(input);
     case "workspace.get_context":
       return synthesizeWorkspace(input);
+    case "github.repositories.list":
+      return synthesizeGitHub(input);
     default:
       return emptyResult("low");
   }

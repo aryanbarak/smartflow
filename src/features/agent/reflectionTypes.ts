@@ -8,6 +8,8 @@ import type {
   WorkspaceSignalDomain,
 } from "../workspace/workspaceTypes";
 
+export type AgentReflectionDomain = WorkspaceSignalDomain | "workspace" | "github";
+
 export const REFLECTION_ENGINE_VERSION = "reflection-engine-v1" as const;
 
 export type AgentReflectionOutcome =
@@ -40,7 +42,7 @@ export interface AgentReflectionInput {
 
 export interface AgentReflectionEvidence {
   toolId: string;
-  domain?: WorkspaceSignalDomain | "workspace";
+  domain?: AgentReflectionDomain;
   outcome: AgentReflectionOutcome;
   usefulness: AgentReflectionUsefulness;
   goalProgress: AgentReflectionGoalProgress;

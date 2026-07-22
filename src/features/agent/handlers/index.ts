@@ -1,6 +1,7 @@
 import type { AgentToolHandler } from "../executionTypes";
 import { calendarListTodayHandler } from "./calendarListTodayHandler";
 import { learningGetProgressHandler } from "./learningGetProgressHandler";
+import { githubRepositoriesListHandler } from "./githubRepositoriesListHandler";
 import { tasksListHandler } from "./tasksListHandler";
 import { workspaceGetContextHandler } from "./workspaceGetContextHandler";
 
@@ -9,6 +10,7 @@ const registeredHandlers: readonly AgentToolHandler[] = Object.freeze([
   calendarListTodayHandler,
   learningGetProgressHandler,
   workspaceGetContextHandler,
+  githubRepositoriesListHandler,
 ]);
 
 export function getHandlerByToolId(toolId: string): AgentToolHandler | undefined {
@@ -22,6 +24,7 @@ export function listRegisteredHandlers(): readonly AgentToolHandler[] {
 export {
   calendarListTodayHandler,
   learningGetProgressHandler,
+  githubRepositoriesListHandler,
   tasksListHandler,
   workspaceGetContextHandler,
 };

@@ -14,10 +14,12 @@ export type AgentToolDomain =
   | "documents"
   | "learning"
   | "conversations"
+  | "github"
   | "workspace"
   | "system";
 
 export type AgentToolCapability =
+  | "read"
   | "inspect"
   | "search"
   | "open"
