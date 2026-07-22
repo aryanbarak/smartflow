@@ -119,16 +119,24 @@ deterministic response composition.
 
 Current focus: production-readiness review of the proposal boundary after
 completing controlled browser integration and local real-worker reasoning
-validation. Production deployment itself has not been validated.
+validation, plus registration-gated validation of GitHub Read-only Integration
+V1 Slice 1. Production deployment itself has not been validated.
 
 ## Current Validation Status
 
 Latest confirmed automated validation:
 
-- Agent tests: 241 passed
+- Agent tests: 262 passed
+- GitHub Worker tests: 24 passed
+- GitHub migration/type-structure tests: 4 passed
+- GitHub frontend client/UI tests: 19 passed
+- GitHub focused suite: 47 passed
+- GitHub live local Supabase RLS/lifecycle tests: 5 passed
 - Workspace tests: 75 passed
 - ChatPage tests: 14 passed
+- Full default test suite: 474 passed; 5 gated live-RLS tests skipped by default
 - TypeScript: passed
+- Worker TypeScript: passed
 - Production build: passed
 
 Existing non-failing build warnings:
@@ -175,6 +183,17 @@ Current Agent Response UX Validation V1 status:
 Perform a production proposal-boundary readiness review without expanding tool
 execution or claiming production validation.
 
+GitHub Read-only Integration V1 Slice 1 is implemented locally. Clean migration
+replay, generated database contracts, two-user live RLS/lifecycle validation,
+bounded status handling, and deterministic Settings UI validation pass. A
+pre-registration hardening pass found and fixed three concrete blockers: a
+missing `service_role` grant on both new tables, a stale hand-patched
+`types.ts` predating dozens of migrations, and five TypeScript regressions
+from a `WorkspaceSignalDomain`/`WorkspacePlanDomain` type-union gap. All are
+fixed and re-verified. It remains blocked on manual GitHub App registration,
+authenticated real-provider QA, and live visual Settings/Integrations browser
+QA. It must not be marked complete before those gates.
+
 Selection criteria:
 
 - preserve explicit approval and execution boundaries,
@@ -203,6 +222,8 @@ Not implemented:
 
 ## In Progress / Blocked
 
+- GitHub Read-only Integration V1 Slice 1: implementation complete locally;
+  dedicated App registration and real authenticated GitHub QA not performed.
 - Continue.dev integration remains blocked by Ollama crashes on Windows/Intel Arc.
   Current workflow uses generated knowledge context with Claude.ai or ChatGPT.
 

@@ -1,6 +1,6 @@
 # SmartFlow - Project Status
 
-Last updated: 2026-07-20
+Last updated: 2026-07-22
 
 ---
 
@@ -18,7 +18,8 @@ or engine metadata to users.
 
 Current focus: production-readiness review of the proposal boundary after
 completing both controlled browser integration and local real-worker reasoning
-validation. Production deployment itself has not been validated.
+validation, plus registration-gated validation of the first GitHub App
+read-only integration. Production deployment itself has not been validated.
 
 ---
 
@@ -162,6 +163,7 @@ The LLM Reasoning Layer supports these intents:
 - `inspect_calendar`
 - `inspect_learning`
 - `inspect_workspace`
+- `inspect_github_repositories`
 - `complete_task`
 - `ask_clarification`
 - `unsupported`
@@ -172,6 +174,7 @@ Intent-to-tool mappings:
 - `inspect_calendar` -> `calendar.list_today`
 - `inspect_learning` -> `learning.get_progress`
 - `inspect_workspace` -> `workspace.get_context`
+- `inspect_github_repositories` -> `github.repositories.list`
 - `complete_task` -> `tasks.complete`
 
 Security boundary:
@@ -201,6 +204,7 @@ Supported read-only executable tools:
 - `calendar.list_today`
 - `learning.get_progress`
 - `workspace.get_context`
+- `github.repositories.list` (implemented and mocked locally; real GitHub App QA pending)
 
 Supported write executable tools:
 
@@ -247,7 +251,7 @@ TasksPage AI and Flow AI Chat have been browser-validated in English, German,
 and Persian.
 
 Response Composer V1 is a deterministic presentation layer that runs after
-verified runtime and reflection output. It supports the five current tools,
+verified runtime and reflection output. It supports the six current tools,
 creates a headline, summary, bounded details, and optional safe suggestion. It
 does not call another LLM, does not inspect raw handler payloads, does not alter
 runtime results, does not expose policy/audit/request IDs/raw JSON/internal
@@ -271,6 +275,7 @@ Supported synthesis domains:
 - calendar
 - learning
 - workspace
+- github
 
 `tasks.complete` receives only verified safe response facts and currently no
 broad cross-context synthesis.
@@ -331,10 +336,17 @@ Guarantees:
 
 Latest confirmed validation:
 
-- Agent tests: 241 passed
+- Agent tests: 262 passed
+- GitHub Worker tests: 24 passed
+- GitHub migration/type-structure tests: 4 passed
+- GitHub frontend client/UI tests: 19 passed
+- GitHub focused suite: 47 passed
+- GitHub live local Supabase RLS/lifecycle tests: 5 passed
 - Workspace tests: 75 passed
 - ChatPage tests: 14 passed
+- Full default test suite: 474 passed; 5 gated live-RLS tests skipped by default
 - TypeScript: passed
+- Worker TypeScript: passed
 - Production build: passed
 
 Existing non-failing build warnings:
@@ -387,15 +399,33 @@ Current Agent Response UX Validation V1 status:
 - Some interaction events are only captured where the UI genuinely exposes them.
 - Learn AI and chat-related storage still need pruning policies.
 - Error tracking is not centralized.
-- Supabase generated types should be regenerated after schema changes.
+- Supabase generated types now include the GitHub connection tables; future
+  schema changes must continue using the canonical generation workflow.
 - Some older UI strings still need i18n/RTL polish.
 - Production build still reports large Vite chunks.
+- GitHub Read-only Integration V1 Slice 1 has passed clean local migration
+  replay, canonical type refresh, two-user RLS/lifecycle tests, and a local
+  authenticated Worker lifecycle smoke. A pre-registration hardening pass found
+  and fixed three concrete blockers that the validations above depend on: the
+  migration did not grant `service_role` any privilege on either new table
+  (the Worker's own connection-lifecycle writes would have failed against a
+  real database), the committed `types.ts` was a stale, hand-patched snapshot
+  missing dozens of real tables predating this Slice, and five TypeScript
+  regressions surfaced once the correct types were restored (a
+  `WorkspaceSignalDomain`/`WorkspacePlanDomain` mismatch in two agent files, an
+  unnarrowed `GitHubConnectionStatus` access, and two test-mock typing gaps).
+  All are now fixed and independently re-verified. Manual GitHub App
+  registration, authenticated real-provider QA, and a live-Chrome ARUX-style
+  browser QA pass (as opposed to the authenticated component/unit-test
+  evidence gathered so far) remain required before completion.
 
 ---
 
 ## 10. Next Sprint
 
-Current next milestone: production proposal-boundary readiness review.
+Current next milestones: production proposal-boundary readiness review and the
+manual registration/real-provider QA gate for GitHub Read-only Integration V1
+Slice 1.
 
 Recommended selection criteria:
 

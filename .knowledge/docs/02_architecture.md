@@ -163,6 +163,7 @@ Supported intents:
 - `inspect_calendar`
 - `inspect_learning`
 - `inspect_workspace`
+- `inspect_github_repositories`
 - `complete_task`
 - `ask_clarification`
 - `unsupported`
@@ -173,6 +174,7 @@ Intent mappings:
 - `inspect_calendar` -> `calendar.list_today`
 - `inspect_learning` -> `learning.get_progress`
 - `inspect_workspace` -> `workspace.get_context`
+- `inspect_github_repositories` -> `github.repositories.list`
 - `complete_task` -> `tasks.complete`
 
 Security boundary:
@@ -206,6 +208,7 @@ Supported mappings:
 - calendar review/open/plan -> `calendar.list_today`
 - learning review/open/continue -> `learning.get_progress`
 - workspace review/reflect/inspect/open -> `workspace.get_context`
+- GitHub repository inspect -> `github.repositories.list`
 - exact task completion -> `tasks.complete`
 
 It does not execute tools, import handlers, call backend services, call
@@ -262,6 +265,7 @@ Supported read-only handlers:
 - `calendar.list_today`
 - `learning.get_progress`
 - `workspace.get_context`
+- `github.repositories.list` (local implementation and mocked validation only)
 
 Supported write handlers:
 
@@ -281,6 +285,38 @@ Supported write handlers:
 
 Handlers are framework-independent. They must not import React hooks, UI code,
 Supabase clients into UI surfaces, route components, or LLM logic.
+
+## GitHub Read-only Integration V1 - Slice 1
+
+The first remote provider slice is implemented behind a GitHub App boundary but
+is not complete until manual App registration and authenticated real-provider QA
+pass. It adds only `inspect_github_repositories` mapped to
+`github.repositories.list`.
+
+The Worker separates the GitHub Setup URL from the User Authorization Callback.
+The Setup URL installation ID is treated as an untrusted claim. A transient
+GitHub user token verifies that the authorizing user can access the claimed
+installation and that the installation belongs to the configured SmartFlow App.
+Only then are the SmartFlow user ID, installation ID, GitHub account ID, bounded
+login, status, and timestamps persisted.
+
+GitHub user tokens and installation tokens are transient and server-only. The
+Worker private key and client secret are never exposed to browser JavaScript or
+stored in Supabase. Repository listing mints an installation token per request,
+uses one fixed first-page endpoint, and returns at most 20 sanitized metadata
+records. There is no generic GitHub proxy, source reading, write capability,
+automatic retry, Local Bridge, or autonomous execution.
+
+Canonical architecture detail:
+`docs/architecture/github-read-only-integration-v1.md`.
+
+Pre-registration hardening adds a bounded authenticated
+`GET /github/connection` contract and a Settings/Integrations connection
+surface. Connection status reads use the user's Supabase bearer token and RLS;
+service-role access remains limited to server-side connection-attempt and
+trusted mapping mutations. Clean local migration replay and two-user live RLS
+validation pass. Real GitHub App registration, provider QA, and live visual
+browser QA remain pending.
 
 ## Tool Registry
 

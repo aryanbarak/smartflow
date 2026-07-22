@@ -33,10 +33,13 @@ Typical documents include:
 # Current Documents
 
 - 01-architecture-baseline.md
+- github-read-only-integration-v1.md
 - Root status: ../../PROJECT_STATUS.md
 - Current generated knowledge source: ../../.knowledge/docs/02_architecture.md
 
 `01-architecture-baseline.md` captures the early stabilization baseline.
+`github-read-only-integration-v1.md` defines the bounded GitHub App connection,
+verification, token, repository-listing, and agent boundaries for Slice 1.
 `PROJECT_STATUS.md` and `.knowledge/docs/02_architecture.md` describe the
 current implemented workspace and agent architecture.
 

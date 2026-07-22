@@ -41,6 +41,10 @@ Typical documents:
 - Database Architecture
 - API Architecture
 
+Current integration architecture:
+
+- [GitHub Read-only Integration V1 - Slice 1](architecture/github-read-only-integration-v1.md)
+
 ---
 
 ## design/
