@@ -5,6 +5,7 @@ const GITHUB_API_ORIGIN = 'https://api.github.com'
 const CONNECT_ATTEMPT_TTL_MS = 10 * 60 * 1000
 const GITHUB_TIMEOUT_MS = 8_000
 const MAX_REPOSITORIES = 20
+const MAX_INSTALLATION_LIST_PAGES = 10
 const API_VERSION = '2022-11-28'
 
 type Fetcher = typeof fetch
@@ -435,13 +436,23 @@ async function githubFetch(
   }
 }
 
-function providerError(response: Response, context: 'verification' | 'token' | 'repositories') {
+function providerError(
+  response: Response,
+  context: 'verification' | 'user-token-exchange' | 'installation-token-mint' | 'repositories',
+) {
   if (response.status === 429) {
     return new GitHubIntegrationError('GITHUB_RATE_LIMITED', 503, 'GitHub rate limit was reached.')
   }
   if (response.status === 404) {
-    const code = context === 'verification' ? 'INSTALLATION_NOT_ACCESSIBLE' : 'GITHUB_APP_NOT_INSTALLED'
-    return new GitHubIntegrationError(code, 409, 'The GitHub App installation is not available.')
+    const code = context === 'verification'
+      ? 'INSTALLATION_NOT_ACCESSIBLE'
+      : context === 'user-token-exchange'
+        ? 'GITHUB_TOKEN_EXCHANGE_FAILED'
+        : 'GITHUB_APP_NOT_INSTALLED'
+    const message = context === 'user-token-exchange'
+      ? 'GitHub could not exchange the authorization code for a user token.'
+      : 'The GitHub App installation is not available.'
+    return new GitHubIntegrationError(code, 409, message)
   }
   if (response.status === 401 || response.status === 403) {
     const code = context === 'verification' ? 'INSTALLATION_NOT_ACCESSIBLE' : 'GITHUB_AUTHORIZATION_INVALID'
@@ -476,7 +487,7 @@ async function exchangeUserCode(
       redirect_uri: config.callbackUrl,
     }).toString(),
   })
-  if (!response.ok) throw providerError(response, 'token')
+  if (!response.ok) throw providerError(response, 'user-token-exchange')
   const body = await providerJson<{ access_token?: unknown; token_type?: unknown }>(response)
   const token = boundedString(body.access_token, 512)
   if (!token || boundedString(body.token_type, 32).toLowerCase() !== 'bearer') {
@@ -485,39 +496,53 @@ async function exchangeUserCode(
   return token
 }
 
+// GET /user/installations/{id} is not a real GitHub endpoint — the only
+// documented user-scoped installation route is the paginated list,
+// GET /user/installations. Verification therefore means "does installationId
+// appear in the list GitHub returns for this user's own OAuth token", which
+// preserves the same guarantee a single-resource lookup was meant to give:
+// the installation must be visible to the authenticated user, not merely
+// claimed by an unauthenticated party.
 async function verifyInstallation(
   installationId: number,
   userToken: string,
   config: GitHubConfig,
   deps: GitHubIntegrationDependencies,
 ) {
-  const response = await githubFetch(
-    deps,
-    `${GITHUB_API_ORIGIN}/user/installations/${installationId}`,
-    {
-      headers: {
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${userToken}`,
-        'X-GitHub-Api-Version': API_VERSION,
-        'User-Agent': 'SmartFlow-GitHub-App',
+  for (let page = 1; page <= MAX_INSTALLATION_LIST_PAGES; page++) {
+    const response = await githubFetch(
+      deps,
+      `${GITHUB_API_ORIGIN}/user/installations?per_page=100&page=${page}`,
+      {
+        headers: {
+          Accept: 'application/vnd.github+json',
+          Authorization: `Bearer ${userToken}`,
+          'X-GitHub-Api-Version': API_VERSION,
+          'User-Agent': 'SmartFlow-GitHub-App',
+        },
       },
-    },
-  )
-  if (!response.ok) throw providerError(response, 'verification')
-  const body = await providerJson<GitHubInstallationResponse>(response)
-  const verifiedInstallationId = positiveInteger(body.id)
-  const appId = positiveInteger(body.app_id)
-  const accountId = positiveInteger(body.account?.id)
-  const accountLogin = boundedString(body.account?.login, 100)
-  if (
-    verifiedInstallationId !== installationId ||
-    appId !== Number(config.appId) ||
-    !accountId ||
-    !accountLogin
-  ) {
-    throw new GitHubIntegrationError('INSTALLATION_VERIFICATION_FAILED', 409, 'The GitHub installation could not be verified.')
+    )
+    if (!response.ok) throw providerError(response, 'verification')
+    const body = await providerJson<{ installations?: unknown }>(response)
+    if (!Array.isArray(body.installations)) {
+      throw new GitHubIntegrationError('GITHUB_RESPONSE_INVALID', 502, 'GitHub returned an invalid installation list response.')
+    }
+    const match = body.installations.find((item) => {
+      if (!item || typeof item !== 'object') return false
+      return positiveInteger((item as GitHubInstallationResponse).id) === installationId
+    }) as GitHubInstallationResponse | undefined
+    if (match) {
+      const appId = positiveInteger(match.app_id)
+      const accountId = positiveInteger(match.account?.id)
+      const accountLogin = boundedString(match.account?.login, 100)
+      if (appId !== Number(config.appId) || !accountId || !accountLogin) {
+        throw new GitHubIntegrationError('INSTALLATION_VERIFICATION_FAILED', 409, 'The GitHub installation could not be verified.')
+      }
+      return { installationId, accountId, accountLogin }
+    }
+    if (body.installations.length < 100) break
   }
-  return { installationId, accountId, accountLogin }
+  throw new GitHubIntegrationError('INSTALLATION_NOT_ACCESSIBLE', 409, 'The GitHub App installation is not available.')
 }
 
 async function persistConnection(
@@ -709,7 +734,7 @@ async function installationToken(
       },
     },
   )
-  if (!response.ok) throw providerError(response, 'token')
+  if (!response.ok) throw providerError(response, 'installation-token-mint')
   const body = await providerJson<{ token?: unknown }>(response)
   const token = boundedString(body.token, 512)
   if (!token) {

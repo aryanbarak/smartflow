@@ -29,9 +29,11 @@ function env(overrides: Partial<Env> = {}): Env {
 
 interface FakeOptions {
   currentUser?: string
+  tokenExchangeStatus?: number
   verificationStatus?: number
   verifiedAppId?: number
   verifiedInstallationId?: number
+  installationsPages?: unknown[][]
   installationTokenStatus?: number
   repositoriesStatus?: number
   repositories?: unknown
@@ -124,19 +126,31 @@ function fakeProvider(options: FakeOptions = {}) {
         throw new DOMException('Aborted', 'AbortError')
       }
       if (url === 'https://github.com/login/oauth/access_token') {
+        const status = options.tokenExchangeStatus ?? 200
+        if (status !== 200) {
+          return response({ message: 'provider detail must not escape' }, status)
+        }
         return options.malformedToken
           ? response({ token_type: 'bearer' })
           : response({ access_token: 'ghu_transient-user-token', token_type: 'bearer' })
       }
-      if (parsed.pathname.startsWith('/user/installations/')) {
+      if (parsed.pathname === '/user/installations') {
         const status = options.verificationStatus ?? 200
-        return status === 200
-          ? response({
+        if (status !== 200) {
+          return response({ message: 'provider detail must not escape' }, status)
+        }
+        const page = Number(parsed.searchParams.get('page') ?? '1')
+        if (options.installationsPages) {
+          return response({ installations: options.installationsPages[page - 1] ?? [] })
+        }
+        const installations = page === 1
+          ? [{
               id: options.verifiedInstallationId ?? 777,
               app_id: options.verifiedAppId ?? 12345,
               account: { id: 9001, login: 'verified-user' },
-            })
-          : response({ message: 'provider detail must not escape' }, status)
+            }]
+          : []
+        return response({ installations })
       }
       if (parsed.pathname.endsWith('/access_tokens')) {
         const status = options.installationTokenStatus ?? 201
@@ -283,6 +297,55 @@ describe('GitHub App connection boundary', () => {
     expect(fake.connection).toBeUndefined()
   })
 
+  it('persists the connection when installationId is present in the authenticated user installation list', async () => {
+    const fake = fakeProvider()
+    const { callback } = await connect(fake, 777)
+    expect(callback.status).toBe(200)
+    expect(fake.connection).toMatchObject({
+      installation_id: 777,
+      github_account_id: 9001,
+      github_account_login: 'verified-user',
+      status: 'connected',
+    })
+  })
+
+  it('rejects with INSTALLATION_NOT_ACCESSIBLE and persists nothing when installationId is absent from the list', async () => {
+    const fake = fakeProvider({ verifiedInstallationId: 909090 })
+    const { callback } = await connect(fake, 777)
+    expect(callback.status).toBe(409)
+    expect(await callback.json()).toMatchObject({ error: { code: 'INSTALLATION_NOT_ACCESSIBLE' } })
+    expect(fake.connection).toBeUndefined()
+  })
+
+  it('rejects an installation that belongs to another user and never appears in this user list', async () => {
+    const fake = fakeProvider({
+      installationsPages: [[
+        { id: 55555, app_id: 12345, account: { id: 1, login: 'someone-elses-account' } },
+      ]],
+    })
+    const { callback } = await connect(fake, 777)
+    expect(callback.status).toBe(409)
+    expect(await callback.json()).toMatchObject({ error: { code: 'INSTALLATION_NOT_ACCESSIBLE' } })
+    expect(fake.connection).toBeUndefined()
+  })
+
+  it('paginates through /user/installations when the match is beyond the first page', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({ id: index + 1, app_id: 12345, account: { id: 1, login: 'other' } }))
+    const fake = fakeProvider({
+      installationsPages: [
+        firstPage,
+        [{ id: 777, app_id: 12345, account: { id: 9001, login: 'verified-user' } }],
+      ],
+    })
+    const { callback } = await connect(fake, 777)
+    expect(callback.status).toBe(200)
+    expect(fake.connection).toMatchObject({ installation_id: 777, github_account_login: 'verified-user' })
+    const installationCalls = fake.calls.filter((call) => call.url.startsWith('https://api.github.com/user/installations'))
+    expect(installationCalls).toHaveLength(2)
+    expect(installationCalls[0].url).toContain('page=1')
+    expect(installationCalls[1].url).toContain('page=2')
+  })
+
   it('persists only verified non-secret metadata after user/installation association succeeds', async () => {
     const fake = fakeProvider()
     const { callback } = await connect(fake)
@@ -355,7 +418,7 @@ describe('GitHub App connection boundary', () => {
   it('calls installation verification on both the oauth-state and setup-state fallback paths', async () => {
     const oauthPathFake = fakeProvider()
     await connect(oauthPathFake)
-    expect(oauthPathFake.calls.some((call) => call.url.includes('/user/installations/'))).toBe(true)
+    expect(oauthPathFake.calls.some((call) => call.url.includes('/user/installations'))).toBe(true)
 
     const setupPathFake = fakeProvider()
     const started = await start(setupPathFake)
@@ -365,7 +428,7 @@ describe('GitHub App connection boundary', () => {
       env(),
       setupPathFake.dependencies,
     )
-    expect(setupPathFake.calls.some((call) => call.url.includes('/user/installations/'))).toBe(true)
+    expect(setupPathFake.calls.some((call) => call.url.includes('/user/installations'))).toBe(true)
   })
 
   it('never allows a state consumed via the fallback path to be replayed on either column', async () => {
@@ -407,6 +470,32 @@ describe('GitHub App connection boundary', () => {
       fake.dependencies,
     )
     expect(retry?.status).toBe(200)
+  })
+
+  it('exchanges the authorization code against the exact documented GitHub OAuth endpoint', async () => {
+    const fake = fakeProvider()
+    await connect(fake)
+
+    const exchangeCall = fake.calls.find((call) => call.url.includes('/login/oauth/access_token'))
+    expect(exchangeCall?.url).toBe('https://github.com/login/oauth/access_token')
+    expect(exchangeCall?.method).toBe('POST')
+  })
+
+  it('reports a failed token exchange distinctly from a missing installation, without touching verification', async () => {
+    const fake = fakeProvider({ tokenExchangeStatus: 404 })
+    const started = await start(fake)
+    const setupState = new URL(started.installationUrl).searchParams.get('state')!
+
+    const callback = await handleGitHubIntegrationRequest(
+      new Request(`http://127.0.0.1:8787/github/connect/callback?code=oauth-code&state=${setupState}&installation_id=777&setup_action=install`),
+      env(),
+      fake.dependencies,
+    )
+
+    expect(callback?.status).toBe(409)
+    expect(await callback?.json()).toMatchObject({ error: { code: 'GITHUB_TOKEN_EXCHANGE_FAILED' } })
+    expect(fake.calls.some((call) => call.url.includes('/user/installations'))).toBe(false)
+    expect(fake.connection).toBeUndefined()
   })
 
   it('fails closed when required Worker configuration is missing', async () => {
