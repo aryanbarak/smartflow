@@ -174,6 +174,11 @@ describe("ChatPage LLM reasoning UX boundary", () => {
     expect(shouldUseReasoningForMessage("درباره سیستم‌های بهره‌وری توضیح بده.")).toBe(false);
   });
 
+  it("does not route messages with no domain signal at all into intent mode", () => {
+    expect(shouldUseReasoningForMessage("Hello, how are you today?")).toBe(false);
+    expect(shouldUseReasoningForMessage("Thanks, that was helpful!")).toBe(false);
+  });
+
   it("routes natural supported action phrasing into intent mode", () => {
     expect(shouldUseReasoningForMessage("What tasks do I have today?")).toBe(true);
     expect(shouldUseReasoningForMessage("Welche Aufgaben habe ich heute?")).toBe(true);
@@ -184,6 +189,10 @@ describe("ChatPage LLM reasoning UX boundary", () => {
     expect(shouldUseReasoningForMessage("Show my connected GitHub repositories.")).toBe(true);
     expect(shouldUseReasoningForMessage("Zeige meine verbundenen GitHub-Repositories.")).toBe(true);
     expect(shouldUseReasoningForMessage("مخزن‌های متصل گیت‌هاب را نشان بده.")).toBe(true);
+    expect(shouldUseReasoningForMessage("Show me my repositories")).toBe(true);
+    expect(shouldUseReasoningForMessage("list my repos")).toBe(true);
+    expect(shouldUseReasoningForMessage("Zeige meine Repositories")).toBe(true);
+    expect(shouldUseReasoningForMessage("مخزن‌های من را نشان بده")).toBe(true);
   });
 
   it("renders a safe read-only action card without executing or exposing internals", () => {

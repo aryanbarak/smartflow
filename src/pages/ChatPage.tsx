@@ -189,9 +189,9 @@ export function shouldUseReasoningForMessage(message: string) {
   if (realPersianReasoningIntent) return true
 
   return (
-    /\b(task|tasks|todo|todos|unfinished|open tasks|focus on|complete|done|calendar|appointments|meetings|learning|lesson|workspace|current plan|github[-\s]+repositories|github[-\s]+repos)\b/i.test(text) ||
+    /\b(task|tasks|todo|todos|unfinished|open tasks|focus on|complete|done|calendar|appointments|meetings|learning|lesson|workspace|current plan|repositories|repos|github[-\s]+repositories|github[-\s]+repos)\b/i.test(text) ||
     /\b(kalender|termin|termine|besprechung|besprechungen|aufgabe|aufgaben|offenen aufgaben|nicht erledigt|lernen|lernfortschritt|fokus|aktueller plan|erledige|markiere|github-repositories)\b/i.test(text) ||
-    /(یادگیری|درس|تقویم|قرار|جلسه|وظیفه|وظیفه‌ها|کارها|کار|تمرکز|برنامه فعلی|کامل کن|انجام‌شده|تمام نشده|((گیت[‌\s-]?هاب|github).*(مخزن|مخزن[‌\s-]?ها)|(مخزن|مخزن[‌\s-]?ها).*(گیت[‌\s-]?هاب|github)))/i.test(text)
+    /(یادگیری|درس|تقویم|قرار|جلسه|وظیفه|وظیفه‌ها|کارها|کار|تمرکز|برنامه فعلی|کامل کن|انجام‌شده|تمام نشده|مخزن|((گیت[‌\s-]?هاب|github).*(مخزن|مخزن[‌\s-]?ها)|(مخزن|مخزن[‌\s-]?ها).*(گیت[‌\s-]?هاب|github)))/i.test(text)
   )
 }
 
