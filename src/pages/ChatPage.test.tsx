@@ -16,6 +16,7 @@ import {
   ChatBubble,
   liveTaskReasoningContext,
   proposalMessage,
+  proposalToState,
   ReasoningProposalCard,
   resultMessage,
   runtimeSummaryMessage,
@@ -35,8 +36,8 @@ const now = "2026-07-15T08:00:00.000Z";
 
 function reasoningResult(
   type: AgentReasoningResult["proposal"]["type"] = "inspect_tasks",
+  toolId: AgentReasoningResult["toolId"] = type === "complete_task" ? "tasks.complete" : "tasks.list",
 ): AgentReasoningResult {
-  const toolId = type === "complete_task" ? "tasks.complete" : "tasks.list";
   return {
     proposal: {
       id: "intent-1",
@@ -212,6 +213,31 @@ describe("ChatPage LLM reasoning UX boundary", () => {
     expect(shouldUseReasoningForMessage("list my repos")).toBe(true);
     expect(shouldUseReasoningForMessage("Zeige meine Repositories")).toBe(true);
     expect(shouldUseReasoningForMessage("مخزن‌های من را نشان بده")).toBe(true);
+  });
+
+  it("resolves every existing read intent to the same toolId intentValidator already assigned it", () => {
+    // proposalToState now passes expectedToolId: result.toolId into
+    // resolveToolForStep, short-circuiting its domain+actionType lookup.
+    // For every intent already in production, the resolved toolId must be
+    // identical to what intentToolMap in intentValidator.ts assigned — if
+    // any of these differ, that's a pre-existing disagreement between
+    // intentToolMap and explicitReadOnlyMappings, not a new regression.
+    const t = (key: string) => key;
+    const cases: Array<[AgentReasoningResult["proposal"]["type"], string]> = [
+      ["inspect_tasks", "tasks.list"],
+      ["inspect_calendar", "calendar.list_today"],
+      ["inspect_learning", "learning.get_progress"],
+      ["inspect_workspace", "workspace.get_context"],
+      ["inspect_github_repositories", "github.repositories.list"],
+    ];
+
+    for (const [type, toolId] of cases) {
+      const result = reasoningResult(type, toolId as AgentReasoningResult["toolId"]);
+      const state = proposalToState(result, t);
+
+      expect(state.resolution?.status).toBe("resolved");
+      expect(state.resolution?.toolId).toBe(toolId);
+    }
   });
 
   it("renders a safe read-only action card without executing or exposing internals", () => {

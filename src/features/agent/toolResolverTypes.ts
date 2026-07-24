@@ -22,6 +22,15 @@ export interface ToolResolutionInput {
   availableTools?: AgentToolDefinition[];
   context?: Record<string, unknown>;
   currentTime?: Date;
+  /**
+   * When the caller already knows the exact tool (e.g. the deterministic
+   * intent validator's intentToolMap), pass it here to skip the
+   * domain+actionType lookup table. All other checks — registry existence,
+   * enabled, the read-only allowlist, domain/capability sanity matching —
+   * still run unchanged. Plan-driven callers that don't know a tool in
+   * advance should omit this and keep using domain+actionType.
+   */
+  expectedToolId?: string;
 }
 
 export interface ToolResolutionCandidate {

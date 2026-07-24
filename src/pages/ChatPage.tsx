@@ -368,12 +368,12 @@ function approvalForReasoningStep(step: WorkspacePlanStep, resolution: ToolResol
   }
 }
 
-function proposalToState(result: AgentReasoningResult, t: Translate): ReasoningProposalState {
+export function proposalToState(result: AgentReasoningResult, t: Translate): ReasoningProposalState {
   const step = stepForReasoning(result, t)
   const resolution = step
     ? result.proposal.type === 'complete_task'
       ? writeResolutionForStep(step)
-      : resolveToolForStep({ step })
+      : resolveToolForStep({ step, expectedToolId: result.toolId })
     : null
   const approval = step && resolution?.resolved && result.proposal.type === 'complete_task'
     ? approvalForReasoningStep(step, resolution, t)

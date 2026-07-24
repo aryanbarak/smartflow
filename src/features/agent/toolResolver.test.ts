@@ -195,4 +195,90 @@ describe("toolResolver", () => {
     expect(second).toEqual(first);
     expect(JSON.stringify({ sourceStep, sourceTools })).toBe(before);
   });
+
+  describe("expectedToolId pass-through", () => {
+    it("is a no-op for plan-driven callers that omit it: identical result to the domain+actionType lookup", () => {
+      const viaLookup = resolveToolForStep({
+        step: step("tasks", "review"),
+        currentTime: now,
+      });
+      const viaExplicitPassThrough = resolveToolForStep({
+        step: step("tasks", "review"),
+        expectedToolId: "tasks.list",
+        currentTime: now,
+      });
+
+      expect(viaExplicitPassThrough).toEqual(viaLookup);
+    });
+
+    it("bypasses the domain+actionType table when the caller already knows the tool", () => {
+      // "tasks" + "plan" has no entry in explicitReadOnlyMappings (only
+      // review/open/inspect are mapped for tasks) — confirm that baseline
+      // fails first, so the pass-through success below actually proves the
+      // lookup table was skipped, not just agreed with it.
+      const withoutPassThrough = resolveToolForStep({
+        step: step("tasks", "plan"),
+        currentTime: now,
+      });
+      expect(withoutPassThrough.status).toBe("unsupported_action");
+
+      const withPassThrough = resolveToolForStep({
+        step: step("tasks", "plan"),
+        expectedToolId: "tasks.list",
+        currentTime: now,
+      });
+
+      expect(withPassThrough.status).toBe("resolved");
+      expect(withPassThrough.toolId).toBe("tasks.list");
+    });
+
+    it("still enforces the read-only allowlist: a real but non-read-only tool id is rejected", () => {
+      // tasks.complete is a real, enabled, registered tool — it is rejected
+      // solely because it is absent from executableReadOnlyToolIds. That
+      // Set is now the only gate between "the intent named a tool" and "the
+      // tool runs" for the pass-through path, so this must fail loudly
+      // (status, not just resolved/false) if that gate is ever loosened.
+      const result = resolveToolForStep({
+        step: step("tasks", "review"),
+        expectedToolId: "tasks.complete",
+        currentTime: now,
+      });
+
+      expect(result.status).toBe("unresolved");
+      expect(result.resolved).toBe(false);
+      expect(result.toolId).toBeUndefined();
+    });
+
+    it("still fails closed on a completely unknown tool id", () => {
+      const result = resolveToolForStep({
+        step: step("tasks", "review"),
+        expectedToolId: "tasks.delete_everything",
+        currentTime: now,
+      });
+
+      expect(result.status).toBe("tool_not_found");
+      expect(result.resolved).toBe(false);
+    });
+
+    it("still requires step context even when expectedToolId is present", () => {
+      const result = resolveToolForStep({
+        step: null,
+        expectedToolId: "tasks.list",
+        currentTime: now,
+      });
+
+      expect(result.status).toBe("missing_context");
+    });
+
+    it("still fails closed on domain mismatch even when the tool id is pre-known", () => {
+      const result = resolveToolForStep({
+        step: step("calendar", "review"),
+        expectedToolId: "tasks.list",
+        currentTime: now,
+      });
+
+      expect(result.status).toBe("domain_mismatch");
+      expect(result.resolved).toBe(false);
+    });
+  });
 });

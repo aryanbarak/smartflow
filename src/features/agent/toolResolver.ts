@@ -206,7 +206,7 @@ export function resolveToolForStep(input: ToolResolutionInput): ToolResolutionRe
     ]);
   }
 
-  const expectedToolId = expectedToolIdFor(step.domain, step.actionType);
+  const expectedToolId = input.expectedToolId ?? expectedToolIdFor(step.domain, step.actionType);
   if (!expectedToolId) {
     return emptyResult(input, "unsupported_action", [
       "No explicit read-only resolver mapping exists for this step domain and action.",
