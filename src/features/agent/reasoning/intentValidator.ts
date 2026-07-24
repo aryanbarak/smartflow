@@ -235,19 +235,32 @@ const GITHUB_ISSUES_EVIDENCE_PATTERNS = [
   /((گیت[‌\s-]?هاب|github).*(ایشو|ایشوها|مسئله|مسائل)|(ایشو|ایشوها|مسئله|مسائل).*(گیت[‌\s-]?هاب|github))/i,
 ];
 
-// Disambiguates WHICH github intent to rescue into. Domain-level evidence
-// (getStrongReadDomainEvidence) only proves "this message is about github" —
-// with two github intents now sharing that domain, picking a specific one to
-// rescue into needs its own check. A message matching both is genuinely
-// ambiguous between the two tools, not a signal to guess; it returns
-// "conflicting" so the caller declines to rescue rather than picking one.
-function getGitHubIntentEvidence(message: string): "repositories" | "issues" | "conflicting" | null {
-  const repositories = messageHasAny(message, GITHUB_REPOSITORIES_EVIDENCE_PATTERNS);
-  const issues = messageHasAny(message, GITHUB_ISSUES_EVIDENCE_PATTERNS);
-  if (repositories && issues) return "conflicting";
-  if (repositories) return "repositories";
-  if (issues) return "issues";
-  return null;
+// One or more tools can share a domain (e.g. github: repositories, issues).
+// Domain-level evidence (getStrongReadDomainEvidence) only proves "this
+// message is about <domain>" — picking which of that domain's tools to
+// rescue into needs a finer check. This table drives that check for every
+// domain uniformly: add a tool's evidence patterns here and it's covered,
+// no new disambiguation function needed. A message matching more than one
+// tool in the same domain is genuinely ambiguous, not a signal to guess.
+type ReadToolIntentType = Exclude<AgentIntentType, "complete_task" | "ask_clarification" | "unsupported">;
+
+const TOOL_EVIDENCE_PATTERNS: Partial<Record<ReadToolIntentType, RegExp[]>> = {
+  inspect_github_repositories: GITHUB_REPOSITORIES_EVIDENCE_PATTERNS,
+  inspect_github_issues: GITHUB_ISSUES_EVIDENCE_PATTERNS,
+};
+
+function getToolEvidenceForDomain(
+  domain: AgentIntentDomain,
+  message: string,
+): ReadToolIntentType | "conflicting" | null {
+  const candidates = (Object.keys(TOOL_EVIDENCE_PATTERNS) as ReadToolIntentType[]).filter(
+    (intentType) => domainByIntent[intentType] === domain,
+  );
+  const matched = candidates.filter((intentType) =>
+    messageHasAny(message, TOOL_EVIDENCE_PATTERNS[intentType] ?? []),
+  );
+  if (matched.length > 1) return "conflicting";
+  return matched.length === 1 ? matched[0] : null;
 }
 
 function getStrongReadDomainEvidence(message: string): AgentIntentDomain | "conflicting" | null {
@@ -271,9 +284,7 @@ function getStrongReadDomainEvidence(message: string): AgentIntentDomain | "conf
     /\b(workspace|aktueller plan|arbeitsbereich)\b/i,
     /(\u0628\u0631\u0646\u0627\u0645\u0647 \u0641\u0639\u0644\u06cc|workspace)/i,
   ]);
-  const githubEvidence =
-    messageHasAny(message, GITHUB_REPOSITORIES_EVIDENCE_PATTERNS) ||
-    messageHasAny(message, GITHUB_ISSUES_EVIDENCE_PATTERNS);
+  const githubEvidence = getToolEvidenceForDomain("github", message) !== null;
 
   const matches = [
     taskEvidence ? "tasks" : null,
@@ -311,13 +322,12 @@ function normalizeReadIntentFromEvidence(
     if (domainEvidence === "learning") return "inspect_learning";
     if (domainEvidence === "workspace") return "inspect_workspace";
     if (domainEvidence === "github") {
-      // Domain-level evidence only proves "this is about github" — repos vs
-      // issues needs its own, narrower check. A message matching both is
-      // left unrescued rather than guessed.
-      const githubIntent = getGitHubIntentEvidence(message);
-      if (githubIntent === "repositories") return "inspect_github_repositories";
-      if (githubIntent === "issues") return "inspect_github_issues";
-      return type;
+      // Domain-level evidence only proves "this is about github" — which
+      // specific tool needs the finer, table-driven check above. A message
+      // matching more than one of the domain's tools is left unrescued
+      // rather than guessed.
+      const toolIntent = getToolEvidenceForDomain("github", message);
+      return toolIntent && toolIntent !== "conflicting" ? toolIntent : type;
     }
   }
   return type;
