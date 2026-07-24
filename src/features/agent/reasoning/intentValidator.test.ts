@@ -103,6 +103,44 @@ describe("intentValidator", () => {
     expect(result.proposal.requestedDomain).toBe("github");
   });
 
+  it("treats a numeric confidence as usable, not low, so evidence rescue still lands", () => {
+    const result = validate(
+      proposal({ type: "intent", confidence: 0.9 }),
+      "Show my connected GitHub repositories",
+    );
+
+    expect(result.proposal.type).toBe("inspect_github_repositories");
+  });
+
+  it("still asks clarification for an explicit low confidence", () => {
+    expect(validate(proposal({ confidence: "low" })).proposal.type).toBe("ask_clarification");
+  });
+
+  it("still asks clarification when confidence is missing or garbage and there is no domain evidence to resolve the type", () => {
+    const missing = validate(proposal({ type: "ask_clarification", confidence: undefined }), "Hello there");
+    const garbage = validate(proposal({ type: "ask_clarification", confidence: 0.9 }), "Hello there");
+
+    expect(missing.proposal.type).toBe("ask_clarification");
+    expect(garbage.proposal.type).toBe("ask_clarification");
+  });
+
+  it("resolves the full live production payload: unrecognized type, string target, invented domain, numeric confidence", () => {
+    const result = validate(
+      proposal({
+        type: "intent",
+        target: "github.repositories.list",
+        requestedDomain: "github_repositories",
+        toolId: "github.repositories.list",
+        confidence: 0.9,
+      }),
+      "Show my connected GitHub repositories",
+    );
+
+    expect(result.proposal.type).toBe("inspect_github_repositories");
+    expect(result.toolId).toBe("github.repositories.list");
+    expect(result.proposal.requestedDomain).toBe("github");
+  });
+
   it("handles malformed or non-object output safely", () => {
     const result = validate(null);
 

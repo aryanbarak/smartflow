@@ -345,14 +345,24 @@ export function validateAgentIntentProposal(input: {
     });
   }
 
-  const confidence = safeString(input.rawProposal.confidence) as AgentIntentConfidence;
-  if (!supportedConfidence.includes(confidence) || confidence === "low") {
+  // A numeric or otherwise unrecognized confidence value (e.g. Gemini sending 0.9 instead of
+  // "high") is not evidence of low confidence — it's an unusable value, same class of problem
+  // as an unrecognized type. Treat it like a safe default so it doesn't discard an already-
+  // correct evidence-rescued type. Only an explicit "low" from the model still requires
+  // clarification.
+  const proposedConfidence = safeString(input.rawProposal.confidence) as AgentIntentConfidence;
+  const confidence: AgentIntentConfidence = proposedConfidence === "low"
+    ? "low"
+    : supportedConfidence.includes(proposedConfidence)
+      ? proposedConfidence
+      : "medium";
+  if (confidence === "low") {
     return createSafeProposal("ask_clarification", {
       userMessage: input.userMessage,
       language: input.language,
       now,
       question: textFor(input.language, "low"),
-      reason: "Low or invalid confidence requires clarification.",
+      reason: "Low confidence requires clarification.",
     });
   }
 
