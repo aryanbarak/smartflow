@@ -1,6 +1,6 @@
 # SmartFlow - Project Status
 
-Last updated: 2026-07-22
+Last updated: 2026-07-24
 
 ---
 
@@ -18,8 +18,10 @@ or engine metadata to users.
 
 Current focus: production-readiness review of the proposal boundary after
 completing both controlled browser integration and local real-worker reasoning
-validation, plus registration-gated validation of the first GitHub App
-read-only integration. Production deployment itself has not been validated.
+validation. GitHub Read-only Integration V1 Slice 1 is complete and live in
+production: a natural-language GitHub repository request now resolves to the
+`inspect_github_repositories` intent, routes through explicit user Run, and
+returns a real repository list from the connected GitHub App installation.
 
 ---
 
@@ -87,6 +89,7 @@ Completed workspace and agent architecture milestones:
 - Multilingual reasoning-domain correction
 - Response Composer V1
 - Context Synthesis V1
+- GitHub Read-only Integration V1 Slice 1 (live in production)
 
 Completed validation milestone:
 
@@ -204,7 +207,7 @@ Supported read-only executable tools:
 - `calendar.list_today`
 - `learning.get_progress`
 - `workspace.get_context`
-- `github.repositories.list` (implemented and mocked locally; real GitHub App QA pending)
+- `github.repositories.list`
 
 Supported write executable tools:
 
@@ -414,18 +417,45 @@ Current Agent Response UX Validation V1 status:
   regressions surfaced once the correct types were restored (a
   `WorkspaceSignalDomain`/`WorkspacePlanDomain` mismatch in two agent files, an
   unnarrowed `GitHubConnectionStatus` access, and two test-mock typing gaps).
-  All are now fixed and independently re-verified. Manual GitHub App
-  registration, authenticated real-provider QA, and a live-Chrome ARUX-style
-  browser QA pass (as opposed to the authenticated component/unit-test
-  evidence gathered so far) remain required before completion.
+  All are now fixed and independently re-verified. GitHub App registration,
+  authenticated real-provider QA, and live production validation are complete:
+  a natural-language GitHub repository request now resolves to the
+  `inspect_github_repositories` intent, routes through explicit user Run, and
+  returns a real repository list end to end in production.
+- `/chat` has no `responseSchema`; the deterministic rescues in
+  `validateAgentIntentProposal` (normalizing an unrecognized `type` via domain
+  evidence, defaulting a non-literal `confidence` instead of treating it as
+  low) exist *because* nothing at the API level constrains Gemini's `/chat`
+  output to the intent schema, unlike the schema-enforced `/agent/reason`
+  endpoint. These rescues are load-bearing, not defensive slack: removing them
+  would silently break every `/chat`-routed intent proposal whenever Gemini
+  drifts from the literal schema in prose, which it does routinely under
+  `/chat`'s casual system persona and temperature 0.7.
+- `/chat` persists the full reasoning prompt (safe context JSON plus
+  instructions) into `agent_chat_messages` when used as a reasoning
+  transport, instead of the user's actual message. Any feature that reads
+  chat history — session titles, conversation memory, audit, chat export —
+  will see the internal prompt text instead of what the user asked, and safe
+  context data ends up stored in a table not designed to hold it.
+- The GitHub OAuth callback returns raw JSON instead of redirecting back to
+  SmartFlow, so a real user completing the GitHub OAuth flow lands on a bare
+  JSON response instead of the app, reading as a broken integration and
+  requiring manual navigation back.
+- `handleSetup` does not read `setup_action`, so the setup phase cannot
+  distinguish a fresh install from an update or a pending-approval request.
+  `handleCallback`'s `setup_action === "request"` check is the only place
+  that distinction is enforced today, and only when the callback is reached
+  at all.
 
 ---
 
 ## 10. Next Sprint
 
-Current next milestones: production proposal-boundary readiness review and the
-manual registration/real-provider QA gate for GitHub Read-only Integration V1
-Slice 1.
+Current next milestones: production proposal-boundary readiness review.
+GitHub Read-only Integration V1 Slice 1 is complete and live; remaining
+GitHub-related work (OAuth callback redirect, `handleSetup` `setup_action`
+handling) is tracked under Technical Debt rather than as a blocking
+milestone.
 
 Recommended selection criteria:
 
