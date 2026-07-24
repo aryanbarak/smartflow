@@ -6,7 +6,9 @@ const CONNECT_ATTEMPT_TTL_MS = 10 * 60 * 1000
 const GITHUB_TIMEOUT_MS = 8_000
 const MAX_REPOSITORIES = 20
 const MAX_ISSUES = 20
-const MAX_REPOS_SCANNED_FOR_ISSUES = 3
+const MAX_PULL_REQUESTS = 20
+const MAX_WORKFLOW_RUNS = 10
+const MAX_REPOS_SCANNED_FOR_FANOUT = 3
 const MAX_INSTALLATION_LIST_PAGES = 10
 const API_VERSION = '2022-11-28'
 
@@ -76,6 +78,21 @@ interface GitHubIssueResponse {
   state?: unknown
   updated_at?: unknown
   pull_request?: unknown
+}
+
+interface GitHubPullRequestResponse {
+  number?: unknown
+  title?: unknown
+  state?: unknown
+  updated_at?: unknown
+  draft?: unknown
+}
+
+interface GitHubWorkflowRunResponse {
+  name?: unknown
+  status?: unknown
+  conclusion?: unknown
+  updated_at?: unknown
 }
 
 class GitHubIntegrationError extends Error {
@@ -448,7 +465,7 @@ async function githubFetch(
 
 function providerError(
   response: Response,
-  context: 'verification' | 'user-token-exchange' | 'installation-token-mint' | 'repositories' | 'issues',
+  context: 'verification' | 'user-token-exchange' | 'installation-token-mint' | 'repositories' | 'issues' | 'pulls' | 'workflow_runs',
 ) {
   if (response.status === 429) {
     return new GitHubIntegrationError('GITHUB_RATE_LIMITED', 503, 'GitHub rate limit was reached.')
@@ -832,13 +849,39 @@ function sanitizeIssue(repo: string, value: GitHubIssueResponse) {
   return { repo, number, title, state, updatedAt }
 }
 
-async function listRepositoriesForIssueScan(
+function sanitizePullRequest(repo: string, value: GitHubPullRequestResponse) {
+  const number = positiveInteger(value.number)
+  const title = boundedString(value.title, 200)
+  const stateValue = boundedString(value.state, 16)
+  const state = stateValue === 'open' || stateValue === 'closed' ? stateValue : undefined
+  const updatedAt = boundedString(value.updated_at, 64)
+  if (!number || !title || !state || !updatedAt) return undefined
+  return { repo, number, title, state, updatedAt, draft: value.draft === true }
+}
+
+// Unlike issue/PR "state" (a stable open|closed pair), GitHub Actions run
+// status/conclusion cover a larger, still-evolving vocabulary (queued,
+// in_progress, completed, action_required, neutral, stale, ...). Enum-gating
+// them the same way risks fail-closed rejecting a legitimate value GitHub
+// adds later, so they are bounded strings instead. conclusion is also
+// genuinely absent (null) while a run is still in progress, not malformed.
+function sanitizeWorkflowRun(repo: string, value: GitHubWorkflowRunResponse) {
+  const workflowName = boundedString(value.name, 200)
+  const status = boundedString(value.status, 32)
+  const updatedAt = boundedString(value.updated_at, 64)
+  if (!workflowName || !status || !updatedAt) return undefined
+  const conclusion = boundedString(value.conclusion, 32) || undefined
+  return { repo, workflowName, status, conclusion, updatedAt }
+}
+
+async function scanRepositoriesForFanout(
   token: string,
   deps: GitHubIntegrationDependencies,
+  maxRepos: number,
 ) {
   const response = await githubFetch(
     deps,
-    `${GITHUB_API_ORIGIN}/installation/repositories?per_page=${MAX_REPOS_SCANNED_FOR_ISSUES}&page=1`,
+    `${GITHUB_API_ORIGIN}/installation/repositories?per_page=${maxRepos}&page=1`,
     {
       headers: {
         Accept: 'application/vnd.github+json',
@@ -853,7 +896,7 @@ async function listRepositoriesForIssueScan(
   if (!Array.isArray(body.repositories)) {
     throw new GitHubIntegrationError('GITHUB_RESPONSE_INVALID', 502, 'GitHub returned an invalid repository response.')
   }
-  const selected = body.repositories.slice(0, MAX_REPOS_SCANNED_FOR_ISSUES)
+  const selected = body.repositories.slice(0, maxRepos)
   const repositories = selected
     .map((item) => item && typeof item === 'object' ? sanitizeRepository(item as GitHubRepositoryResponse) : undefined)
   if (repositories.some((item) => !item)) {
@@ -914,7 +957,7 @@ async function listIssues(
     throw new GitHubIntegrationError('CONNECTION_RECORD_INVALID', 500, 'Verified connection metadata is invalid.')
   }
   const token = await installationToken(installationId, config, deps)
-  const repositories = await listRepositoriesForIssueScan(token, deps)
+  const repositories = await scanRepositoriesForFanout(token, deps, MAX_REPOS_SCANNED_FOR_FANOUT)
 
   // Repos are independent, read-only requests — fan out in parallel rather
   // than one round trip per repo. Promise.all fails the whole request closed
@@ -926,6 +969,126 @@ async function listIssues(
 
   return {
     issues: perRepositoryIssues.flat().slice(0, MAX_ISSUES),
+  }
+}
+
+async function listPullRequestsForRepository(
+  repo: NonNullable<ReturnType<typeof sanitizeRepository>>,
+  token: string,
+  deps: GitHubIntegrationDependencies,
+) {
+  const response = await githubFetch(
+    deps,
+    `${GITHUB_API_ORIGIN}/repos/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}/pulls?state=open&per_page=${MAX_PULL_REQUESTS}&page=1`,
+    {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': API_VERSION,
+        'User-Agent': 'SmartFlow-GitHub-App',
+      },
+    },
+  )
+  if (!response.ok) throw providerError(response, 'pulls')
+  const body = await providerJson<unknown>(response)
+  if (!Array.isArray(body)) {
+    throw new GitHubIntegrationError('GITHUB_RESPONSE_INVALID', 502, 'GitHub returned an invalid pull request response.')
+  }
+  const repoLabel = `${repo.owner}/${repo.name}`
+  // Unlike /issues, the /pulls endpoint returns only pull requests — no
+  // exclusion filter is needed here.
+  const sanitized = body
+    .filter((item): item is GitHubPullRequestResponse => Boolean(item) && typeof item === 'object')
+    .map((item) => sanitizePullRequest(repoLabel, item))
+  if (sanitized.some((item) => !item)) {
+    throw new GitHubIntegrationError('GITHUB_RESPONSE_INVALID', 502, 'GitHub returned invalid pull request metadata.')
+  }
+  return sanitized.filter((item): item is NonNullable<typeof item> => Boolean(item))
+}
+
+async function listPullRequests(
+  request: Request,
+  config: GitHubConfig,
+  deps: GitHubIntegrationDependencies,
+) {
+  const { userId, authorization } = await requireUser(request, config, deps)
+  const connection = await loadConnection(userId, authorization, config, deps)
+  const installationId = positiveInteger(connection.installation_id)
+  if (!installationId) {
+    throw new GitHubIntegrationError('CONNECTION_RECORD_INVALID', 500, 'Verified connection metadata is invalid.')
+  }
+  const token = await installationToken(installationId, config, deps)
+  const repositories = await scanRepositoriesForFanout(token, deps, MAX_REPOS_SCANNED_FOR_FANOUT)
+
+  const perRepositoryPulls = await Promise.all(
+    repositories.map((repo) => listPullRequestsForRepository(repo, token, deps)),
+  )
+
+  return {
+    pullRequests: perRepositoryPulls.flat().slice(0, MAX_PULL_REQUESTS),
+  }
+}
+
+async function listWorkflowRunsForRepository(
+  repo: NonNullable<ReturnType<typeof sanitizeRepository>>,
+  token: string,
+  deps: GitHubIntegrationDependencies,
+) {
+  const response = await githubFetch(
+    deps,
+    `${GITHUB_API_ORIGIN}/repos/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}/actions/runs?per_page=${MAX_WORKFLOW_RUNS}&page=1`,
+    {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': API_VERSION,
+        'User-Agent': 'SmartFlow-GitHub-App',
+      },
+    },
+  )
+  if (!response.ok) throw providerError(response, 'workflow_runs')
+  const body = await providerJson<{ workflow_runs?: unknown }>(response)
+  if (!Array.isArray(body.workflow_runs)) {
+    throw new GitHubIntegrationError('GITHUB_RESPONSE_INVALID', 502, 'GitHub returned an invalid workflow runs response.')
+  }
+  const repoLabel = `${repo.owner}/${repo.name}`
+  const sanitized = body.workflow_runs
+    .filter((item): item is GitHubWorkflowRunResponse => Boolean(item) && typeof item === 'object')
+    .map((item) => sanitizeWorkflowRun(repoLabel, item))
+  if (sanitized.some((item) => !item)) {
+    throw new GitHubIntegrationError('GITHUB_RESPONSE_INVALID', 502, 'GitHub returned invalid workflow run metadata.')
+  }
+  return sanitized.filter((item): item is NonNullable<typeof item> => Boolean(item))
+}
+
+async function listWorkflowRuns(
+  request: Request,
+  config: GitHubConfig,
+  deps: GitHubIntegrationDependencies,
+) {
+  const { userId, authorization } = await requireUser(request, config, deps)
+  const connection = await loadConnection(userId, authorization, config, deps)
+  const installationId = positiveInteger(connection.installation_id)
+  if (!installationId) {
+    throw new GitHubIntegrationError('CONNECTION_RECORD_INVALID', 500, 'Verified connection metadata is invalid.')
+  }
+  const token = await installationToken(installationId, config, deps)
+  const repositories = await scanRepositoriesForFanout(token, deps, MAX_REPOS_SCANNED_FOR_FANOUT)
+
+  const perRepositoryRuns = await Promise.all(
+    repositories.map((repo) => listWorkflowRunsForRepository(repo, token, deps)),
+  )
+
+  // "Is the latest build green" is meaningless in repo-scan order, unlike
+  // issues/pulls — callers need the genuinely most-recent runs across all
+  // scanned repos, not the first repo's runs padded out with others. Sort by
+  // updatedAt (ISO 8601 strings sort lexicographically the same as
+  // chronologically) before capping so the final slice reflects true recency.
+  return {
+    workflowRuns: perRepositoryRuns
+      .flat()
+      .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
+      .slice(0, MAX_WORKFLOW_RUNS),
   }
 }
 
@@ -1014,12 +1177,20 @@ export async function handleGitHubIntegrationRequest(
     if (url.pathname === '/github/issues' && request.method === 'GET') {
       return json(await listIssues(request, config, deps), 200, origin, config)
     }
+    if (url.pathname === '/github/pulls' && request.method === 'GET') {
+      return json(await listPullRequests(request, config, deps), 200, origin, config)
+    }
+    if (url.pathname === '/github/workflow_runs' && request.method === 'GET') {
+      return json(await listWorkflowRuns(request, config, deps), 200, origin, config)
+    }
     if (
       url.pathname === '/github/connect/start' ||
       url.pathname === '/github/connect/setup' ||
       url.pathname === '/github/connect/callback' ||
       url.pathname === '/github/repositories' ||
       url.pathname === '/github/issues' ||
+      url.pathname === '/github/pulls' ||
+      url.pathname === '/github/workflow_runs' ||
       url.pathname === '/github/disconnect' ||
       url.pathname === '/github/connection'
     ) {
@@ -1036,10 +1207,14 @@ export const githubIntegrationInternals = {
   GITHUB_AUTH_ORIGIN,
   MAX_REPOSITORIES,
   MAX_ISSUES,
-  MAX_REPOS_SCANNED_FOR_ISSUES,
+  MAX_PULL_REQUESTS,
+  MAX_WORKFLOW_RUNS,
+  MAX_REPOS_SCANNED_FOR_FANOUT,
   CONNECT_ATTEMPT_TTL_MS,
   resolveBaseConfig,
   resolveConfig,
   sanitizeRepository,
   sanitizeIssue,
+  sanitizePullRequest,
+  sanitizeWorkflowRun,
 }

@@ -135,6 +135,22 @@ function assessToolData(result: ExecutionResult): ToolDataAssessment {
         empty: count === 0,
       };
     }
+    case "github.pulls.list": {
+      const count = arrayLength(result.data, "pullRequests");
+      return {
+        itemCount: count,
+        hasUsefulData: count > 0,
+        empty: count === 0,
+      };
+    }
+    case "github.workflow_runs.list": {
+      const count = arrayLength(result.data, "workflowRuns");
+      return {
+        itemCount: count,
+        hasUsefulData: count > 0,
+        empty: count === 0,
+      };
+    }
     case "tasks.complete": {
       const alreadyCompleted = isObject(result.data) && result.data.alreadyCompleted === true;
       const verified = isObject(result.data) && result.data.verified === true;
@@ -278,6 +294,14 @@ function summaryFor(result: ExecutionResult, outcome: AgentReflectionOutcome, as
       return assessment.empty
         ? "No open GitHub issues were found."
         : "Open GitHub issue metadata was gathered.";
+    case "github.pulls.list":
+      return assessment.empty
+        ? "No open GitHub pull requests were found."
+        : "Open GitHub pull request metadata was gathered.";
+    case "github.workflow_runs.list":
+      return assessment.empty
+        ? "No recent GitHub workflow runs were found."
+        : "Recent GitHub workflow run status was gathered.";
     case "tasks.complete":
       return assessment.empty
         ? "Task was already completed. No new change was needed."
@@ -311,6 +335,10 @@ function followUpFor(result: ExecutionResult, outcome: AgentReflectionOutcome, a
       return assessment.empty ? undefined : "Choose a repository to inspect in GitHub when needed.";
     case "github.issues.list":
       return assessment.empty ? undefined : "Choose an issue to follow up on in GitHub when needed.";
+    case "github.pulls.list":
+      return assessment.empty ? undefined : "Choose a pull request to review or merge in GitHub when needed.";
+    case "github.workflow_runs.list":
+      return assessment.empty ? undefined : "Open GitHub Actions if a run needs a closer look.";
     case "tasks.complete":
       return assessment.empty ? undefined : "Refresh the task view before choosing the next action.";
     default:

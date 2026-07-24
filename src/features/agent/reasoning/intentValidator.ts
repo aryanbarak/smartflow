@@ -16,6 +16,8 @@ const supportedIntentTypes: AgentIntentType[] = [
   "inspect_workspace",
   "inspect_github_repositories",
   "inspect_github_issues",
+  "inspect_github_pull_requests",
+  "inspect_github_workflow_runs",
   "complete_task",
   "ask_clarification",
   "unsupported",
@@ -38,6 +40,8 @@ const intentToolMap = {
   inspect_workspace: "workspace.get_context",
   inspect_github_repositories: "github.repositories.list",
   inspect_github_issues: "github.issues.list",
+  inspect_github_pull_requests: "github.pulls.list",
+  inspect_github_workflow_runs: "github.workflow_runs.list",
   complete_task: "tasks.complete",
 } as const;
 
@@ -50,6 +54,8 @@ const domainByIntent: Partial<Record<AgentIntentType, AgentIntentDomain>> = {
   inspect_workspace: "workspace",
   inspect_github_repositories: "github",
   inspect_github_issues: "github",
+  inspect_github_pull_requests: "github",
+  inspect_github_workflow_runs: "github",
   complete_task: "tasks",
 };
 
@@ -235,6 +241,22 @@ const GITHUB_ISSUES_EVIDENCE_PATTERNS = [
   /((گیت[‌\s-]?هاب|github).*(ایشو|ایشوها|مسئله|مسائل)|(ایشو|ایشوها|مسئله|مسائل).*(گیت[‌\s-]?هاب|github))/i,
 ];
 
+// Bare "PR"/"PRs" is deliberately excluded — it's an ambiguous initialism, a
+// real collision risk. Only the spelled-out phrase counts as evidence; this
+// is a rescue backstop, not the only path, so Gemini's own schema-enforced
+// choice still covers "show my open PRs" when the type comes back well-formed.
+const GITHUB_PULL_REQUESTS_EVIDENCE_PATTERNS = [
+  /\b(pull requests?|open pull requests?|github pull requests?|connected pull requests?)\b/i,
+  /\b(pull-requests?|offene pull requests?|verbundene pull requests?)\b/i,
+  /((گیت[‌\s-]?هاب|github).*(پول[‌\s-]?ریکوئست|پول[‌\s-]?ریکوئست[‌\s-]?ها|درخواست[‌\s-]?ادغام)|(پول[‌\s-]?ریکوئست|پول[‌\s-]?ریکوئست[‌\s-]?ها|درخواست[‌\s-]?ادغام).*(گیت[‌\s-]?هاب|github))/i,
+];
+
+const GITHUB_WORKFLOW_RUNS_EVIDENCE_PATTERNS = [
+  /\b(workflow runs?|github actions?|ci status|build status|pipeline status|action runs?)\b/i,
+  /\b(workflow-runs?|ci-status|pipeline-status)\b/i,
+  /((گیت[‌\s-]?هاب|github).*(ورک[‌\s-]?فلو|اکشن|اکشن[‌\s-]?ها|وضعیت[‌\s-]?سی[‌\s-]?آی)|(ورک[‌\s-]?فلو|اکشن|اکشن[‌\s-]?ها|وضعیت[‌\s-]?سی[‌\s-]?آی).*(گیت[‌\s-]?هاب|github))/i,
+];
+
 // One or more tools can share a domain (e.g. github: repositories, issues).
 // Domain-level evidence (getStrongReadDomainEvidence) only proves "this
 // message is about <domain>" — picking which of that domain's tools to
@@ -247,6 +269,8 @@ type ReadToolIntentType = Exclude<AgentIntentType, "complete_task" | "ask_clarif
 const TOOL_EVIDENCE_PATTERNS: Partial<Record<ReadToolIntentType, RegExp[]>> = {
   inspect_github_repositories: GITHUB_REPOSITORIES_EVIDENCE_PATTERNS,
   inspect_github_issues: GITHUB_ISSUES_EVIDENCE_PATTERNS,
+  inspect_github_pull_requests: GITHUB_PULL_REQUESTS_EVIDENCE_PATTERNS,
+  inspect_github_workflow_runs: GITHUB_WORKFLOW_RUNS_EVIDENCE_PATTERNS,
 };
 
 function getToolEvidenceForDomain(
@@ -315,7 +339,9 @@ function normalizeReadIntentFromEvidence(
     type === "inspect_learning" ||
     type === "inspect_workspace" ||
     type === "inspect_github_repositories" ||
-    type === "inspect_github_issues"
+    type === "inspect_github_issues" ||
+    type === "inspect_github_pull_requests" ||
+    type === "inspect_github_workflow_runs"
   ) {
     if (domainEvidence === "tasks") return "inspect_tasks";
     if (domainEvidence === "calendar") return "inspect_calendar";

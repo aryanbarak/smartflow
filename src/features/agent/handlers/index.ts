@@ -3,6 +3,8 @@ import { calendarListTodayHandler } from "./calendarListTodayHandler";
 import { learningGetProgressHandler } from "./learningGetProgressHandler";
 import { githubRepositoriesListHandler } from "./githubRepositoriesListHandler";
 import { githubIssuesListHandler } from "./githubIssuesListHandler";
+import { githubPullRequestsListHandler } from "./githubPullRequestsListHandler";
+import { githubWorkflowRunsListHandler } from "./githubWorkflowRunsListHandler";
 import { tasksListHandler } from "./tasksListHandler";
 import { workspaceGetContextHandler } from "./workspaceGetContextHandler";
 
@@ -13,6 +15,8 @@ const registeredHandlers: readonly AgentToolHandler[] = Object.freeze([
   workspaceGetContextHandler,
   githubRepositoriesListHandler,
   githubIssuesListHandler,
+  githubPullRequestsListHandler,
+  githubWorkflowRunsListHandler,
 ]);
 
 export function getHandlerByToolId(toolId: string): AgentToolHandler | undefined {
@@ -28,6 +32,8 @@ export {
   learningGetProgressHandler,
   githubRepositoriesListHandler,
   githubIssuesListHandler,
+  githubPullRequestsListHandler,
+  githubWorkflowRunsListHandler,
   tasksListHandler,
   workspaceGetContextHandler,
 };

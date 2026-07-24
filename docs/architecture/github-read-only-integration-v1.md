@@ -152,6 +152,50 @@ authoritative. The handler receives authenticated identity only through its
 runtime client. Execution Audit records shape/count metadata only and never
 tokens or raw provider payloads.
 
+## Adding a New Read-only Tool
+
+This is a checklist of every place a new GitHub (or other domain) read-only
+tool must be registered, gathered here because a miss in any one of them
+fails silently rather than with an obvious error — especially the first item,
+which is the easiest to miss and the hardest to debug: the tool simply never
+gets proposed, with no exception anywhere.
+
+1. `SUPPORTED_INTENT_VALUES` in `agent/worker/reasoning-endpoint.ts` — feeds
+   the Gemini response schema's `type` enum for both `/agent/reason` and
+   `/chat` reasoning mode. Miss this and Gemini's structured output is
+   constrained to never include the new intent; there is no error, no log
+   line, no failed request — the model simply cannot emit the value, and it
+   silently resolves to something else or `ask_clarification`.
+2. `supportedIntentTypes`, `intentToolMap`, `domainByIntent` in
+   `src/features/agent/reasoning/intentValidator.ts` — the deterministic
+   validator's own contract for the intent.
+3. `TOOL_EVIDENCE_PATTERNS` in the same file, if the new tool shares a domain
+   with an existing tool — otherwise the conflicting-evidence disambiguation
+   (see below) can never distinguish it, and evidence-rescue always falls
+   back to guessing or leaves the LLM's raw type unchecked.
+4. `executableReadOnlyToolIds` in `src/features/agent/toolResolver.ts` and
+   `SUPPORTED_READ_ONLY_TOOL_IDS` in `src/features/agent/readOnlyRuntime.ts`
+   — both allowlists are checked independently; a tool present in one but not
+   the other fails closed at whichever boundary is missing it.
+5. The presentation layers: `readOnlyResultPresenter.ts` (safe summary/preview
+   text), `responseComposer.ts` (EN/DE/FA copy), `contextSynthesis.ts`, and
+   `reflectionEngine.ts`. Missing any of these does not error — the tool runs
+   and returns data, but the user-facing response falls back to a generic
+   "action completed" message instead of the tool's actual result.
+
+Also required but not silent-failure-prone (a missing one causes an obvious
+compile error, test failure, or unregistered handler): the tool definition in
+`src/features/agent/tools/githubTools.ts`, a handler in
+`src/features/agent/handlers/`, a browser client in
+`src/features/integrations/github/`, the `AgentIntentType`/`toolId` unions in
+`reasoningTypes.ts`, wiring the client into `ChatPage.tsx`'s execution
+context, and i18n keys in `src/i18n/index.ts`.
+
+New read-only GitHub tools do not need a new `WorkspacePlanActionType` or an
+`explicitReadOnlyMappings` entry — the resolver trusts `expectedToolId` passed
+directly from `intentToolMap` (see `toolResolver.ts`), bypassing the
+domain+actionType lookup table entirely for intent-driven proposals.
+
 ## Configuration Contract
 
 Non-secret Worker configuration:

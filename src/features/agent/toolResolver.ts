@@ -17,6 +17,8 @@ const executableReadOnlyToolIds = new Set([
   "workspace.get_context",
   "github.repositories.list",
   "github.issues.list",
+  "github.pulls.list",
+  "github.workflow_runs.list",
 ]);
 
 const unsupportedMutationActions = new Set<WorkspacePlanActionType>([

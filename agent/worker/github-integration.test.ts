@@ -42,6 +42,10 @@ interface FakeOptions {
   rejectGitHub?: boolean
   issuesByRepo?: Record<string, unknown[]>
   issuesFailureByRepo?: Record<string, number>
+  pullsByRepo?: Record<string, unknown[]>
+  pullsFailureByRepo?: Record<string, number>
+  workflowRunsByRepo?: Record<string, unknown[]>
+  workflowRunsFailureByRepo?: Record<string, number>
 }
 
 function response(body: unknown, status = 200) {
@@ -177,6 +181,24 @@ function fakeProvider(options: FakeOptions = {}) {
           return response({ message: 'provider detail must not escape' }, failStatus)
         }
         return response(options.issuesByRepo?.[key] ?? [])
+      }
+      const pullsMatch = parsed.pathname.match(/^\/repos\/([^/]+)\/([^/]+)\/pulls$/)
+      if (pullsMatch) {
+        const key = `${decodeURIComponent(pullsMatch[1])}/${decodeURIComponent(pullsMatch[2])}`
+        const failStatus = options.pullsFailureByRepo?.[key]
+        if (failStatus) {
+          return response({ message: 'provider detail must not escape' }, failStatus)
+        }
+        return response(options.pullsByRepo?.[key] ?? [])
+      }
+      const workflowRunsMatch = parsed.pathname.match(/^\/repos\/([^/]+)\/([^/]+)\/actions\/runs$/)
+      if (workflowRunsMatch) {
+        const key = `${decodeURIComponent(workflowRunsMatch[1])}/${decodeURIComponent(workflowRunsMatch[2])}`
+        const failStatus = options.workflowRunsFailureByRepo?.[key]
+        if (failStatus) {
+          return response({ message: 'provider detail must not escape' }, failStatus)
+        }
+        return response({ workflow_runs: options.workflowRunsByRepo?.[key] ?? [] })
       }
     }
 
@@ -804,6 +826,337 @@ describe('GitHub issues listing boundary', () => {
     const result = await handleGitHubIntegrationRequest(apiRequest('/github/issues'), env(), fake.dependencies)
     expect(await result?.json()).toEqual({ issues: [] })
     expect(fake.calls.some((call) => /\/repos\/.+\/issues/.test(call.url))).toBe(false)
+  })
+})
+
+describe('GitHub pull requests listing boundary', () => {
+  function verifiedConnection(userId = USER_ONE) {
+    return {
+      user_id: userId,
+      installation_id: 777,
+      github_account_id: 9001,
+      github_account_login: 'verified-user',
+      status: 'connected',
+    }
+  }
+
+  function repoFixture(id: number, name: string, owner = 'owner') {
+    return {
+      id,
+      name,
+      owner: { login: owner },
+      visibility: 'public',
+      default_branch: 'main',
+      archived: false,
+    }
+  }
+
+  function pullFixture(number: number, title: string, extra: Record<string, unknown> = {}) {
+    return {
+      number,
+      title,
+      state: 'open',
+      updated_at: '2026-07-20T10:00:00.000Z',
+      draft: false,
+      body: 'must-not-pass',
+      user: { login: 'must-not-pass' },
+      ...extra,
+    }
+  }
+
+  it('requires authentication and loads only the authenticated user connection', async () => {
+    const fake = fakeProvider()
+    fake.connection = verifiedConnection()
+    const unauthenticated = await handleGitHubIntegrationRequest(apiRequest('/github/pulls', 'GET', false), env(), fake.dependencies)
+    expect(unauthenticated?.status).toBe(401)
+
+    fake.currentUser = USER_TWO
+    const crossUser = await handleGitHubIntegrationRequest(apiRequest('/github/pulls'), env(), fake.dependencies)
+    expect(crossUser?.status).toBe(409)
+    expect(fake.calls.some((call) => call.url.includes('/access_tokens'))).toBe(false)
+  })
+
+  it('fans out pull request requests in parallel across scanned repos and returns bounded sanitized pulls', async () => {
+    const fake = fakeProvider({
+      repositories: [repoFixture(1, 'alpha'), repoFixture(2, 'beta'), repoFixture(3, 'gamma')],
+      pullsByRepo: {
+        'owner/alpha': [pullFixture(1, 'Alpha PR one'), pullFixture(2, 'Alpha PR two', { draft: true })],
+        'owner/beta': [pullFixture(10, 'Beta PR one')],
+        'owner/gamma': [],
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/pulls'), env(), fake.dependencies)
+    expect(result?.status).toBe(200)
+    const body = await result!.json() as { pullRequests: Array<Record<string, unknown>> }
+    expect(body.pullRequests).toHaveLength(3)
+    expect(Object.keys(body.pullRequests[0]).sort()).toEqual(['draft', 'number', 'repo', 'state', 'title', 'updatedAt'])
+    expect(body.pullRequests.find((pr) => pr.number === 2)?.draft).toBe(true)
+    const serialized = JSON.stringify(body)
+    expect(serialized).not.toContain('must-not-pass')
+    expect(serialized).not.toContain('ghs_transient-installation-token')
+
+    const pullCalls = fake.calls.filter((call) => call.url.includes('/pulls') && !call.url.includes('github_connection'))
+    expect(pullCalls).toHaveLength(3)
+  })
+
+  it('scans at most 3 repositories even when more are connected', async () => {
+    const fake = fakeProvider({
+      repositories: [
+        repoFixture(1, 'r1'), repoFixture(2, 'r2'), repoFixture(3, 'r3'),
+        repoFixture(4, 'r4'), repoFixture(5, 'r5'),
+      ],
+      pullsByRepo: {
+        'owner/r1': [pullFixture(1, 'one')],
+        'owner/r2': [pullFixture(1, 'one')],
+        'owner/r3': [pullFixture(1, 'one')],
+        'owner/r4': [pullFixture(1, 'one')],
+        'owner/r5': [pullFixture(1, 'one')],
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/pulls'), env(), fake.dependencies)
+    const body = await result!.json() as { pullRequests: unknown[] }
+    expect(body.pullRequests).toHaveLength(3)
+    const pullCalls = fake.calls.filter((call) => /\/repos\/owner\/r\d+\/pulls/.test(call.url))
+    expect(pullCalls).toHaveLength(3)
+  })
+
+  it('caps total pull requests at 20 across all scanned repos', async () => {
+    const fake = fakeProvider({
+      repositories: [repoFixture(1, 'alpha'), repoFixture(2, 'beta'), repoFixture(3, 'gamma')],
+      pullsByRepo: {
+        'owner/alpha': Array.from({ length: 10 }, (_, i) => pullFixture(i + 1, `Alpha ${i + 1}`)),
+        'owner/beta': Array.from({ length: 10 }, (_, i) => pullFixture(i + 1, `Beta ${i + 1}`)),
+        'owner/gamma': Array.from({ length: 10 }, (_, i) => pullFixture(i + 1, `Gamma ${i + 1}`)),
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/pulls'), env(), fake.dependencies)
+    const body = await result!.json() as { pullRequests: unknown[] }
+    expect(body.pullRequests).toHaveLength(20)
+  })
+
+  it('fails the whole request closed if any single scanned repo fails, instead of returning a partial list', async () => {
+    const fake = fakeProvider({
+      repositories: [repoFixture(1, 'alpha'), repoFixture(2, 'beta')],
+      pullsByRepo: {
+        'owner/alpha': [pullFixture(1, 'Alpha PR')],
+      },
+      pullsFailureByRepo: {
+        'owner/beta': 500,
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/pulls'), env(), fake.dependencies)
+    expect(result?.status).toBe(502)
+    const body = await result!.json() as { error: { code: string } }
+    expect(body.error.code).toBe('GITHUB_UNAVAILABLE')
+  })
+
+  it('rejects malformed pull request metadata the same way malformed issue metadata is rejected', async () => {
+    const fake = fakeProvider({
+      repositories: [repoFixture(1, 'alpha')],
+      pullsByRepo: {
+        'owner/alpha': [{ number: 1, title: 'Missing state and updated_at' }],
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/pulls'), env(), fake.dependencies)
+    expect(result?.status).toBe(502)
+    expect(await result?.json()).toMatchObject({ error: { code: 'GITHUB_RESPONSE_INVALID' } })
+  })
+
+  it('returns an empty bounded list without calling any repo pulls endpoint when there are no repos', async () => {
+    const fake = fakeProvider({ repositories: [] })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/pulls'), env(), fake.dependencies)
+    expect(await result?.json()).toEqual({ pullRequests: [] })
+    expect(fake.calls.some((call) => /\/repos\/.+\/pulls/.test(call.url))).toBe(false)
+  })
+})
+
+describe('GitHub workflow runs listing boundary', () => {
+  function verifiedConnection(userId = USER_ONE) {
+    return {
+      user_id: userId,
+      installation_id: 777,
+      github_account_id: 9001,
+      github_account_login: 'verified-user',
+      status: 'connected',
+    }
+  }
+
+  function repoFixture(id: number, name: string, owner = 'owner') {
+    return {
+      id,
+      name,
+      owner: { login: owner },
+      visibility: 'public',
+      default_branch: 'main',
+      archived: false,
+    }
+  }
+
+  function runFixture(name: string, status: string, conclusion: string | null, updatedAt: string) {
+    return { name, status, conclusion, updated_at: updatedAt, id: 999, head_sha: 'must-not-pass' }
+  }
+
+  it('requires authentication and loads only the authenticated user connection', async () => {
+    const fake = fakeProvider()
+    fake.connection = verifiedConnection()
+    const unauthenticated = await handleGitHubIntegrationRequest(apiRequest('/github/workflow_runs', 'GET', false), env(), fake.dependencies)
+    expect(unauthenticated?.status).toBe(401)
+
+    fake.currentUser = USER_TWO
+    const crossUser = await handleGitHubIntegrationRequest(apiRequest('/github/workflow_runs'), env(), fake.dependencies)
+    expect(crossUser?.status).toBe(409)
+    expect(fake.calls.some((call) => call.url.includes('/access_tokens'))).toBe(false)
+  })
+
+  it('fans out workflow run requests in parallel across scanned repos and returns bounded sanitized runs', async () => {
+    const fake = fakeProvider({
+      repositories: [repoFixture(1, 'alpha'), repoFixture(2, 'beta')],
+      workflowRunsByRepo: {
+        'owner/alpha': [runFixture('CI', 'completed', 'success', '2026-07-20T10:00:00.000Z')],
+        'owner/beta': [runFixture('Deploy', 'in_progress', null, '2026-07-21T10:00:00.000Z')],
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/workflow_runs'), env(), fake.dependencies)
+    expect(result?.status).toBe(200)
+    const body = await result!.json() as { workflowRuns: Array<Record<string, unknown>> }
+    expect(body.workflowRuns).toHaveLength(2)
+    expect(Object.keys(body.workflowRuns[0]).sort()).toEqual(['repo', 'status', 'updatedAt', 'workflowName'])
+    const serialized = JSON.stringify(body)
+    expect(serialized).not.toContain('must-not-pass')
+    expect(serialized).not.toContain('ghs_transient-installation-token')
+
+    const runCalls = fake.calls.filter((call) => call.url.includes('/actions/runs'))
+    expect(runCalls).toHaveLength(2)
+  })
+
+  it('accepts a null conclusion for a still-running run instead of rejecting it as malformed', async () => {
+    const fake = fakeProvider({
+      repositories: [repoFixture(1, 'alpha')],
+      workflowRunsByRepo: {
+        'owner/alpha': [runFixture('CI', 'in_progress', null, '2026-07-20T10:00:00.000Z')],
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/workflow_runs'), env(), fake.dependencies)
+    expect(result?.status).toBe(200)
+    const body = await result!.json() as { workflowRuns: Array<Record<string, unknown>> }
+    expect(body.workflowRuns[0]).toEqual({
+      repo: 'owner/alpha',
+      workflowName: 'CI',
+      status: 'in_progress',
+      updatedAt: '2026-07-20T10:00:00.000Z',
+    })
+  })
+
+  it('sorts by updatedAt across repos before capping, so the most recent runs win regardless of scan order', async () => {
+    const fake = fakeProvider({
+      repositories: [repoFixture(1, 'alpha'), repoFixture(2, 'beta')],
+      workflowRunsByRepo: {
+        'owner/alpha': [runFixture('Old', 'completed', 'success', '2026-07-01T00:00:00.000Z')],
+        'owner/beta': [runFixture('Newest', 'completed', 'success', '2026-07-21T00:00:00.000Z')],
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/workflow_runs'), env(), fake.dependencies)
+    const body = await result!.json() as { workflowRuns: Array<{ workflowName: string }> }
+    expect(body.workflowRuns[0].workflowName).toBe('Newest')
+    expect(body.workflowRuns[1].workflowName).toBe('Old')
+  })
+
+  it('scans at most 3 repositories even when more are connected', async () => {
+    const fake = fakeProvider({
+      repositories: [
+        repoFixture(1, 'r1'), repoFixture(2, 'r2'), repoFixture(3, 'r3'),
+        repoFixture(4, 'r4'), repoFixture(5, 'r5'),
+      ],
+      workflowRunsByRepo: {
+        'owner/r1': [runFixture('CI', 'completed', 'success', '2026-07-20T10:00:00.000Z')],
+        'owner/r2': [runFixture('CI', 'completed', 'success', '2026-07-20T10:00:00.000Z')],
+        'owner/r3': [runFixture('CI', 'completed', 'success', '2026-07-20T10:00:00.000Z')],
+        'owner/r4': [runFixture('CI', 'completed', 'success', '2026-07-20T10:00:00.000Z')],
+        'owner/r5': [runFixture('CI', 'completed', 'success', '2026-07-20T10:00:00.000Z')],
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/workflow_runs'), env(), fake.dependencies)
+    const body = await result!.json() as { workflowRuns: unknown[] }
+    expect(body.workflowRuns).toHaveLength(3)
+    const runCalls = fake.calls.filter((call) => /\/repos\/owner\/r\d+\/actions\/runs/.test(call.url))
+    expect(runCalls).toHaveLength(3)
+  })
+
+  it('caps total workflow runs at 10 across all scanned repos', async () => {
+    const fake = fakeProvider({
+      repositories: [repoFixture(1, 'alpha'), repoFixture(2, 'beta'), repoFixture(3, 'gamma')],
+      workflowRunsByRepo: {
+        'owner/alpha': Array.from({ length: 10 }, (_, i) => runFixture(`Alpha ${i + 1}`, 'completed', 'success', '2026-07-20T10:00:00.000Z')),
+        'owner/beta': Array.from({ length: 10 }, (_, i) => runFixture(`Beta ${i + 1}`, 'completed', 'success', '2026-07-20T10:00:00.000Z')),
+        'owner/gamma': Array.from({ length: 10 }, (_, i) => runFixture(`Gamma ${i + 1}`, 'completed', 'success', '2026-07-20T10:00:00.000Z')),
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/workflow_runs'), env(), fake.dependencies)
+    const body = await result!.json() as { workflowRuns: unknown[] }
+    expect(body.workflowRuns).toHaveLength(10)
+  })
+
+  it('fails the whole request closed if any single scanned repo fails, instead of returning a partial list', async () => {
+    const fake = fakeProvider({
+      repositories: [repoFixture(1, 'alpha'), repoFixture(2, 'beta')],
+      workflowRunsByRepo: {
+        'owner/alpha': [runFixture('CI', 'completed', 'success', '2026-07-20T10:00:00.000Z')],
+      },
+      workflowRunsFailureByRepo: {
+        'owner/beta': 500,
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/workflow_runs'), env(), fake.dependencies)
+    expect(result?.status).toBe(502)
+    const body = await result!.json() as { error: { code: string } }
+    expect(body.error.code).toBe('GITHUB_UNAVAILABLE')
+  })
+
+  it('rejects malformed workflow run metadata the same way malformed issue metadata is rejected', async () => {
+    const fake = fakeProvider({
+      repositories: [repoFixture(1, 'alpha')],
+      workflowRunsByRepo: {
+        'owner/alpha': [{ name: 'CI' }],
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/workflow_runs'), env(), fake.dependencies)
+    expect(result?.status).toBe(502)
+    expect(await result?.json()).toMatchObject({ error: { code: 'GITHUB_RESPONSE_INVALID' } })
+  })
+
+  it('returns an empty bounded list without calling any repo actions endpoint when there are no repos', async () => {
+    const fake = fakeProvider({ repositories: [] })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/workflow_runs'), env(), fake.dependencies)
+    expect(await result?.json()).toEqual({ workflowRuns: [] })
+    expect(fake.calls.some((call) => /\/repos\/.+\/actions\/runs/.test(call.url))).toBe(false)
   })
 })
 

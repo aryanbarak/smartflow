@@ -34,6 +34,16 @@ interface GitHubIssuesData {
   issues?: Array<{ repo?: string; number?: number; title?: string }>;
 }
 
+interface GitHubPullRequestsData {
+  connectionStatus?: string;
+  pullRequests?: Array<{ repo?: string; number?: number; title?: string; draft?: boolean }>;
+}
+
+interface GitHubWorkflowRunsData {
+  connectionStatus?: string;
+  workflowRuns?: Array<{ repo?: string; workflowName?: string; status?: string; conclusion?: string }>;
+}
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object");
 }
@@ -142,6 +152,50 @@ function githubIssuesPresentation(data: unknown): ReadOnlyResultPresentation {
   };
 }
 
+function githubPullRequestsPresentation(data: unknown): ReadOnlyResultPresentation {
+  const value = isObject(data) ? data as GitHubPullRequestsData : {};
+  if (value.connectionStatus === "not_connected") {
+    return { safeSummary: "GitHub is not connected.", safePreviewItems: [] };
+  }
+  const pullRequests = Array.isArray(value.pullRequests) ? value.pullRequests.slice(0, 20) : [];
+  return {
+    safeSummary: countSummary(
+      pullRequests.length,
+      "No open GitHub pull requests found.",
+      "1 open GitHub pull request found.",
+      (count) => `${count} open GitHub pull requests found.`,
+    ),
+    safePreviewItems: pullRequests
+      .map((item) => item.repo && item.number && item.title
+        ? `${item.repo}#${item.number} ${item.title}${item.draft ? " (draft)" : ""}`
+        : undefined)
+      .filter((item): item is string => Boolean(item))
+      .slice(0, 6),
+  };
+}
+
+function githubWorkflowRunsPresentation(data: unknown): ReadOnlyResultPresentation {
+  const value = isObject(data) ? data as GitHubWorkflowRunsData : {};
+  if (value.connectionStatus === "not_connected") {
+    return { safeSummary: "GitHub is not connected.", safePreviewItems: [] };
+  }
+  const workflowRuns = Array.isArray(value.workflowRuns) ? value.workflowRuns.slice(0, 10) : [];
+  return {
+    safeSummary: countSummary(
+      workflowRuns.length,
+      "No recent GitHub workflow runs found.",
+      "1 recent GitHub workflow run found.",
+      (count) => `${count} recent GitHub workflow runs found.`,
+    ),
+    safePreviewItems: workflowRuns
+      .map((item) => item.repo && item.workflowName
+        ? `${item.repo}: ${item.workflowName} (${item.conclusion ?? item.status ?? "unknown"})`
+        : undefined)
+      .filter((item): item is string => Boolean(item))
+      .slice(0, 6),
+  };
+}
+
 export function presentReadOnlyResult(result: ExecutionResult): ReadOnlyResultPresentation {
   if (result.status !== "success") {
     if (result.status === "policy_denied") {
@@ -173,6 +227,10 @@ export function presentReadOnlyResult(result: ExecutionResult): ReadOnlyResultPr
       return githubPresentation(result.data);
     case "github.issues.list":
       return githubIssuesPresentation(result.data);
+    case "github.pulls.list":
+      return githubPullRequestsPresentation(result.data);
+    case "github.workflow_runs.list":
+      return githubWorkflowRunsPresentation(result.data);
     default:
       return {
         safeSummary: "The read-only action completed.",

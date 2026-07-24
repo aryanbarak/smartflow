@@ -54,6 +54,8 @@ import {
 import { StepApprovalDialog } from '@/features/workspace/components/StepApprovalDialog'
 import { createGitHubRepositoriesClient } from '@/features/integrations/github/githubRepositoriesClient'
 import { createGitHubIssuesClient } from '@/features/integrations/github/githubIssuesClient'
+import { createGitHubPullRequestsClient } from '@/features/integrations/github/githubPullRequestsClient'
+import { createGitHubWorkflowRunsClient } from '@/features/integrations/github/githubWorkflowRunsClient'
 import { useWorkspace } from '@/features/workspace'
 import type {
   WorkspacePlanActionType,
@@ -208,23 +210,67 @@ function isEntirelyConversationalFiller(text: string): boolean {
   return residual.length === 0
 }
 
+// Persian marks possession primarily with an enclitic suffix on the noun
+// (ـم / ـت / ـش / ـمان / ـتان / ـشان), not a standalone word like English
+// "my" — a bare "من" check misses most real possessive phrasing ("برنامه‌ام
+// چیست؟", "issue‌هایم چیست؟"). This matches the two orthographic shapes that
+// are reliably distinguishable from an ordinary word ending:
+//   - plural+possessive "های" + suffix (کارهایم, issue‌هایم) — "های" is
+//     specific enough that this rarely false-positives;
+//   - a suffix directly after a U+200C ZWNJ (برنامه‌ام, خانه‌اش) — in casual
+//     Persian text, ZWNJ is used almost exclusively for exactly this kind
+//     of enclitic joining, so its presence is a reliable signal.
+// A bare suffix with no separator at all (کارم, دستم) is deliberately NOT
+// matched: "م"/"ت"/"ش" are also ordinary root-final letters (کرم, دست,
+// آتش, ...), and there is no reliable way to tell "my X" from "a word that
+// happens to end in that letter" without a real morphological analyzer.
+// That gap is real, not hidden — some valid possessive phrasing (informal
+// "کارم چیه؟") still will not be caught here. This is exactly informal
+// spoken-register Persian ("کارم چیه؟", "issueهام کو؟"), not a rare edge
+// case. A regex over the message text alone cannot close it safely. If the
+// connected-repo-inventory idea for safeContext (see the intentValidator
+// entity-collision discussion) ever lands, giving the model real context
+// about what exists, that is the more promising path to revisit this gap —
+// not a longer suffix list here.
+const PERSIAN_POSSESSIVE_SUFFIX_PATTERN =
+  /(های(م|ت|ش|مان|تان|شان)|‌(ام|ات|اش|امان|اتان|اشان|م|ت|ش|مان|تان|شان))(?![\p{L}\p{N}_])/u
+
+function hasPersianPossessiveMarker(text: string): boolean {
+  return (
+    /(?<![\p{L}\p{N}_])من(?![\p{L}\p{N}_])/u.test(text) ||
+    PERSIAN_POSSESSIVE_SUFFIX_PATTERN.test(text)
+  )
+}
+
 export function shouldUseReasoningForMessage(message: string) {
   const text = message.trim().toLowerCase()
   if (!text) return false
-  const realPersianOrdinaryConversation =
-    /(\u0686\u0631\u0627|\u062a\u0648\u0636\u06cc\u062d\s+\u0628\u062f\u0647|\u062f\u0631\u0628\u0627\u0631\u0647)/i.test(text) ||
-    /\u0686\u06cc\u0633\u062a/i.test(text) &&
-      !/(\u0628\u0631\u0646\u0627\u0645\u0647\s+\u0641\u0639\u0644\u06cc|\u062a\u0645\u0631\u06a9\u0632\s+\u0645\u0646|workspace|\u062a\u0642\u0648\u06cc\u0645|\u0648\u0638\u06cc\u0641\u0647|\u06a9\u0627\u0631)/i.test(text)
   const realPersianReasoningIntent =
-    /(\u06cc\u0627\u062f\u06af\u06cc\u0631\u06cc|\u062f\u0631\u0633|\u062a\u0642\u0648\u06cc\u0645|\u0642\u0631\u0627\u0631|\u062c\u0644\u0633\u0647|\u0648\u0638\u06cc\u0641\u0647|\u0648\u0638\u06cc\u0641\u0647[\u200c\s-]?\u0647\u0627|\u06a9\u0627\u0631\u0647\u0627|\u06a9\u0627\u0631|\u062a\u0645\u0631\u06a9\u0632|\u0628\u0631\u0646\u0627\u0645\u0647\s+\u0641\u0639\u0644\u06cc|\u06a9\u0627\u0645\u0644\s+\u06a9\u0646|\u0627\u0646\u062c\u0627\u0645[\u200c\s-]?\u0634\u062f\u0647|\u062a\u0645\u0627\u0645\s+\u0646\u0634\u062f\u0647)/i.test(text)
+    /(یادگیری|درس|تقویم|قرار|جلسه|وظیفه|وظیفه[‌\s-]?ها|کارها|کار|تمرکز|برنامه\s+فعلی|کامل\s+کن|انجام[‌\s-]?شده|تمام\s+نشده)/i.test(text)
 
+  // "why is / explain / tell me about" (and the German/Persian equivalents)
+  // are unconditional generic-topic markers: asking to explain a concept is
+  // ordinary conversation no matter which domain words happen to appear in
+  // it, so these need no per-tool list and none is applied to them.
+  //
+  // "what is X" / "X چیست" is genuinely ambiguous the
+  // other clauses aren't -- "what is spaced repetition" is ordinary, "what
+  // is my GitHub Actions CI status" is a real request naming a specific
+  // tool. The distinguishing signal is possession, not which domain X
+  // names, so this checks for a possessive marker instead of an enumerated
+  // list of known tool phrasings. A new tool works here automatically; it
+  // does not need a naming update the way the old domain-phrase list did.
+  // English possession is the standalone word "my". Persian possession is
+  // usually an enclitic suffix on the noun rather than a standalone word
+  // (see hasPersianPossessiveMarker above) -- bare "من" alone would miss
+  // most real cases, like "برنامه‌ام چیست؟".
   const ordinaryConversation =
     /\b(why is|explain|tell me about|warum ist|erkläre|erklaere|erzähl|erzaehl)\b/i.test(text) ||
-    /\bwhat is\b/i.test(text) && !/\b(on my calendar|my current plan|my focus|my workspace|my tasks)\b/i.test(text) ||
-    /(چرا|توضیح بده|درباره)/i.test(text) ||
-    /چیست/i.test(text) && !/(برنامه فعلی|تمرکز من|workspace|تقویم|وظیفه|کار)/i.test(text)
+    (/\bwhat is\b/i.test(text) && !/\bmy\b/i.test(text)) ||
+    /(چرا|توضیح\s+بده|درباره)/i.test(text) ||
+    (/چیست/i.test(text) && !hasPersianPossessiveMarker(text))
 
-  if (ordinaryConversation || realPersianOrdinaryConversation) return false
+  if (ordinaryConversation) return false
   if (realPersianReasoningIntent) return true
 
   // Small denylist of clearly conversational messages (greetings, thanks,
@@ -260,6 +306,10 @@ function intentTitleKey(type: AgentReasoningResult['proposal']['type']): Transla
       return 'agent_intent_title_inspect_github_repositories'
     case 'inspect_github_issues':
       return 'agent_intent_title_inspect_github_issues'
+    case 'inspect_github_pull_requests':
+      return 'agent_intent_title_inspect_github_pull_requests'
+    case 'inspect_github_workflow_runs':
+      return 'agent_intent_title_inspect_github_workflow_runs'
     case 'complete_task':
       return 'agent_intent_title_complete_task'
     case 'ask_clarification':
@@ -298,7 +348,10 @@ function stepForReasoning(result: AgentReasoningResult, t: Translate): Workspace
     return null
   }
   const domain =
-    proposal.type === 'inspect_github_repositories' || proposal.type === 'inspect_github_issues'
+    proposal.type === 'inspect_github_repositories' ||
+    proposal.type === 'inspect_github_issues' ||
+    proposal.type === 'inspect_github_pull_requests' ||
+    proposal.type === 'inspect_github_workflow_runs'
       ? 'github'
       : proposal.type === 'inspect_workspace'
       ? 'workspace'
@@ -888,6 +941,20 @@ export default function ChatPage() {
           },
         }),
         githubIssuesClient: createGitHubIssuesClient({
+          workerBaseUrl: workerUrl,
+          getAccessToken: async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            return session?.access_token
+          },
+        }),
+        githubPullRequestsClient: createGitHubPullRequestsClient({
+          workerBaseUrl: workerUrl,
+          getAccessToken: async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            return session?.access_token
+          },
+        }),
+        githubWorkflowRunsClient: createGitHubWorkflowRunsClient({
           workerBaseUrl: workerUrl,
           getAccessToken: async () => {
             const { data: { session } } = await supabase.auth.getSession()

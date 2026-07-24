@@ -141,6 +141,8 @@ describe('handleChat mode routing', () => {
       'inspect_workspace',
       'inspect_github_repositories',
       'inspect_github_issues',
+      'inspect_github_pull_requests',
+      'inspect_github_workflow_runs',
       'complete_task',
       'ask_clarification',
       'unsupported',

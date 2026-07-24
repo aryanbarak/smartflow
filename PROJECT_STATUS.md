@@ -446,6 +446,19 @@ Current Agent Response UX Validation V1 status:
   `handleCallback`'s `setup_action === "request"` check is the only place
   that distinction is enforced today, and only when the callback is reached
   at all.
+- The German task-domain evidence pattern in `intentValidator.ts`
+  (`getStrongReadDomainEvidence`) matches bare `offen`/`offene`/`offenen`
+  without requiring `Aufgabe` attached, unlike the stricter English task
+  phrase requirement. This collides with any German GitHub phrasing that
+  also uses "offene" — e.g. `"Zeige meine offenen Issues."` or `"Zeige meine
+  offenen Pull-Requests."` — which now also carries github domain evidence,
+  so both domains match and the deterministic validator returns
+  `ask_clarification` instead of resolving directly, even though the message
+  is unambiguous to a human reader. Worked around in tests by dropping
+  "offen(e/en)" from German test phrasing rather than fixing the underlying
+  regex, since narrowing it is a separate, broader change affecting the
+  existing tasks intent, not scoped to the GitHub tools work that surfaced
+  it.
 
 ---
 

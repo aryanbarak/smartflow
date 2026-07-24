@@ -91,6 +91,41 @@ export interface GitHubIssuesClient {
   listIssues(): Promise<GitHubIssuesResult>;
 }
 
+export interface GitHubPullRequestSummary {
+  repo: string;
+  number: number;
+  title: string;
+  state: "open" | "closed";
+  updatedAt: string;
+  draft: boolean;
+}
+
+export interface GitHubPullRequestsResult {
+  connectionStatus: "connected" | "not_connected";
+  pullRequests: GitHubPullRequestSummary[];
+}
+
+export interface GitHubPullRequestsClient {
+  listPullRequests(): Promise<GitHubPullRequestsResult>;
+}
+
+export interface GitHubWorkflowRunSummary {
+  repo: string;
+  workflowName: string;
+  status: string;
+  conclusion?: string;
+  updatedAt: string;
+}
+
+export interface GitHubWorkflowRunsResult {
+  connectionStatus: "connected" | "not_connected";
+  workflowRuns: GitHubWorkflowRunSummary[];
+}
+
+export interface GitHubWorkflowRunsClient {
+  listWorkflowRuns(): Promise<GitHubWorkflowRunsResult>;
+}
+
 export interface ExecutionContext {
   tasks?: readonly ExecutionContextTask[];
   events?: readonly ExecutionContextEvent[];
@@ -100,6 +135,8 @@ export interface ExecutionContext {
   currentTime?: string;
   githubRepositoriesClient?: GitHubRepositoriesClient;
   githubIssuesClient?: GitHubIssuesClient;
+  githubPullRequestsClient?: GitHubPullRequestsClient;
+  githubWorkflowRunsClient?: GitHubWorkflowRunsClient;
 }
 
 export interface ExecutionRequest {

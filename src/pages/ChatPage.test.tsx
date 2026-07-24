@@ -216,6 +216,36 @@ describe("ChatPage LLM reasoning UX boundary", () => {
     expect(shouldUseReasoningForMessage("Show my open GitHub issues.")).toBe(true);
     expect(shouldUseReasoningForMessage("Zeige meine offenen GitHub-Issues.")).toBe(true);
     expect(shouldUseReasoningForMessage("ایشوهای باز گیت‌هاب را نشان بده.")).toBe(true);
+    expect(shouldUseReasoningForMessage("Show my open pull requests.")).toBe(true);
+    expect(shouldUseReasoningForMessage("Zeige meine offenen Pull-Requests.")).toBe(true);
+    expect(shouldUseReasoningForMessage("Zeige meine GitHub-Workflow-Runs.")).toBe(true);
+  });
+
+  it("routes a 'what is' / 'چیست' question into intent mode when it's possessive, not just explanatory", () => {
+    // Regression coverage for the ordinaryConversation gate: it used to
+    // exempt "what is X" from ordinary-conversation only when X matched a
+    // hardcoded list of known tool phrases ("on my calendar", "my tasks",
+    // ...), so a genuinely new tool request phrased as a question ("What is
+    // my GitHub Actions CI status?") was silently swallowed into plain chat.
+    // The gate now checks for a possessive marker ("my" / "من") instead of
+    // an enumerated domain list, so this works without the gate knowing
+    // anything about GitHub Actions specifically.
+    expect(shouldUseReasoningForMessage("What is my GitHub Actions CI status?")).toBe(true);
+    expect(shouldUseReasoningForMessage("Was ist mein GitHub Actions Status?")).toBe(true);
+    expect(shouldUseReasoningForMessage("وضعیت اجراهای گیت‌هاب من چیست؟")).toBe(true);
+    // Still ordinary without possession: generic/explanatory "what is" stays chat.
+    expect(shouldUseReasoningForMessage("What is GitHub Actions?")).toBe(false);
+  });
+
+  it("recognizes Persian's enclitic possessive suffix, not just the standalone word من", () => {
+    // Persian marks possession on the noun itself (برنامه‌ام = "my plan"),
+    // not with a free-standing word the way English "my" works — a bare
+    // "من" check misses this shape entirely, which is the common case in
+    // natural Persian phrasing, not an edge case.
+    expect(shouldUseReasoningForMessage("برنامه‌ام چیست؟")).toBe(true);
+    expect(shouldUseReasoningForMessage("وضعیت issue‌هایم چیست؟")).toBe(true);
+    // No possessive marker in any form: stays ordinary.
+    expect(shouldUseReasoningForMessage("الگوریتم مرتب‌سازی چیست؟")).toBe(false);
   });
 
   it("resolves inspect_github_issues via expectedToolId pass-through, even though it has no domain+actionType mapping", () => {
@@ -228,6 +258,18 @@ describe("ChatPage LLM reasoning UX boundary", () => {
 
     expect(state.resolution?.status).toBe("resolved");
     expect(state.resolution?.toolId).toBe("github.issues.list");
+  });
+
+  it.each([
+    ["inspect_github_pull_requests", "github.pulls.list"],
+    ["inspect_github_workflow_runs", "github.workflow_runs.list"],
+  ] as const)("resolves %s via expectedToolId pass-through, even though it has no domain+actionType mapping", (type, toolId) => {
+    const t = (key: string) => key;
+    const result = reasoningResult(type, toolId);
+    const state = proposalToState(result, t);
+
+    expect(state.resolution?.status).toBe("resolved");
+    expect(state.resolution?.toolId).toBe(toolId);
   });
 
   it("resolves every existing read intent to the same toolId intentValidator already assigned it", () => {

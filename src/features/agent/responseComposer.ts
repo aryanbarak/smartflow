@@ -12,6 +12,8 @@ export const SUPPORTED_RESPONSE_COMPOSER_TOOL_IDS = Object.freeze([
   "tasks.complete",
   "github.repositories.list",
   "github.issues.list",
+  "github.pulls.list",
+  "github.workflow_runs.list",
 ] as const);
 
 export type ResponseComposerToolId = typeof SUPPORTED_RESPONSE_COMPOSER_TOOL_IDS[number];
@@ -184,6 +186,52 @@ const TOOL_COPY: Record<ResponseComposerToolId, Record<AssistantResponseLanguage
       countSummary: (count) => `${count} ایشوی باز گیت‌هاب پیدا کردم.`,
       failureSummary: "نتوانستم ایشوهای باز گیت‌هاب را به شکل امن بارگذاری کنم.",
       suggestion: "برای تغییر یا نظر دادن روی یک ایشو، گیت‌هاب را جداگانه باز کن.",
+    },
+  },
+  "github.pulls.list": {
+    en: {
+      headline: "Here are your open GitHub pull requests.",
+      emptySummary: "GitHub is not connected or no open pull requests are available.",
+      countSummary: (count) => `I found ${count} open GitHub pull ${count === 1 ? "request" : "requests"}.`,
+      failureSummary: "I could not load your open GitHub pull requests safely.",
+      suggestion: "Open GitHub separately if you need to review or merge a pull request.",
+    },
+    de: {
+      headline: "Hier sind deine offenen GitHub-Pull-Requests.",
+      emptySummary: "GitHub ist nicht verbunden oder es sind keine offenen Pull-Requests verfuegbar.",
+      countSummary: (count) => `Ich habe ${count} offene GitHub-Pull-${count === 1 ? "Request" : "Requests"} gefunden.`,
+      failureSummary: "Ich konnte deine offenen GitHub-Pull-Requests nicht sicher laden.",
+      suggestion: "Oeffne GitHub separat, wenn du einen Pull-Request pruefen oder mergen moechtest.",
+    },
+    fa: {
+      headline: "پول‌ریکوئست‌های باز گیت‌هاب تو این‌ها هستند.",
+      emptySummary: "گیت‌هاب متصل نیست یا پول‌ریکوئست بازی در دسترس نیست.",
+      countSummary: (count) => `${count} پول‌ریکوئست باز گیت‌هاب پیدا کردم.`,
+      failureSummary: "نتوانستم پول‌ریکوئست‌های باز گیت‌هاب را به شکل امن بارگذاری کنم.",
+      suggestion: "برای بررسی یا ادغام یک پول‌ریکوئست، گیت‌هاب را جداگانه باز کن.",
+    },
+  },
+  "github.workflow_runs.list": {
+    en: {
+      headline: "Here are your recent GitHub workflow runs.",
+      emptySummary: "GitHub is not connected or no recent workflow runs are available.",
+      countSummary: (count) => `I found ${count} recent GitHub workflow ${count === 1 ? "run" : "runs"}.`,
+      failureSummary: "I could not load your recent GitHub workflow runs safely.",
+      suggestion: "Open GitHub Actions separately if you need run logs or details.",
+    },
+    de: {
+      headline: "Hier sind deine letzten GitHub-Workflow-Laeufe.",
+      emptySummary: "GitHub ist nicht verbunden oder es sind keine letzten Workflow-Laeufe verfuegbar.",
+      countSummary: (count) => `Ich habe ${count} letzte GitHub-Workflow-${count === 1 ? "Lauf" : "Laeufe"} gefunden.`,
+      failureSummary: "Ich konnte deine letzten GitHub-Workflow-Laeufe nicht sicher laden.",
+      suggestion: "Oeffne GitHub Actions separat, wenn du Protokolle oder Details brauchst.",
+    },
+    fa: {
+      headline: "اجراهای اخیر ورک‌فلوهای گیت‌هاب تو این‌ها هستند.",
+      emptySummary: "گیت‌هاب متصل نیست یا اجرای اخیری در دسترس نیست.",
+      countSummary: (count) => `${count} اجرای اخیر ورک‌فلو گیت‌هاب پیدا کردم.`,
+      failureSummary: "نتوانستم اجراهای اخیر ورک‌فلوهای گیت‌هاب را به شکل امن بارگذاری کنم.",
+      suggestion: "برای دیدن جزئیات یا لاگ‌ها، گیت‌هاب اکشنز را جداگانه باز کن.",
     },
   },
   "tasks.complete": {
