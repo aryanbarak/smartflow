@@ -58,6 +58,7 @@ export function createLlmReasoningCaller(
           message: request.prompt,
           session_id: request.sessionId ?? "flow-ai-reasoning",
           responseLanguage: request.responseLanguage,
+          mode: "reasoning",
         };
     const response = await fetcher(options.endpoint, {
       method: "POST",

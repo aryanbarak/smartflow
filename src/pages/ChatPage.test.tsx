@@ -174,9 +174,28 @@ describe("ChatPage LLM reasoning UX boundary", () => {
     expect(shouldUseReasoningForMessage("درباره سیستم‌های بهره‌وری توضیح بده.")).toBe(false);
   });
 
-  it("does not route messages with no domain signal at all into intent mode", () => {
+  it("does not route greetings, thanks, or acknowledgements into intent mode", () => {
     expect(shouldUseReasoningForMessage("Hello, how are you today?")).toBe(false);
     expect(shouldUseReasoningForMessage("Thanks, that was helpful!")).toBe(false);
+    expect(shouldUseReasoningForMessage("Hi there!")).toBe(false);
+    expect(shouldUseReasoningForMessage("Ok, got it, thanks.")).toBe(false);
+    expect(shouldUseReasoningForMessage("Hallo, wie geht es dir?")).toBe(false);
+    expect(shouldUseReasoningForMessage("Danke, das war hilfreich!")).toBe(false);
+    expect(shouldUseReasoningForMessage("سلام، چطوری؟")).toBe(false);
+    expect(shouldUseReasoningForMessage("ممنونم، خیلی کمک کرد.")).toBe(false);
+  });
+
+  it("routes arbitrary tool phrasing never seen before into reasoning, since the allowlist is gone", () => {
+    expect(shouldUseReasoningForMessage("Check the status of my project rollout")).toBe(true);
+    expect(shouldUseReasoningForMessage("Can you look into the widget inventory for me?")).toBe(true);
+    expect(shouldUseReasoningForMessage("Kannst du den Status meines Projekts pruefen?")).toBe(true);
+    expect(shouldUseReasoningForMessage("می‌تونی وضعیت پروژه من رو بررسی کنی؟")).toBe(true);
+  });
+
+  it("does not let a greeting/thanks/acknowledgement word thrown in as a prefix disqualify a real request", () => {
+    expect(shouldUseReasoningForMessage("ok show me my repositories")).toBe(true);
+    expect(shouldUseReasoningForMessage("Great, now list my open issues")).toBe(true);
+    expect(shouldUseReasoningForMessage("thanks, and what tasks do I have?")).toBe(true);
   });
 
   it("routes natural supported action phrasing into intent mode", () => {

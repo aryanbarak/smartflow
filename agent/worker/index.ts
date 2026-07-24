@@ -1,7 +1,13 @@
 import type { Env, AgentBriefing, ExtractedFact, MemoryEntry, UserContext, BriefingMode, ChatMessage, ChatOptions } from './types'
 import { buildUserContext, fetchUserMemory, fetchUserLanguage, fetchTaskSnapshot, fetchCalendarSnapshot, fetchHabitSnapshot, fetchFinanceSnapshot, supabaseGet, supabasePost, supabasePatch } from './context-builder'
 import { buildPrompt, buildExtractionPrompt, buildChatExtractionPrompt, EXTRACTABLE_KEYS, buildChatSystemPrompt } from './prompt-builder'
-import { handleLocalReasoningRequest } from './reasoning-endpoint'
+import {
+  handleLocalReasoningRequest,
+  buildReasoningSystemInstruction,
+  buildReasoningResponseSchema,
+  RESPONSE_LANGUAGES,
+  type ReasoningResponseLanguage,
+} from './reasoning-endpoint'
 import { handleGitHubIntegrationRequest } from './github-integration'
 
 const ENABLE_AUTO_MEMORY_WRITE = true
@@ -613,8 +619,15 @@ async function handleChat(request: Request, env: Env, ctx: ExecutionContext): Pr
 
   let message: string
   let sessionId: string
+  let mode: 'reasoning' | 'chat'
+  let responseLanguage: ReasoningResponseLanguage
   try {
-    const body = await request.json() as { message?: unknown; session_id?: unknown }
+    const body = await request.json() as {
+      message?: unknown
+      session_id?: unknown
+      mode?: unknown
+      responseLanguage?: unknown
+    }
     const parsed = typeof body.message === 'string' ? body.message.trim() : ''
     if (parsed === '') {
       return json({ error: 'message must be a non-empty string' }, 400, origin)
@@ -624,8 +637,28 @@ async function handleChat(request: Request, env: Env, ctx: ExecutionContext): Pr
     }
     message = parsed
     sessionId = body.session_id.trim()
+    mode = body.mode === 'reasoning' ? 'reasoning' : 'chat'
+    responseLanguage = typeof body.responseLanguage === 'string' && RESPONSE_LANGUAGES.has(body.responseLanguage)
+      ? (body.responseLanguage as ReasoningResponseLanguage)
+      : 'auto'
   } catch {
     return json({ error: 'Invalid JSON body' }, 400, origin)
+  }
+
+  // Reasoning mode: the frontend has already built the full reasoning prompt
+  // (instructions + safe context JSON) and sent it as `message`. This is not
+  // a conversational turn — schema-enforce the model call and persist
+  // nothing to agent_chat_messages, since there is no user-visible message
+  // here to record.
+  if (mode === 'reasoning') {
+    try {
+      const reply = await callGeminiReasoning(message, responseLanguage, env)
+      console.log(`[Chat] userId=${userId} sessionId=${sessionId} mode=reasoning reply=${reply.length} chars`)
+      return json({ reply }, 200, origin)
+    } catch (err) {
+      console.error('[Chat] Reasoning mode error:', err)
+      return json({ error: 'Failed to generate reasoning proposal' }, 500, origin)
+    }
   }
 
   try {
@@ -772,6 +805,58 @@ async function callGeminiChat(
   console.log('[Chat] finishReason:', finishReason, 'text length:', text.length)
 
   if (!text) throw new Error(`No content from Gemini chat (finishReason: ${finishReason})`)
+  return text.trim()
+}
+
+// =============================================
+// Gemini reasoning-mode call (/chat with mode="reasoning")
+//
+// Schema-enforced like /agent/reason's callGeminiOnce, so the model cannot
+// return prose. This is a defense-in-depth measure, not a replacement for
+// intentValidator's deterministic rescues (unrecognized type, non-literal
+// confidence) — those stay in place as the fallback for whatever Gemini
+// returns off-contract despite the schema.
+// =============================================
+async function callGeminiReasoning(
+  reasoningPrompt: string,
+  responseLanguage: ReasoningResponseLanguage,
+  env: Env,
+): Promise<string> {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: {
+          parts: [{ text: buildReasoningSystemInstruction(responseLanguage) }],
+        },
+        contents: [{ role: 'user', parts: [{ text: reasoningPrompt }] }],
+        generationConfig: {
+          maxOutputTokens: 768,
+          temperature: 0,
+          responseMimeType: 'application/json',
+          // Disable thinking tokens — they count against maxOutputTokens in Gemini 2.5
+          thinkingConfig: { thinkingBudget: 0 },
+          responseSchema: buildReasoningResponseSchema(),
+        },
+      }),
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Gemini reasoning API error: ${err}`)
+  }
+
+  const data: any = await res.json()
+  const candidate = data?.candidates?.[0]
+  const finishReason: string = candidate?.finishReason ?? 'UNKNOWN'
+  const text: string = candidate?.content?.parts?.[0]?.text ?? ''
+
+  console.log('[Chat] reasoning mode finishReason:', finishReason, 'text length:', text.length)
+
+  if (!text) throw new Error(`No content from Gemini reasoning (finishReason: ${finishReason})`)
   return text.trim()
 }
 

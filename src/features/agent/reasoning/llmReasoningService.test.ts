@@ -51,6 +51,27 @@ describe("llmReasoningService", () => {
     expect(JSON.stringify(fetcher.mock.calls[0]?.[1])).toContain("Bearer token");
   });
 
+  it("sends mode: reasoning on the stateful-chat transport so the worker schema-enforces the model call", async () => {
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => ({
+      ok: true,
+      json: async () => ({ reply: '{"type":"inspect_tasks"}' }),
+    }));
+    const caller = createLlmReasoningCaller({
+      endpoint: "https://example.test/chat",
+      accessToken: "token",
+      fetcher: fetcher as unknown as typeof fetch,
+    });
+
+    await caller({
+      prompt: "Return JSON",
+      responseLanguage: "en",
+      sessionId: "session-1",
+    });
+
+    const requestBody = JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body));
+    expect(requestBody.mode).toBe("reasoning");
+  });
+
   it("returns empty raw text when no endpoint is configured", async () => {
     await expect(
       createLlmReasoningCaller({})({

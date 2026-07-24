@@ -169,6 +169,44 @@ const readIntentAction: Record<string, WorkspacePlanActionType> = {
   inspect_github_repositories: 'inspect',
 }
 
+const CONVERSATIONAL_FILLER_ATOMS = [
+  // English greetings/thanks/acknowledgements, plus "today"/"there"/"and" as
+  // low-risk standalone filler words
+  'good morning', 'good evening', 'good night', 'how are you', 'thank you',
+  'thanks a lot', 'much appreciated', 'that was helpful', 'no problem',
+  "you're welcome", 'sounds good', 'got it', 'see you', 'thanks', 'okay',
+  'ok', 'cool', 'nice', 'great', 'goodbye', 'bye', 'hello', 'hi', 'hey',
+  'today', 'there', 'and',
+  // German
+  'guten morgen', 'guten abend', 'gute nacht', 'wie geht es dir',
+  "wie geht's", 'wie geht', 'dankesch(?:ö|oe)n', 'vielen dank',
+  'das war hilfreich', 'kein problem', 'gern geschehen', 'alles klar',
+  'klingt gut', 'verstanden', 'auf wiedersehen', 'tsch(?:ü|ue)ss', 'danke',
+  'super', 'klasse', 'hallo', 'servus', 'und',
+  // Persian
+  'سلام', 'درود', 'صبح بخیر', 'شب بخیر', 'روز بخیر', 'حالت چطوره', 'چطوری',
+  'خیلی کمک کرد', 'خیلی ممنون', 'خواهش می.کنم', 'ممنونم', 'متشکرم', 'ممنون',
+  'مرسی', 'قابل نداره', 'باشه', 'خداحافظ', 'و', 'هم',
+].join('|')
+
+// (?<![\p{L}\p{N}_]) / (?![\p{L}\p{N}_]) are Unicode-aware word boundaries —
+// unlike \b, which only recognizes ASCII a-z/0-9/_, this correctly treats a
+// bare Persian connector like "و" as a whole word instead of matching it as
+// a substring inside an unrelated word.
+const CONVERSATIONAL_FILLER_PATTERN = new RegExp(
+  `(?<![\\p{L}\\p{N}_])(?:${CONVERSATIONAL_FILLER_ATOMS})(?![\\p{L}\\p{N}_])`,
+  'giu',
+)
+const PUNCTUATION_PATTERN = /[,.!?؟،؛:'"-]/g
+
+function isEntirelyConversationalFiller(text: string): boolean {
+  const residual = text
+    .replace(CONVERSATIONAL_FILLER_PATTERN, ' ')
+    .replace(PUNCTUATION_PATTERN, ' ')
+    .replace(/\s+/g, '')
+  return residual.length === 0
+}
+
 export function shouldUseReasoningForMessage(message: string) {
   const text = message.trim().toLowerCase()
   if (!text) return false
@@ -188,11 +226,23 @@ export function shouldUseReasoningForMessage(message: string) {
   if (ordinaryConversation || realPersianOrdinaryConversation) return false
   if (realPersianReasoningIntent) return true
 
-  return (
-    /\b(task|tasks|todo|todos|unfinished|open tasks|focus on|complete|done|calendar|appointments|meetings|learning|lesson|workspace|current plan|repositories|repos|github[-\s]+repositories|github[-\s]+repos)\b/i.test(text) ||
-    /\b(kalender|termin|termine|besprechung|besprechungen|aufgabe|aufgaben|offenen aufgaben|nicht erledigt|lernen|lernfortschritt|fokus|aktueller plan|erledige|markiere|github-repositories)\b/i.test(text) ||
-    /(یادگیری|درس|تقویم|قرار|جلسه|وظیفه|وظیفه‌ها|کارها|کار|تمرکز|برنامه فعلی|کامل کن|انجام‌شده|تمام نشده|مخزن|((گیت[‌\s-]?هاب|github).*(مخزن|مخزن[‌\s-]?ها)|(مخزن|مخزن[‌\s-]?ها).*(گیت[‌\s-]?هاب|github)))/i.test(text)
-  )
+  // Small denylist of clearly conversational messages (greetings, thanks,
+  // acknowledgements) — everything else attempts reasoning. This replaces
+  // the old domain-keyword allowlist, which silently dropped any phrasing
+  // it hadn't been taught (e.g. new tool intents) into plain chat.
+  //
+  // This must anchor to the WHOLE message, not match anywhere in it — "ok"
+  // or "great" thrown in as a prefix ("ok show me my repositories") must not
+  // disqualify a real request. So instead of testing for presence, strip
+  // every known greeting/thanks/acknowledgement phrase (plus a couple of
+  // connector/filler words) and all punctuation, then check whether
+  // anything substantive is left. CONVERSATIONAL_FILLER_PATTERN uses
+  // Unicode-aware boundaries (not \b, which is ASCII-only) so a bare
+  // connector like Persian "و" only strips when it stands alone as a word,
+  // never as a substring inside an unrelated word.
+  if (isEntirelyConversationalFiller(text)) return false
+
+  return true
 }
 
 function intentTitleKey(type: AgentReasoningResult['proposal']['type']): TranslationKey {

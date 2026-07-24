@@ -4,7 +4,7 @@ const MAX_PROMPT_LENGTH = 24_000
 const MAX_REQUEST_ID_LENGTH = 128
 const MAX_SHORT_TEXT_LENGTH = 240
 
-const RESPONSE_LANGUAGES = new Set(['auto', 'en', 'de', 'fa'])
+export const RESPONSE_LANGUAGES = new Set(['auto', 'en', 'de', 'fa'])
 const PROPOSAL_LANGUAGES = ['en', 'de', 'fa'] as const
 const SUPPORTED_INTENT_VALUES = [
   'inspect_tasks',
@@ -60,6 +60,8 @@ interface ReasoningRequest {
   reasoningPrompt: string
   responseLanguage: 'auto' | 'en' | 'de' | 'fa'
 }
+
+export type ReasoningResponseLanguage = ReasoningRequest['responseLanguage']
 
 type ValidationResult<T> =
   | { ok: true; value: T }
@@ -370,6 +372,44 @@ async function authenticate(
   return typeof user.id === 'string' && user.id.length > 0
 }
 
+export function buildReasoningSystemInstruction(responseLanguage: ReasoningResponseLanguage): string {
+  return [
+    'Return exactly one JSON intent proposal and no prose.',
+    'Use only the schema fields type, confidence, requestedDomain, target, clarificationQuestion, reasons, and language.',
+    'The type field must use one supported SmartFlow intent from the supplied prompt.',
+    'You never execute, approve, authorize, or claim completion of an action.',
+    languageInstruction(responseLanguage),
+  ].join(' ')
+}
+
+export function buildReasoningResponseSchema() {
+  return {
+    type: 'OBJECT',
+    required: ['type', 'confidence', 'reasons', 'language'],
+    properties: {
+      type: { type: 'STRING', enum: [...SUPPORTED_INTENT_VALUES] },
+      confidence: { type: 'STRING', enum: [...SUPPORTED_CONFIDENCE_VALUES] },
+      requestedDomain: { type: 'STRING', enum: [...SUPPORTED_DOMAIN_VALUES] },
+      target: {
+        type: 'OBJECT',
+        properties: {
+          taskId: { type: 'STRING' },
+          taskReference: { type: 'STRING' },
+          taskTitleHint: { type: 'STRING' },
+        },
+      },
+      clarificationQuestion: { type: 'STRING' },
+      reasons: {
+        type: 'ARRAY',
+        minItems: 1,
+        maxItems: 3,
+        items: { type: 'STRING' },
+      },
+      language: { type: 'STRING', enum: [...PROPOSAL_LANGUAGES] },
+    },
+  }
+}
+
 async function callGeminiOnce(
   input: ReasoningRequest,
   config: LocalReasoningConfig,
@@ -385,15 +425,7 @@ async function callGeminiOnce(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       system_instruction: {
-        parts: [{
-          text: [
-            'Return exactly one JSON intent proposal and no prose.',
-            'Use only the schema fields type, confidence, requestedDomain, target, clarificationQuestion, reasons, and language.',
-            'The type field must use one supported SmartFlow intent from the supplied prompt.',
-            'You never execute, approve, authorize, or claim completion of an action.',
-            languageInstruction(input.responseLanguage),
-          ].join(' '),
-        }],
+        parts: [{ text: buildReasoningSystemInstruction(input.responseLanguage) }],
       },
       contents: [{ role: 'user', parts: [{ text: input.reasoningPrompt }] }],
       generationConfig: {
@@ -401,31 +433,7 @@ async function callGeminiOnce(
         temperature: 0,
         responseMimeType: 'application/json',
         thinkingConfig: { thinkingBudget: 0 },
-        responseSchema: {
-          type: 'OBJECT',
-          required: ['type', 'confidence', 'reasons', 'language'],
-          properties: {
-            type: { type: 'STRING', enum: [...SUPPORTED_INTENT_VALUES] },
-            confidence: { type: 'STRING', enum: [...SUPPORTED_CONFIDENCE_VALUES] },
-            requestedDomain: { type: 'STRING', enum: [...SUPPORTED_DOMAIN_VALUES] },
-            target: {
-              type: 'OBJECT',
-              properties: {
-                taskId: { type: 'STRING' },
-                taskReference: { type: 'STRING' },
-                taskTitleHint: { type: 'STRING' },
-              },
-            },
-            clarificationQuestion: { type: 'STRING' },
-            reasons: {
-              type: 'ARRAY',
-              minItems: 1,
-              maxItems: 3,
-              items: { type: 'STRING' },
-            },
-            language: { type: 'STRING', enum: [...PROPOSAL_LANGUAGES] },
-          },
-        },
+        responseSchema: buildReasoningResponseSchema(),
       },
     }),
   })
