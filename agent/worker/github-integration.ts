@@ -5,6 +5,8 @@ const GITHUB_API_ORIGIN = 'https://api.github.com'
 const CONNECT_ATTEMPT_TTL_MS = 10 * 60 * 1000
 const GITHUB_TIMEOUT_MS = 8_000
 const MAX_REPOSITORIES = 20
+const MAX_ISSUES = 20
+const MAX_REPOS_SCANNED_FOR_ISSUES = 3
 const MAX_INSTALLATION_LIST_PAGES = 10
 const API_VERSION = '2022-11-28'
 
@@ -66,6 +68,14 @@ interface GitHubRepositoryResponse {
   default_branch?: unknown
   archived?: unknown
   owner?: { login?: unknown }
+}
+
+interface GitHubIssueResponse {
+  number?: unknown
+  title?: unknown
+  state?: unknown
+  updated_at?: unknown
+  pull_request?: unknown
 }
 
 class GitHubIntegrationError extends Error {
@@ -438,7 +448,7 @@ async function githubFetch(
 
 function providerError(
   response: Response,
-  context: 'verification' | 'user-token-exchange' | 'installation-token-mint' | 'repositories',
+  context: 'verification' | 'user-token-exchange' | 'installation-token-mint' | 'repositories' | 'issues',
 ) {
   if (response.status === 429) {
     return new GitHubIntegrationError('GITHUB_RATE_LIMITED', 503, 'GitHub rate limit was reached.')
@@ -808,6 +818,117 @@ async function listRepositories(
   }
 }
 
+function isPullRequest(value: GitHubIssueResponse) {
+  return value.pull_request !== undefined
+}
+
+function sanitizeIssue(repo: string, value: GitHubIssueResponse) {
+  const number = positiveInteger(value.number)
+  const title = boundedString(value.title, 200)
+  const stateValue = boundedString(value.state, 16)
+  const state = stateValue === 'open' || stateValue === 'closed' ? stateValue : undefined
+  const updatedAt = boundedString(value.updated_at, 64)
+  if (!number || !title || !state || !updatedAt) return undefined
+  return { repo, number, title, state, updatedAt }
+}
+
+async function listRepositoriesForIssueScan(
+  token: string,
+  deps: GitHubIntegrationDependencies,
+) {
+  const response = await githubFetch(
+    deps,
+    `${GITHUB_API_ORIGIN}/installation/repositories?per_page=${MAX_REPOS_SCANNED_FOR_ISSUES}&page=1`,
+    {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': API_VERSION,
+        'User-Agent': 'SmartFlow-GitHub-App',
+      },
+    },
+  )
+  if (!response.ok) throw providerError(response, 'repositories')
+  const body = await providerJson<{ repositories?: unknown }>(response)
+  if (!Array.isArray(body.repositories)) {
+    throw new GitHubIntegrationError('GITHUB_RESPONSE_INVALID', 502, 'GitHub returned an invalid repository response.')
+  }
+  const selected = body.repositories.slice(0, MAX_REPOS_SCANNED_FOR_ISSUES)
+  const repositories = selected
+    .map((item) => item && typeof item === 'object' ? sanitizeRepository(item as GitHubRepositoryResponse) : undefined)
+  if (repositories.some((item) => !item)) {
+    throw new GitHubIntegrationError('GITHUB_RESPONSE_INVALID', 502, 'GitHub returned invalid repository metadata.')
+  }
+  return repositories.filter(
+    (item): item is NonNullable<ReturnType<typeof sanitizeRepository>> => Boolean(item),
+  )
+}
+
+async function listIssuesForRepository(
+  repo: NonNullable<ReturnType<typeof sanitizeRepository>>,
+  token: string,
+  deps: GitHubIntegrationDependencies,
+) {
+  const response = await githubFetch(
+    deps,
+    `${GITHUB_API_ORIGIN}/repos/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}/issues?state=open&per_page=${MAX_ISSUES}&page=1`,
+    {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': API_VERSION,
+        'User-Agent': 'SmartFlow-GitHub-App',
+      },
+    },
+  )
+  if (!response.ok) throw providerError(response, 'issues')
+  const body = await providerJson<unknown>(response)
+  if (!Array.isArray(body)) {
+    throw new GitHubIntegrationError('GITHUB_RESPONSE_INVALID', 502, 'GitHub returned an invalid issues response.')
+  }
+  const repoLabel = `${repo.owner}/${repo.name}`
+  // Pull requests share this endpoint and carry a pull_request key — excluded
+  // silently, they are not "invalid issue data". Anything else that fails to
+  // sanitize is a genuine data problem and fails the whole request closed,
+  // same as listRepositories.
+  const candidates = body.filter(
+    (item): item is GitHubIssueResponse =>
+      Boolean(item) && typeof item === 'object' && !isPullRequest(item as GitHubIssueResponse),
+  )
+  const sanitized = candidates.map((item) => sanitizeIssue(repoLabel, item))
+  if (sanitized.some((item) => !item)) {
+    throw new GitHubIntegrationError('GITHUB_RESPONSE_INVALID', 502, 'GitHub returned invalid issue metadata.')
+  }
+  return sanitized.filter((item): item is NonNullable<typeof item> => Boolean(item))
+}
+
+async function listIssues(
+  request: Request,
+  config: GitHubConfig,
+  deps: GitHubIntegrationDependencies,
+) {
+  const { userId, authorization } = await requireUser(request, config, deps)
+  const connection = await loadConnection(userId, authorization, config, deps)
+  const installationId = positiveInteger(connection.installation_id)
+  if (!installationId) {
+    throw new GitHubIntegrationError('CONNECTION_RECORD_INVALID', 500, 'Verified connection metadata is invalid.')
+  }
+  const token = await installationToken(installationId, config, deps)
+  const repositories = await listRepositoriesForIssueScan(token, deps)
+
+  // Repos are independent, read-only requests — fan out in parallel rather
+  // than one round trip per repo. Promise.all fails the whole request closed
+  // if any single repo's issues call fails, rather than silently returning a
+  // partial, undercounted list.
+  const perRepositoryIssues = await Promise.all(
+    repositories.map((repo) => listIssuesForRepository(repo, token, deps)),
+  )
+
+  return {
+    issues: perRepositoryIssues.flat().slice(0, MAX_ISSUES),
+  }
+}
+
 async function connectionStatus(
   request: Request,
   config: GitHubBaseConfig,
@@ -890,11 +1011,15 @@ export async function handleGitHubIntegrationRequest(
     if (url.pathname === '/github/repositories' && request.method === 'GET') {
       return json(await listRepositories(request, config, deps), 200, origin, config)
     }
+    if (url.pathname === '/github/issues' && request.method === 'GET') {
+      return json(await listIssues(request, config, deps), 200, origin, config)
+    }
     if (
       url.pathname === '/github/connect/start' ||
       url.pathname === '/github/connect/setup' ||
       url.pathname === '/github/connect/callback' ||
       url.pathname === '/github/repositories' ||
+      url.pathname === '/github/issues' ||
       url.pathname === '/github/disconnect' ||
       url.pathname === '/github/connection'
     ) {
@@ -910,8 +1035,11 @@ export const githubIntegrationInternals = {
   GITHUB_API_ORIGIN,
   GITHUB_AUTH_ORIGIN,
   MAX_REPOSITORIES,
+  MAX_ISSUES,
+  MAX_REPOS_SCANNED_FOR_ISSUES,
   CONNECT_ATTEMPT_TTL_MS,
   resolveBaseConfig,
   resolveConfig,
   sanitizeRepository,
+  sanitizeIssue,
 }

@@ -15,6 +15,7 @@ const supportedIntentTypes: AgentIntentType[] = [
   "inspect_learning",
   "inspect_workspace",
   "inspect_github_repositories",
+  "inspect_github_issues",
   "complete_task",
   "ask_clarification",
   "unsupported",
@@ -36,6 +37,7 @@ const intentToolMap = {
   inspect_learning: "learning.get_progress",
   inspect_workspace: "workspace.get_context",
   inspect_github_repositories: "github.repositories.list",
+  inspect_github_issues: "github.issues.list",
   complete_task: "tasks.complete",
 } as const;
 
@@ -47,6 +49,7 @@ const domainByIntent: Partial<Record<AgentIntentType, AgentIntentDomain>> = {
   inspect_learning: "learning",
   inspect_workspace: "workspace",
   inspect_github_repositories: "github",
+  inspect_github_issues: "github",
   complete_task: "tasks",
 };
 
@@ -220,6 +223,33 @@ function messageHasAny(message: string, patterns: RegExp[]) {
   return patterns.some((pattern) => pattern.test(message));
 }
 
+const GITHUB_REPOSITORIES_EVIDENCE_PATTERNS = [
+  /\b(github repositories|github repos|connected repositories|connected repos|github repository)\b/i,
+  /\b(github-repositories|verbundene repositories|github-repos)\b/i,
+  /((گیت[‌\s-]?هاب|github).*(مخزن|مخزن[‌\s-]?ها)|(مخزن|مخزن[‌\s-]?ها).*(گیت[‌\s-]?هاب|github))/i,
+];
+
+const GITHUB_ISSUES_EVIDENCE_PATTERNS = [
+  /\b(github issues|open issues|connected issues|github issue)\b/i,
+  /\b(github-issues|offene issues|offenen issues)\b/i,
+  /((گیت[‌\s-]?هاب|github).*(ایشو|ایشوها|مسئله|مسائل)|(ایشو|ایشوها|مسئله|مسائل).*(گیت[‌\s-]?هاب|github))/i,
+];
+
+// Disambiguates WHICH github intent to rescue into. Domain-level evidence
+// (getStrongReadDomainEvidence) only proves "this message is about github" —
+// with two github intents now sharing that domain, picking a specific one to
+// rescue into needs its own check. A message matching both is genuinely
+// ambiguous between the two tools, not a signal to guess; it returns
+// "conflicting" so the caller declines to rescue rather than picking one.
+function getGitHubIntentEvidence(message: string): "repositories" | "issues" | "conflicting" | null {
+  const repositories = messageHasAny(message, GITHUB_REPOSITORIES_EVIDENCE_PATTERNS);
+  const issues = messageHasAny(message, GITHUB_ISSUES_EVIDENCE_PATTERNS);
+  if (repositories && issues) return "conflicting";
+  if (repositories) return "repositories";
+  if (issues) return "issues";
+  return null;
+}
+
 function getStrongReadDomainEvidence(message: string): AgentIntentDomain | "conflicting" | null {
   const taskEvidence = messageHasAny(message, [
     /\b(task|tasks|open tasks|unfinished|to-?do|todos|focus on)\b/i,
@@ -241,11 +271,9 @@ function getStrongReadDomainEvidence(message: string): AgentIntentDomain | "conf
     /\b(workspace|aktueller plan|arbeitsbereich)\b/i,
     /(\u0628\u0631\u0646\u0627\u0645\u0647 \u0641\u0639\u0644\u06cc|workspace)/i,
   ]);
-  const githubEvidence = messageHasAny(message, [
-    /\b(github repositories|github repos|connected repositories|connected repos|github repository)\b/i,
-    /\b(github-repositories|verbundene repositories|github-repos)\b/i,
-    /((\u06af\u06cc\u062a[\u200c\s-]?\u0647\u0627\u0628|github).*(\u0645\u062e\u0632\u0646|\u0645\u062e\u0632\u0646[\u200c\s-]?\u0647\u0627)|(\u0645\u062e\u0632\u0646|\u0645\u062e\u0632\u0646[\u200c\s-]?\u0647\u0627).*(\u06af\u06cc\u062a[\u200c\s-]?\u0647\u0627\u0628|github))/i,
-  ]);
+  const githubEvidence =
+    messageHasAny(message, GITHUB_REPOSITORIES_EVIDENCE_PATTERNS) ||
+    messageHasAny(message, GITHUB_ISSUES_EVIDENCE_PATTERNS);
 
   const matches = [
     taskEvidence ? "tasks" : null,
@@ -264,6 +292,7 @@ function getStrongReadDomainEvidence(message: string): AgentIntentDomain | "conf
 function normalizeReadIntentFromEvidence(
   type: AgentIntentType,
   domainEvidence: AgentIntentDomain | "conflicting" | null,
+  message: string,
 ): AgentIntentType {
   if (!domainEvidence || domainEvidence === "conflicting" || type === "complete_task" || type === "unsupported") {
     return type;
@@ -274,13 +303,22 @@ function normalizeReadIntentFromEvidence(
     type === "inspect_calendar" ||
     type === "inspect_learning" ||
     type === "inspect_workspace" ||
-    type === "inspect_github_repositories"
+    type === "inspect_github_repositories" ||
+    type === "inspect_github_issues"
   ) {
     if (domainEvidence === "tasks") return "inspect_tasks";
     if (domainEvidence === "calendar") return "inspect_calendar";
     if (domainEvidence === "learning") return "inspect_learning";
     if (domainEvidence === "workspace") return "inspect_workspace";
-    if (domainEvidence === "github") return "inspect_github_repositories";
+    if (domainEvidence === "github") {
+      // Domain-level evidence only proves "this is about github" — repos vs
+      // issues needs its own, narrower check. A message matching both is
+      // left unrescued rather than guessed.
+      const githubIntent = getGitHubIntentEvidence(message);
+      if (githubIntent === "repositories") return "inspect_github_repositories";
+      if (githubIntent === "issues") return "inspect_github_issues";
+      return type;
+    }
   }
   return type;
 }
@@ -326,7 +364,7 @@ export function validateAgentIntentProposal(input: {
     !mixedReadWriteRequest &&
     (normalizationSourceType === "ask_clarification" || normalizationSourceType === "inspect_tasks" || normalizationSourceType === "complete_task")
     ? "complete_task"
-    : normalizeReadIntentFromEvidence(normalizationSourceType, domainEvidence);
+    : normalizeReadIntentFromEvidence(normalizationSourceType, domainEvidence, input.userMessage);
   const normalizedByEvidence = type !== initialType;
   if (!initialTypeSupported && type === "ask_clarification") {
     return createSafeProposal("unsupported", {

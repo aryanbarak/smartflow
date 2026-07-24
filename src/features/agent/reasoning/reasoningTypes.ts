@@ -14,6 +14,7 @@ export type AgentIntentType =
   | "inspect_learning"
   | "inspect_workspace"
   | "inspect_github_repositories"
+  | "inspect_github_issues"
   | "complete_task"
   | "ask_clarification"
   | "unsupported";
@@ -85,7 +86,7 @@ export type AgentLlmReasoningCaller = (
 
 export interface AgentReasoningValidationResult {
   proposal: AgentIntentProposal;
-  toolId?: "tasks.list" | "calendar.list_today" | "learning.get_progress" | "workspace.get_context" | "github.repositories.list" | "tasks.complete";
+  toolId?: "tasks.list" | "calendar.list_today" | "learning.get_progress" | "workspace.get_context" | "github.repositories.list" | "github.issues.list" | "tasks.complete";
   validationReasons: string[];
 }
 

@@ -96,6 +96,7 @@ describe("toolRegistry", () => {
       "learning.get_progress",
       "workspace.get_context",
       "github.repositories.list",
+      "github.issues.list",
       "tasks.create",
       "tasks.update",
       "tasks.complete",

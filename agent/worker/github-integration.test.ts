@@ -40,6 +40,8 @@ interface FakeOptions {
   malformedToken?: boolean
   malformedRepositoriesJson?: boolean
   rejectGitHub?: boolean
+  issuesByRepo?: Record<string, unknown[]>
+  issuesFailureByRepo?: Record<string, number>
 }
 
 function response(body: unknown, status = 200) {
@@ -166,6 +168,15 @@ function fakeProvider(options: FakeOptions = {}) {
         return status === 200
           ? response({ repositories: options.repositories ?? [] })
           : response({ message: 'provider detail must not escape' }, status)
+      }
+      const issuesMatch = parsed.pathname.match(/^\/repos\/([^/]+)\/([^/]+)\/issues$/)
+      if (issuesMatch) {
+        const key = `${decodeURIComponent(issuesMatch[1])}/${decodeURIComponent(issuesMatch[2])}`
+        const failStatus = options.issuesFailureByRepo?.[key]
+        if (failStatus) {
+          return response({ message: 'provider detail must not escape' }, failStatus)
+        }
+        return response(options.issuesByRepo?.[key] ?? [])
       }
     }
 
@@ -618,6 +629,181 @@ describe('GitHub repository listing boundary', () => {
     expect(await result?.json()).toEqual({ connected: false, appUninstalled: false })
     expect(fake.connection).toBeUndefined()
     expect(fake.calls.some((call) => call.url.startsWith('https://api.github.com'))).toBe(false)
+  })
+})
+
+describe('GitHub issues listing boundary', () => {
+  function verifiedConnection(userId = USER_ONE) {
+    return {
+      user_id: userId,
+      installation_id: 777,
+      github_account_id: 9001,
+      github_account_login: 'verified-user',
+      status: 'connected',
+    }
+  }
+
+  function repoFixture(id: number, name: string, owner = 'owner') {
+    return {
+      id,
+      name,
+      owner: { login: owner },
+      visibility: 'public',
+      default_branch: 'main',
+      archived: false,
+    }
+  }
+
+  function issueFixture(number: number, title: string, extra: Record<string, unknown> = {}) {
+    return {
+      number,
+      title,
+      state: 'open',
+      updated_at: '2026-07-20T10:00:00.000Z',
+      body: 'must-not-pass',
+      user: { login: 'must-not-pass' },
+      ...extra,
+    }
+  }
+
+  it('requires authentication and loads only the authenticated user connection', async () => {
+    const fake = fakeProvider()
+    fake.connection = verifiedConnection()
+    const unauthenticated = await handleGitHubIntegrationRequest(apiRequest('/github/issues', 'GET', false), env(), fake.dependencies)
+    expect(unauthenticated?.status).toBe(401)
+
+    fake.currentUser = USER_TWO
+    const crossUser = await handleGitHubIntegrationRequest(apiRequest('/github/issues'), env(), fake.dependencies)
+    expect(crossUser?.status).toBe(409)
+    expect(fake.calls.some((call) => call.url.includes('/access_tokens'))).toBe(false)
+  })
+
+  it('fans out issue requests in parallel across scanned repos and returns bounded sanitized issues', async () => {
+    const fake = fakeProvider({
+      repositories: [repoFixture(1, 'alpha'), repoFixture(2, 'beta'), repoFixture(3, 'gamma')],
+      issuesByRepo: {
+        'owner/alpha': [issueFixture(1, 'Alpha issue one'), issueFixture(2, 'Alpha issue two')],
+        'owner/beta': [issueFixture(10, 'Beta issue one')],
+        'owner/gamma': [],
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/issues'), env(), fake.dependencies)
+    expect(result?.status).toBe(200)
+    const body = await result!.json() as { issues: Array<Record<string, unknown>> }
+    expect(body.issues).toHaveLength(3)
+    expect(Object.keys(body.issues[0]).sort()).toEqual(['number', 'repo', 'state', 'title', 'updatedAt'])
+    const serialized = JSON.stringify(body)
+    expect(serialized).not.toContain('must-not-pass')
+    expect(serialized).not.toContain('ghs_transient-installation-token')
+
+    const issueCalls = fake.calls.filter((call) => call.url.includes('/issues') && !call.url.includes('github_connection'))
+    expect(issueCalls).toHaveLength(3)
+  })
+
+  it('scans at most 3 repositories even when more are connected', async () => {
+    const fake = fakeProvider({
+      repositories: [
+        repoFixture(1, 'r1'), repoFixture(2, 'r2'), repoFixture(3, 'r3'),
+        repoFixture(4, 'r4'), repoFixture(5, 'r5'),
+      ],
+      issuesByRepo: {
+        'owner/r1': [issueFixture(1, 'one')],
+        'owner/r2': [issueFixture(1, 'one')],
+        'owner/r3': [issueFixture(1, 'one')],
+        'owner/r4': [issueFixture(1, 'one')],
+        'owner/r5': [issueFixture(1, 'one')],
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/issues'), env(), fake.dependencies)
+    expect(result?.status).toBe(200)
+    const body = await result!.json() as { issues: unknown[] }
+    expect(body.issues).toHaveLength(3)
+
+    const reposCall = fake.calls.find((call) => call.url.includes('/installation/repositories'))
+    expect(reposCall?.url).toContain('per_page=3')
+    const issueCalls = fake.calls.filter((call) => /\/repos\/owner\/r\d+\/issues/.test(call.url))
+    expect(issueCalls).toHaveLength(3)
+  })
+
+  it('caps total issues at 20 across all scanned repos', async () => {
+    const fake = fakeProvider({
+      repositories: [repoFixture(1, 'alpha'), repoFixture(2, 'beta'), repoFixture(3, 'gamma')],
+      issuesByRepo: {
+        'owner/alpha': Array.from({ length: 10 }, (_, i) => issueFixture(i + 1, `Alpha ${i + 1}`)),
+        'owner/beta': Array.from({ length: 10 }, (_, i) => issueFixture(i + 1, `Beta ${i + 1}`)),
+        'owner/gamma': Array.from({ length: 10 }, (_, i) => issueFixture(i + 1, `Gamma ${i + 1}`)),
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/issues'), env(), fake.dependencies)
+    const body = await result!.json() as { issues: unknown[] }
+    expect(body.issues).toHaveLength(20)
+  })
+
+  it('excludes pull requests silently rather than treating them as invalid issue data', async () => {
+    const fake = fakeProvider({
+      repositories: [repoFixture(1, 'alpha')],
+      issuesByRepo: {
+        'owner/alpha': [
+          issueFixture(1, 'Real issue'),
+          issueFixture(2, 'A pull request', { pull_request: { url: 'https://api.github.com/pulls/2' } }),
+        ],
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/issues'), env(), fake.dependencies)
+    expect(result?.status).toBe(200)
+    const body = await result!.json() as { issues: Array<{ number: number }> }
+    expect(body.issues).toHaveLength(1)
+    expect(body.issues[0].number).toBe(1)
+  })
+
+  it('fails the whole request closed if any single scanned repo fails, instead of returning a partial list', async () => {
+    const fake = fakeProvider({
+      repositories: [repoFixture(1, 'alpha'), repoFixture(2, 'beta')],
+      issuesByRepo: {
+        'owner/alpha': [issueFixture(1, 'Alpha issue')],
+      },
+      issuesFailureByRepo: {
+        'owner/beta': 500,
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/issues'), env(), fake.dependencies)
+    expect(result?.status).toBe(502)
+    const body = await result!.json() as { error: { code: string } }
+    expect(body.error.code).toBe('GITHUB_UNAVAILABLE')
+    expect(JSON.stringify(body)).not.toContain('provider detail')
+  })
+
+  it('rejects malformed issue metadata the same way malformed repository metadata is rejected', async () => {
+    const fake = fakeProvider({
+      repositories: [repoFixture(1, 'alpha')],
+      issuesByRepo: {
+        'owner/alpha': [{ number: 1, title: 'Missing state and updated_at' }],
+      },
+    })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/issues'), env(), fake.dependencies)
+    expect(result?.status).toBe(502)
+    expect(await result?.json()).toMatchObject({ error: { code: 'GITHUB_RESPONSE_INVALID' } })
+  })
+
+  it('returns an empty bounded list without calling any repo issues endpoint when there are no repos', async () => {
+    const fake = fakeProvider({ repositories: [] })
+    fake.connection = verifiedConnection()
+
+    const result = await handleGitHubIntegrationRequest(apiRequest('/github/issues'), env(), fake.dependencies)
+    expect(await result?.json()).toEqual({ issues: [] })
+    expect(fake.calls.some((call) => /\/repos\/.+\/issues/.test(call.url))).toBe(false)
   })
 })
 

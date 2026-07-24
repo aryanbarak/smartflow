@@ -29,6 +29,11 @@ interface GitHubRepositoriesData {
   repositories?: Array<{ name?: string; owner?: string }>;
 }
 
+interface GitHubIssuesData {
+  connectionStatus?: string;
+  issues?: Array<{ repo?: string; number?: number; title?: string }>;
+}
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object");
 }
@@ -117,6 +122,26 @@ function githubPresentation(data: unknown): ReadOnlyResultPresentation {
   };
 }
 
+function githubIssuesPresentation(data: unknown): ReadOnlyResultPresentation {
+  const value = isObject(data) ? data as GitHubIssuesData : {};
+  if (value.connectionStatus === "not_connected") {
+    return { safeSummary: "GitHub is not connected.", safePreviewItems: [] };
+  }
+  const issues = Array.isArray(value.issues) ? value.issues.slice(0, 20) : [];
+  return {
+    safeSummary: countSummary(
+      issues.length,
+      "No open GitHub issues found.",
+      "1 open GitHub issue found.",
+      (count) => `${count} open GitHub issues found.`,
+    ),
+    safePreviewItems: issues
+      .map((item) => item.repo && item.number && item.title ? `${item.repo}#${item.number} ${item.title}` : undefined)
+      .filter((item): item is string => Boolean(item))
+      .slice(0, 6),
+  };
+}
+
 export function presentReadOnlyResult(result: ExecutionResult): ReadOnlyResultPresentation {
   if (result.status !== "success") {
     if (result.status === "policy_denied") {
@@ -146,6 +171,8 @@ export function presentReadOnlyResult(result: ExecutionResult): ReadOnlyResultPr
       };
     case "github.repositories.list":
       return githubPresentation(result.data);
+    case "github.issues.list":
+      return githubIssuesPresentation(result.data);
     default:
       return {
         safeSummary: "The read-only action completed.",

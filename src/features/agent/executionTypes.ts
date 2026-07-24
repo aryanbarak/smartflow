@@ -74,6 +74,23 @@ export interface GitHubRepositoriesClient {
   listRepositories(): Promise<GitHubRepositoriesResult>;
 }
 
+export interface GitHubIssueSummary {
+  repo: string;
+  number: number;
+  title: string;
+  state: "open" | "closed";
+  updatedAt: string;
+}
+
+export interface GitHubIssuesResult {
+  connectionStatus: "connected" | "not_connected";
+  issues: GitHubIssueSummary[];
+}
+
+export interface GitHubIssuesClient {
+  listIssues(): Promise<GitHubIssuesResult>;
+}
+
 export interface ExecutionContext {
   tasks?: readonly ExecutionContextTask[];
   events?: readonly ExecutionContextEvent[];
@@ -82,6 +99,7 @@ export interface ExecutionContext {
   policyContext?: ExecutionPolicyContext;
   currentTime?: string;
   githubRepositoriesClient?: GitHubRepositoriesClient;
+  githubIssuesClient?: GitHubIssuesClient;
 }
 
 export interface ExecutionRequest {

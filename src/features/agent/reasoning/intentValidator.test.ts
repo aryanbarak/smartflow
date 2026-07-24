@@ -141,6 +141,68 @@ describe("intentValidator", () => {
     expect(result.proposal.requestedDomain).toBe("github");
   });
 
+  it("validates the github issues intent mapping", () => {
+    const result = validate(
+      proposal({ type: "inspect_github_issues", requestedDomain: "github", toolId: "github.issues.list" }),
+      "Show my open GitHub issues.",
+    );
+    expect(result.proposal.type).toBe("inspect_github_issues");
+    expect(result.toolId).toBe("github.issues.list");
+  });
+
+  it("rescues an unrecognized type into the github intent the evidence actually names, not always repositories", () => {
+    const repositories = validate(
+      proposal({ type: "intent", requestedDomain: "tasks", toolId: "tasks.list" }),
+      "Show my connected GitHub repositories",
+    );
+    const issues = validate(
+      proposal({ type: "intent", requestedDomain: "tasks", toolId: "tasks.list" }),
+      "Show my open GitHub issues",
+    );
+
+    expect(repositories.proposal.type).toBe("inspect_github_repositories");
+    expect(repositories.toolId).toBe("github.repositories.list");
+    expect(issues.proposal.type).toBe("inspect_github_issues");
+    expect(issues.toolId).toBe("github.issues.list");
+  });
+
+  it("does not guess between repositories and issues when a message names both: leaves it unrescued", () => {
+    const result = validate(
+      proposal({ type: "intent", requestedDomain: "tasks", toolId: "tasks.list" }),
+      "Show my GitHub repositories and my open GitHub issues",
+    );
+
+    // Unrescued from an unrecognized type with domain evidence present but
+    // no clean single-intent match falls through the same path as no
+    // evidence at all: unsupported, not a guessed pick between the two.
+    expect(result.proposal.type).toBe("unsupported");
+  });
+
+  it("does not override an already-valid, explicit type when repo/issue evidence conflicts in the same message", () => {
+    const result = validate(
+      proposal({ type: "inspect_github_issues", requestedDomain: "github", toolId: "github.issues.list" }),
+      "Show my GitHub repositories and my open GitHub issues",
+    );
+
+    expect(result.proposal.type).toBe("inspect_github_issues");
+    expect(result.toolId).toBe("github.issues.list");
+  });
+
+  it("resolves the production-shaped issues payload: unrecognized type, invented domain literal, correct tool id", () => {
+    const result = validate(
+      proposal({
+        type: "intent",
+        requestedDomain: "github_issues",
+        toolId: "github.issues.list",
+      }),
+      "Show my open GitHub issues",
+    );
+
+    expect(result.proposal.type).toBe("inspect_github_issues");
+    expect(result.toolId).toBe("github.issues.list");
+    expect(result.proposal.requestedDomain).toBe("github");
+  });
+
   it("handles malformed or non-object output safely", () => {
     const result = validate(null);
 

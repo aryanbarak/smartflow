@@ -52,6 +52,7 @@ const SUPPORTED_TOOL_IDS = new Set([
   "workspace.get_context",
   "tasks.complete",
   "github.repositories.list",
+  "github.issues.list",
 ]);
 
 const INTERNAL_PATTERN =
@@ -377,6 +378,7 @@ export function synthesizeContext(input: ContextSynthesisInput): SynthesizedCont
     case "workspace.get_context":
       return synthesizeWorkspace(input);
     case "github.repositories.list":
+    case "github.issues.list":
       return synthesizeGitHub(input);
     default:
       return emptyResult("low");

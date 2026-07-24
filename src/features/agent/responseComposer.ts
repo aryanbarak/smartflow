@@ -11,6 +11,7 @@ export const SUPPORTED_RESPONSE_COMPOSER_TOOL_IDS = Object.freeze([
   "workspace.get_context",
   "tasks.complete",
   "github.repositories.list",
+  "github.issues.list",
 ] as const);
 
 export type ResponseComposerToolId = typeof SUPPORTED_RESPONSE_COMPOSER_TOOL_IDS[number];
@@ -160,6 +161,29 @@ const TOOL_COPY: Record<ResponseComposerToolId, Record<AssistantResponseLanguage
       countSummary: (count) => `${count} مخزن متصل گیت‌هاب پیدا کردم.`,
       failureSummary: "نتوانستم مخزن‌های متصل گیت‌هاب را به شکل امن بارگذاری کنم.",
       suggestion: "برای تغییر دسترسی مخزن‌ها، تنظیمات گیت‌هاب را جداگانه باز کن.",
+    },
+  },
+  "github.issues.list": {
+    en: {
+      headline: "Here are your open GitHub issues.",
+      emptySummary: "GitHub is not connected or no open issues are available.",
+      countSummary: (count) => `I found ${count} open GitHub ${count === 1 ? "issue" : "issues"}.`,
+      failureSummary: "I could not load your open GitHub issues safely.",
+      suggestion: "Open GitHub separately if you need to change or comment on an issue.",
+    },
+    de: {
+      headline: "Hier sind deine offenen GitHub-Issues.",
+      emptySummary: "GitHub ist nicht verbunden oder es sind keine offenen Issues verfuegbar.",
+      countSummary: (count) => `Ich habe ${count} offene GitHub-${count === 1 ? "Issue" : "Issues"} gefunden.`,
+      failureSummary: "Ich konnte deine offenen GitHub-Issues nicht sicher laden.",
+      suggestion: "Oeffne GitHub separat, wenn du ein Issue aendern oder kommentieren moechtest.",
+    },
+    fa: {
+      headline: "ایشوهای باز گیت‌هاب تو این‌ها هستند.",
+      emptySummary: "گیت‌هاب متصل نیست یا ایشوی بازی در دسترس نیست.",
+      countSummary: (count) => `${count} ایشوی باز گیت‌هاب پیدا کردم.`,
+      failureSummary: "نتوانستم ایشوهای باز گیت‌هاب را به شکل امن بارگذاری کنم.",
+      suggestion: "برای تغییر یا نظر دادن روی یک ایشو، گیت‌هاب را جداگانه باز کن.",
     },
   },
   "tasks.complete": {

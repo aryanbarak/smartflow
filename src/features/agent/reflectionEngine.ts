@@ -127,6 +127,14 @@ function assessToolData(result: ExecutionResult): ToolDataAssessment {
         empty: count === 0,
       };
     }
+    case "github.issues.list": {
+      const count = arrayLength(result.data, "issues");
+      return {
+        itemCount: count,
+        hasUsefulData: count > 0,
+        empty: count === 0,
+      };
+    }
     case "tasks.complete": {
       const alreadyCompleted = isObject(result.data) && result.data.alreadyCompleted === true;
       const verified = isObject(result.data) && result.data.verified === true;
@@ -266,6 +274,10 @@ function summaryFor(result: ExecutionResult, outcome: AgentReflectionOutcome, as
       return assessment.empty
         ? "No connected GitHub repositories were found."
         : "Connected GitHub repository metadata was gathered.";
+    case "github.issues.list":
+      return assessment.empty
+        ? "No open GitHub issues were found."
+        : "Open GitHub issue metadata was gathered.";
     case "tasks.complete":
       return assessment.empty
         ? "Task was already completed. No new change was needed."
@@ -297,6 +309,8 @@ function followUpFor(result: ExecutionResult, outcome: AgentReflectionOutcome, a
       return "Use the loaded context to choose the next read-only step.";
     case "github.repositories.list":
       return assessment.empty ? undefined : "Choose a repository to inspect in GitHub when needed.";
+    case "github.issues.list":
+      return assessment.empty ? undefined : "Choose an issue to follow up on in GitHub when needed.";
     case "tasks.complete":
       return assessment.empty ? undefined : "Refresh the task view before choosing the next action.";
     default:

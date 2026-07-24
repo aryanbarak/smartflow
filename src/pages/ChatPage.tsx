@@ -53,6 +53,7 @@ import {
 } from '@/features/agent'
 import { StepApprovalDialog } from '@/features/workspace/components/StepApprovalDialog'
 import { createGitHubRepositoriesClient } from '@/features/integrations/github/githubRepositoriesClient'
+import { createGitHubIssuesClient } from '@/features/integrations/github/githubIssuesClient'
 import { useWorkspace } from '@/features/workspace'
 import type {
   WorkspacePlanActionType,
@@ -257,6 +258,8 @@ function intentTitleKey(type: AgentReasoningResult['proposal']['type']): Transla
       return 'agent_intent_title_inspect_workspace'
     case 'inspect_github_repositories':
       return 'agent_intent_title_inspect_github_repositories'
+    case 'inspect_github_issues':
+      return 'agent_intent_title_inspect_github_issues'
     case 'complete_task':
       return 'agent_intent_title_complete_task'
     case 'ask_clarification':
@@ -295,7 +298,7 @@ function stepForReasoning(result: AgentReasoningResult, t: Translate): Workspace
     return null
   }
   const domain =
-    proposal.type === 'inspect_github_repositories'
+    proposal.type === 'inspect_github_repositories' || proposal.type === 'inspect_github_issues'
       ? 'github'
       : proposal.type === 'inspect_workspace'
       ? 'workspace'
@@ -878,6 +881,13 @@ export default function ChatPage() {
         workspace,
         currentTime: currentTime.toISOString(),
         githubRepositoriesClient: createGitHubRepositoriesClient({
+          workerBaseUrl: workerUrl,
+          getAccessToken: async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            return session?.access_token
+          },
+        }),
+        githubIssuesClient: createGitHubIssuesClient({
           workerBaseUrl: workerUrl,
           getAccessToken: async () => {
             const { data: { session } } = await supabase.auth.getSession()

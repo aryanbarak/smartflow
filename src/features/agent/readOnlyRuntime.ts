@@ -21,6 +21,7 @@ export const SUPPORTED_READ_ONLY_TOOL_IDS = Object.freeze([
   "learning.get_progress",
   "workspace.get_context",
   "github.repositories.list",
+  "github.issues.list",
 ] as const);
 
 export type SupportedReadOnlyToolId = typeof SUPPORTED_READ_ONLY_TOOL_IDS[number];

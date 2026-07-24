@@ -16,6 +16,7 @@ const executableReadOnlyToolIds = new Set([
   "learning.get_progress",
   "workspace.get_context",
   "github.repositories.list",
+  "github.issues.list",
 ]);
 
 const unsupportedMutationActions = new Set<WorkspacePlanActionType>([

@@ -451,6 +451,7 @@ describe("executionEngine", () => {
       "learning.get_progress",
       "workspace.get_context",
       "github.repositories.list",
+      "github.issues.list",
     ]);
   });
 });

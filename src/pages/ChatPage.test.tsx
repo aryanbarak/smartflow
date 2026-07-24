@@ -213,6 +213,21 @@ describe("ChatPage LLM reasoning UX boundary", () => {
     expect(shouldUseReasoningForMessage("list my repos")).toBe(true);
     expect(shouldUseReasoningForMessage("Zeige meine Repositories")).toBe(true);
     expect(shouldUseReasoningForMessage("مخزن‌های من را نشان بده")).toBe(true);
+    expect(shouldUseReasoningForMessage("Show my open GitHub issues.")).toBe(true);
+    expect(shouldUseReasoningForMessage("Zeige meine offenen GitHub-Issues.")).toBe(true);
+    expect(shouldUseReasoningForMessage("ایشوهای باز گیت‌هاب را نشان بده.")).toBe(true);
+  });
+
+  it("resolves inspect_github_issues via expectedToolId pass-through, even though it has no domain+actionType mapping", () => {
+    // github.issues.list deliberately has no explicitReadOnlyMappings entry
+    // (see toolResolver.ts) — this only resolves because proposalToState
+    // passes expectedToolId straight from intentToolMap.
+    const t = (key: string) => key;
+    const result = reasoningResult("inspect_github_issues", "github.issues.list");
+    const state = proposalToState(result, t);
+
+    expect(state.resolution?.status).toBe("resolved");
+    expect(state.resolution?.toolId).toBe("github.issues.list");
   });
 
   it("resolves every existing read intent to the same toolId intentValidator already assigned it", () => {
