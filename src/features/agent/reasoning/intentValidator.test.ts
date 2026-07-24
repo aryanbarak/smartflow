@@ -69,8 +69,38 @@ describe("intentValidator", () => {
   });
 
   it("rejects unknown intent and invented tool id", () => {
-    expect(validate(proposal({ type: "inspect_secret" })).proposal.type).toBe("unsupported");
+    expect(validate(proposal({ type: "inspect_secret" }), "Hello there").proposal.type).toBe("unsupported");
     expect(validate(proposal({ toolId: "finance.pay" })).proposal.type).toBe("unsupported");
+  });
+
+  it("rescues an unrecognized intent type using deterministic domain evidence, like a parse failure", () => {
+    const rescued = validate(
+      proposal({ type: "intent", requestedDomain: "tasks", toolId: "tasks.list" }),
+      "Show my connected GitHub repositories",
+    );
+
+    expect(rescued.proposal.type).toBe("inspect_github_repositories");
+    expect(rescued.toolId).toBe("github.repositories.list");
+    expect(rescued.proposal.requestedDomain).toBe("github");
+  });
+
+  it("still rejects an unrecognized intent type when there is no domain evidence to rescue it", () => {
+    expect(validate(proposal({ type: "whatever" }), "Hello there").proposal.type).toBe("unsupported");
+  });
+
+  it("resolves the production payload: unrecognized type, invented domain literal, correct tool id", () => {
+    const result = validate(
+      proposal({
+        type: "intent",
+        requestedDomain: "github_repositories",
+        toolId: "github.repositories.list",
+      }),
+      "Show my connected GitHub repositories",
+    );
+
+    expect(result.proposal.type).toBe("inspect_github_repositories");
+    expect(result.toolId).toBe("github.repositories.list");
+    expect(result.proposal.requestedDomain).toBe("github");
   });
 
   it("handles malformed or non-object output safely", () => {

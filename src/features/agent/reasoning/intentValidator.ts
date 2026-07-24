@@ -313,16 +313,30 @@ export function validateAgentIntentProposal(input: {
   }
 
   const initialType = safeString(input.rawProposal.type) as AgentIntentType;
+  const initialTypeSupported = supportedIntentTypes.includes(initialType);
   const domainEvidence = getStrongReadDomainEvidence(input.userMessage);
   const completionRequested = requestLooksLikeTaskCompletion(input.userMessage);
   const mixedReadWriteRequest = requestLooksMixed(input.userMessage, "inspect_tasks");
+  // An unrecognized type is treated the same as a total parse failure (fallbackRawProposal
+  // also starts from "ask_clarification"): fall through to deterministic evidence-based
+  // normalization instead of rejecting immediately. The rescued type still comes only from
+  // regex evidence over the user's own message, never from whatever the LLM proposed.
+  const normalizationSourceType = initialTypeSupported ? initialType : "ask_clarification";
   const type = completionRequested &&
     !mixedReadWriteRequest &&
-    (initialType === "ask_clarification" || initialType === "inspect_tasks" || initialType === "complete_task")
+    (normalizationSourceType === "ask_clarification" || normalizationSourceType === "inspect_tasks" || normalizationSourceType === "complete_task")
     ? "complete_task"
-    : normalizeReadIntentFromEvidence(initialType, domainEvidence);
+    : normalizeReadIntentFromEvidence(normalizationSourceType, domainEvidence);
   const normalizedByEvidence = type !== initialType;
-  if (!supportedIntentTypes.includes(initialType) || !supportedIntentTypes.includes(type)) {
+  if (!initialTypeSupported && type === "ask_clarification") {
+    return createSafeProposal("unsupported", {
+      userMessage: input.userMessage,
+      language: input.language,
+      now,
+      reason: "Unknown intent type was rejected.",
+    });
+  }
+  if (!supportedIntentTypes.includes(type)) {
     return createSafeProposal("unsupported", {
       userMessage: input.userMessage,
       language: input.language,
@@ -395,7 +409,7 @@ export function validateAgentIntentProposal(input: {
 
   const expectedDomain = domainByIntent[type];
   const proposedDomain = safeString(input.rawProposal.requestedDomain) as AgentIntentDomain;
-  if (proposedDomain && !supportedDomains.includes(proposedDomain)) {
+  if (proposedDomain && !supportedDomains.includes(proposedDomain) && !normalizedByEvidence) {
     return createSafeProposal("unsupported", {
       userMessage: input.userMessage,
       language: input.language,
