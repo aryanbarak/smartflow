@@ -9,7 +9,7 @@ import {
   type AgentReasoningValidationResult,
 } from "./reasoningTypes";
 
-const supportedIntentTypes: AgentIntentType[] = [
+export const supportedIntentTypes: AgentIntentType[] = [
   "inspect_tasks",
   "inspect_calendar",
   "inspect_learning",

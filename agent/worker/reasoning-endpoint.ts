@@ -6,7 +6,7 @@ const MAX_SHORT_TEXT_LENGTH = 240
 
 export const RESPONSE_LANGUAGES = new Set(['auto', 'en', 'de', 'fa'])
 const PROPOSAL_LANGUAGES = ['en', 'de', 'fa'] as const
-const SUPPORTED_INTENT_VALUES = [
+export const SUPPORTED_INTENT_VALUES = [
   'inspect_tasks',
   'inspect_calendar',
   'inspect_learning',
